@@ -1,0 +1,331 @@
+/*
+ * Outlook Automation CRM — global stylesheet and design system.
+ *
+ * Tailwind v4 is configured in CSS rather than a JS config file. Everything
+ * declared inside `@theme` is compiled into real design tokens, so a token like
+ * `--color-brand-600` is usable as `bg-brand-600`, `text-brand-600`, etc.
+ *
+ * The tokens below are the single source of truth for the product's look. A new
+ * page should be buildable entirely from them without inventing one-off colours.
+ */
+
+@import 'tailwindcss';
+
+@theme {
+  /* --- Brand ------------------------------------------------------------
+   * Microsoft/Outlook-adjacent blues. 600 is the primary action colour;
+   * 700 is its hover state.
+   */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+
+  /* --- Sidebar ---------------------------------------------------------
+   * The dark navigation surface. Kept as its own scale rather than reusing
+   * `slate`, so the chrome can be re-themed without touching page content.
+   */
+  --color-sidebar-bg: #0f172a;
+  --color-sidebar-bg-elevated: #16213c;
+  --color-sidebar-border: #1e2b47;
+  --color-sidebar-text: #94a3b8;
+  --color-sidebar-text-strong: #f1f5f9;
+  --color-sidebar-hover: #1c2b48;
+  --color-sidebar-active: #1e3a8a;
+
+  /* --- Semantic status -------------------------------------------------- */
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #0891b2;
+
+  /* --- Typography ------------------------------------------------------- */
+  --font-sans: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  --font-mono: 'Cascadia Code', ui-monospace, Consolas, monospace;
+
+  /* --- Elevation --------------------------------------------------------
+   * Deliberately soft. Enterprise UI reads as cheap when shadows are heavy;
+   * a 1px ring plus a faint shadow separates surfaces without shouting.
+   */
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
+  --shadow-card-hover: 0 2px 4px -1px rgb(15 23 42 / 0.06), 0 4px 12px -2px rgb(15 23 42 / 0.08);
+  --shadow-dropdown: 0 4px 6px -2px rgb(15 23 42 / 0.06), 0 12px 24px -4px rgb(15 23 42 / 0.12);
+
+  /* --- Motion (Phase 16.1) ----------------------------------------------
+   * One vocabulary for every transition in the product.
+   *
+   * 150ms for anything the pointer triggers — a hover that takes longer feels
+   * like lag rather than polish. 200ms for things that change layout, where the
+   * eye needs to follow the movement. Nothing exceeds 250ms: past that a
+   * transition stops being feedback and becomes a wait.
+   *
+   * The easing is a standard "decelerate" curve — fast out of the gate, gentle
+   * on arrival, which is what makes motion read as physical rather than linear.
+   */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
+
+  /* --- Radius -----------------------------------------------------------
+   * Three steps, used consistently. Mixing radii across cards is the single
+   * most common reason an admin console reads as assembled rather than
+   * designed.
+   */
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-panel: 1rem;
+
+  /* --- Elevation, refined ------------------------------------------------
+   * A raised surface is one that has *lifted*, so the shadow spreads and
+   * softens rather than darkening. Paired with a border that stays constant,
+   * which keeps the card's edge from appearing to move on hover.
+   */
+  --shadow-raised: 0 4px 6px -2px rgb(15 23 42 / 0.05), 0 12px 20px -6px rgb(15 23 42 / 0.10);
+
+  /* --- Layout metrics ---------------------------------------------------
+   * Shared by the sidebar, the content offset and the page measure, so none of
+   * the three can drift apart and leave a gap, an overlap or a page narrower
+   * than its neighbours.
+   */
+
+  /* --- Page measure (Phase 16.1B) ---------------------------------------
+   * The one place the admin content width is decided.
+   *
+   * 90rem (1440px). Uncapped content on a 1920px display stretches a table to
+   * ~1600px, which pushes the first and last columns so far apart the eye
+   * cannot track a row — the complaint that everything "looks small and
+   * disconnected". A measure plus auto margins centres the page and gives the
+   * gutters back.
+   *
+   * 1440 rather than 1600: with the 292px sidebar, 1600 + padding leaves only
+   * ~28px of gutter at 1920px, which reads as edge-to-edge again. 1440 leaves a
+   * comfortable 124px and still fills a 1440px laptop exactly.
+   *
+   * A token rather than a utility class, so a page cannot quietly pick its own
+   * — which is exactly what the user detail page had done.
+   */
+  --spacing-page: 90rem;
+
+  /* --- Spacing scale ----------------------------------------------------
+   * 8 / 12 / 16 / 24 / 32 / 48. Tailwind's own scale already provides these
+   * as 2 / 3 / 4 / 6 / 8 / 12; these aliases name the *roles* so a page uses
+   * "section gap" rather than picking a number.
+   */
+  --spacing-gutter: 1.5rem;
+  --spacing-section: 1.5rem;
+  --spacing-page-top: 2rem;
+
+  /*
+   * Phase 16.1A: 18.25rem (292px), up from 16rem (256px).
+   *
+   * 256px forced 13px labels and tight padding to fit, which is what made the
+   * column read as compressed. At 292px the navigation can use a 14px label and
+   * a proper rhythm without truncating "Roles & permissions" — the longest
+   * item, and the one that was deciding the width by accident.
+   */
+  --spacing-sidebar: 18.25rem;
+  --spacing-sidebar-collapsed: 4.75rem;
+
+  /*
+   * 4rem (64px), up from 3.5rem (56px).
+   *
+   * The header carries a search control, a bell, a workspace badge and an
+   * avatar. At 56px those sat edge to edge with no vertical air, which is the
+   * clearest tell of a dense admin template.
+   */
+  --spacing-topbar: 4rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Anchor navigation lands below the sticky topbar rather than under it. */
+    scroll-padding-top: calc(var(--spacing-topbar) + 1rem);
+  }
+
+  body {
+    @apply bg-slate-50 font-sans text-slate-700 antialiased;
+    /*
+     * `dvh`, not `svh` (Phase 16.1D).
+     *
+     * `svh` is the *smallest* viewport — the height when a mobile browser's
+     * toolbars are fully expanded. When they retract the viewport grows, and a
+     * frame sized in `svh` leaves a strip of body background below the app
+     * exactly the height of the toolbar. `dvh` tracks the live viewport, so the
+     * frame stays flush at every stage of that animation.
+     */
+    min-height: 100dvh;
+  }
+
+  /* Keyboard focus stays visible everywhere; mouse clicks stay clean. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+
+  /* Focus rings on the dark sidebar need a light colour to be visible at all. */
+  .sidebar-surface :focus-visible {
+    @apply outline-brand-300;
+  }
+}
+
+@layer components {
+  /*
+   * The shared card surface (Phase 16.1).
+   *
+   * Every panel in the console resolves to this, so radius, border and
+   * elevation cannot drift between one screen and another — which is what
+   * makes a console feel like one product rather than several.
+   */
+  .surface-card {
+    @apply rounded-[--radius-card] border border-slate-200 bg-white;
+    box-shadow: var(--shadow-card);
+  }
+
+  /*
+   * Hover lift, for cards that are themselves interactive.
+   *
+   * Deliberately not applied to every card. A surface that rises under the
+   * pointer is promising that clicking it does something, and a dashboard where
+   * everything lifts and nothing is clickable is worse than one that is still.
+   */
+  .surface-interactive {
+    transition:
+      box-shadow var(--duration-fast) var(--ease-out-quint),
+      transform var(--duration-fast) var(--ease-out-quint),
+      border-color var(--duration-fast) var(--ease-out-quint);
+  }
+
+  .surface-interactive:hover {
+    box-shadow: var(--shadow-raised);
+    border-color: var(--color-slate-300);
+    transform: translateY(-1px);
+  }
+
+  /*
+   * Figures in a metric position.
+   *
+   * `tabular-nums` so a counter animating from 0 to 1,284 does not jitter as
+   * digit widths change, and so a column of numbers aligns on its decimal.
+   * `-0.01em` tracking because large numerals in Segoe UI read loose by default.
+   */
+  .metric-figure {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /*
+   * The shimmer used by every skeleton.
+   *
+   * One keyframe shared by all of them, so loading states across the product
+   * pulse in sympathy rather than each on its own clock — which is what makes
+   * a page look like it is loading rather than glitching.
+   */
+  .skeleton {
+    @apply rounded-[--radius-control] bg-slate-100;
+    animation: skeleton-pulse 1.6s var(--ease-out-quint) infinite;
+  }
+
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+}
+
+@layer utilities {
+  /*
+   * Opt-out of motion for users who have asked the OS for reduced motion.
+   * Applied globally rather than per component so a new transition cannot
+   * accidentally ignore the preference.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /*
+   * Visually hidden but available to screen readers. Used for the skip link and
+   * for labels on icon-only controls.
+   */
+  .sr-only-focusable {
+    @apply sr-only;
+  }
+  .sr-only-focusable:focus-visible {
+    @apply not-sr-only fixed left-4 top-4 z-50 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-dropdown;
+  }
+}
+
+/*
+ * Hidden scrollbars (Phase 16.2).
+ *
+ * Scrolling is completely untouched — wheel, trackpad, touch, keyboard and
+ * programmatic scrolling all behave exactly as before. Only the *painting* of
+ * the scrollbar is suppressed, which is what Notion, Linear, Slack, Discord and
+ * Teams all do so a grey gutter does not cut into every panel.
+ *
+ * ## Why this sits outside `@layer`
+ *
+ * Unlayered CSS outranks every layered rule, including all of Tailwind's. Put
+ * inside `@layer utilities` — where Phase 16.1C had it — these declarations sit
+ * at the bottom of the cascade and any unlayered rule, now or later, silently
+ * beats them. For a rule whose whole job is "always win", a layer is the wrong
+ * place.
+ *
+ * ## Why it is global rather than scoped to the admin shell
+ *
+ * 16.1C scoped it to `.admin-shell`. That was the bug: `html` and `body` are
+ * **ancestors** of that element, not descendants, so the document's own
+ * scrollbar was never matched. Every inner panel was hidden and the outermost
+ * bar — the most visible one — stayed. Hence "multiple visible scrollbars".
+ *
+ * `*` covers every element that exists or will exist, so a panel added next
+ * month is covered without anybody remembering to opt in.
+ *
+ * ## Three declarations, because no single one covers every engine
+ *
+ *   `scrollbar-width`       standard. Firefox 64+, Chrome 121+, Safari 18.2+
+ *   `-ms-overflow-style`    legacy Edge and IE11
+ *   `::-webkit-scrollbar`   Chrome, Safari, Edge before 121
+ *
+ * `width`/`height: 0` alongside `display: none` on the WebKit pseudo-element:
+ * `display: none` is what actually removes it, and the zero sizes are the
+ * belt-and-braces form for older WebKit builds that ignored `display` on this
+ * pseudo-element.
+ *
+ * ## What this costs
+ *
+ * A scrollbar is both a hint that content continues and a control you can drag.
+ * Hiding it removes both, which matters most to pointer users who find dragging
+ * easier than wheeling. Every container keeps `overflow: auto`, so wheel,
+ * trackpad, touch and keyboard are unaffected — and `#admin-main` carries
+ * `tabIndex={-1}` specifically so Page Up/Down, Home/End and the arrows reach
+ * the real scroll container. A user who enables "always show scrollbars" at the
+ * OS level still gets overlay bars, because that setting overrides page CSS.
+ */
+*,
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
