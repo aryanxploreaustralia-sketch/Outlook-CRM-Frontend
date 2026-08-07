@@ -5,8 +5,9 @@
  * services never hold a URL string, so a route change on the server is a
  * one-line edit here rather than a search across the module.
  *
- * Paths are relative to `env.apiBaseUrl` (default `/api`), which `httpClient`
- * applies automatically.
+ * Paths start at the API version (`/v1/...`) and never include the origin or
+ * the `/api` prefix — those come from the base URL. See `@/api/endpoints` for
+ * the full rule.
  *
  * ## Every entry exists on the server
  *

@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# Apache configuration for the built frontend.
+#
+# Lives in `public/`, so Vite copies it into `dist/` verbatim on every build and
+# it is uploaded along with everything else. Keeping it here rather than
+# hand-placing it on the server means it cannot be forgotten during a deploy or
+# wiped by one.
+#
+# Hostinger's shared hosting runs Apache with mod_rewrite, mod_headers and
+# mod_deflate enabled. Each block below is wrapped in an <IfModule> guard, so a
+# host without one of them serves the site rather than returning a 500.
+# ---------------------------------------------------------------------------
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # --- Single-page application fallback ------------------------------------
+  #
+  # React Router owns every path under this domain, but Apache does not know
+  # that: it looks for a directory named `dashboard` on disk, finds none, and
+  # returns its own 404. Only `/` would work — the app would load on first
+  # visit and 404 on every refresh and every shared link.
+  #
+  # So anything that is not a real file or directory is served `index.html`,
+  # and the router reads the URL from the address bar as it does in
+  # development. Real files still win, which is what keeps `/assets/*.js` and
+  # `favicon.svg` being served as themselves.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  # --- Cache policy --------------------------------------------------------
+  #
+  # Vite fingerprints every asset (`index-C4dK2p.js`), so an asset's contents
+  # can never change without its name changing. They are safe to cache
+  # permanently, and doing so is most of why a return visit is fast.
+  <FilesMatch "\.(js|css|woff2?|svg|png|jpg|jpeg|gif|webp|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # `index.html` is the one file whose name never changes, and it is the file
+  # that names the fingerprinted assets. Cached, it keeps pointing at the
+  # previous build — the deployment is uploaded, and the browser goes on
+  # running the old bundle with no indication that anything happened. That is
+  # a slow, confusing failure, so this file is never cached.
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+
+# Directory listings are never wanted; without this, a URL that happens to name
+# a real directory would enumerate it.
+Options -Indexes

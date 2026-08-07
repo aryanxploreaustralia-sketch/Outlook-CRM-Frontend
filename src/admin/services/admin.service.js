@@ -34,6 +34,7 @@
  */
 
 import { ADMIN_ENDPOINTS } from '@/admin/services/adminEndpoints'
+import { apiUrl } from '@/api/apiUrl'
 import { httpClient } from '@/api/httpClient'
 
 /**
@@ -214,8 +215,9 @@ export async function decideAdminUserDocument(id, documentId, status, remarks) {
 
 /** Where an administrator previews or downloads one of their documents. */
 export function adminDocumentFileUrl(id, documentId, { download = false } = {}) {
-  const base = httpClient.defaults.baseURL ?? ''
-  return `${base}${ADMIN_ENDPOINTS.users.documentFile(id, documentId)}${download ? '?download=1' : ''}`
+  return apiUrl(ADMIN_ENDPOINTS.users.documentFile(id, documentId), {
+    download: download ? '1' : null,
+  })
 }
 
 /**
@@ -452,12 +454,13 @@ export function fetchAuditTimeline({ signal, ...params } = {}) {
  * Fetching it into memory to re-wrap it in a Blob would discard all three and
  * hold the whole export in the tab.
  *
- * Same-origin, so the session cookie is sent — which is why this needs no token
- * handling of its own.
+ * The session cookie rides along without any token handling here. In a split
+ * deployment the API is on a sibling subdomain, which is a different *origin*
+ * but the same *site*, so the browser attaches a `SameSite=Lax` cookie to this
+ * navigation exactly as it does when both apps share a host.
  */
 export function auditExportUrl({ format = 'csv', ...params } = {}) {
-  const query = new URLSearchParams(clean({ ...params, format }))
-  return `${httpClient.defaults.baseURL ?? ''}${ADMIN_ENDPOINTS.audit.export}?${query}`
+  return apiUrl(ADMIN_ENDPOINTS.audit.export, clean({ ...params, format }))
 }
 
 export function fetchAdminOrganization({ signal } = {}) {

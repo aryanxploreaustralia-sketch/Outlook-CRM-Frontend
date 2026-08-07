@@ -4,8 +4,16 @@
  * Components never hard-code URL strings; they import from here. When a route
  * changes on the server it is corrected in exactly one place.
  *
- * Paths are relative to `env.apiBaseUrl` (default `/api`), which the HTTP client
- * applies automatically.
+ * ## What a path here may contain
+ *
+ * Every entry starts at the API **version** — `/v1/...` — and never earlier.
+ * The origin and the server's `/api` prefix are contributed by the base URL, so
+ * writing `/api/v1/...` here would request `/api/api/v1/...`. `@/api/apiUrl`
+ * strips the prefix and warns if it ever appears, but the fix belongs in this
+ * file.
+ *
+ * Paths are joined onto `env.apiBaseUrl` by `httpClient` for requests, and by
+ * `apiUrl()` for the handful of URLs the browser navigates to itself.
  */
 
 export const ENDPOINTS = Object.freeze({

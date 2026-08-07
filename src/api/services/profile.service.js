@@ -10,6 +10,7 @@
  */
 
 import { ENDPOINTS } from '@/api/endpoints'
+import { apiUrl } from '@/api/apiUrl'
 import { httpClient } from '@/api/httpClient'
 
 /** Unwraps the standard envelope. */
@@ -105,8 +106,7 @@ export async function fetchMyPerformance({ range = {}, signal } = {}) {
 }
 
 export function documentFileUrl(id, { download = false } = {}) {
-  const base = httpClient.defaults.baseURL ?? ''
-  return `${base}${ENDPOINTS.profile.documentFile(id)}${download ? '?download=1' : ''}`
+  return apiUrl(ENDPOINTS.profile.documentFile(id), { download: download ? '1' : null })
 }
 
 export default {

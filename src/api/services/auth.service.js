@@ -9,8 +9,8 @@
  */
 
 import { ENDPOINTS } from '@/api/endpoints'
+import { apiUrl } from '@/api/apiUrl'
 import { httpClient } from '@/api/httpClient'
-import { env } from '@/config/env'
 
 /**
  * Starts Microsoft sign-in by navigating the browser to the API.
@@ -20,15 +20,9 @@ import { env } from '@/config/env'
  *   the server rejects absolute URLs to prevent an open redirect.
  */
 export function startMicrosoftSignIn({ returnPath } = {}) {
-  const url = new URL(`${env.apiBaseUrl}${ENDPOINTS.auth.login}`, window.location.origin)
-
-  if (returnPath) {
-    url.searchParams.set('returnPath', returnPath)
-  }
-
   // `assign` rather than `replace` so the browser's Back button still works if
   // the user abandons the Microsoft consent screen.
-  window.location.assign(url.toString())
+  window.location.assign(apiUrl(ENDPOINTS.auth.login, { returnPath }))
 }
 
 /**
@@ -56,19 +50,11 @@ export function startMicrosoftSignIn({ returnPath } = {}) {
  * A refusal comes back to the login page as `?admin=error&reason=...`.
  */
 export function startMicrosoftAdminSignIn() {
-  const url = new URL(`${env.apiBaseUrl}${ENDPOINTS.auth.microsoftAdmin}`, window.location.origin)
-
-  window.location.assign(url.toString())
+  window.location.assign(apiUrl(ENDPOINTS.auth.microsoftAdmin))
 }
 
 export function startGoogleSignIn({ returnPath } = {}) {
-  const url = new URL(`${env.apiBaseUrl}${ENDPOINTS.auth.google}`, window.location.origin)
-
-  if (returnPath) {
-    url.searchParams.set('returnPath', returnPath)
-  }
-
-  window.location.assign(url.toString())
+  window.location.assign(apiUrl(ENDPOINTS.auth.google, { returnPath }))
 }
 
 /**

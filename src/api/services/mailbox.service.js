@@ -12,8 +12,8 @@
  */
 
 import { ENDPOINTS } from '@/api/endpoints'
+import { apiUrl } from '@/api/apiUrl'
 import { httpClient } from '@/api/httpClient'
-import { env } from '@/config/env'
 
 /**
  * Fetches every mailbox this workspace has connected.
@@ -41,27 +41,22 @@ export async function fetchMailboxes({ signal } = {}) {
  *   absolute URLs to prevent an open redirect.
  */
 export function startMailboxConnect({ returnPath, mailboxId } = {}) {
-  const url = new URL(`${env.apiBaseUrl}${ENDPOINTS.mailboxes.connect}`, window.location.origin)
-
-  if (returnPath) {
-    url.searchParams.set('returnPath', returnPath)
-  }
-
   /**
-   * Present only for a **reconnect**, naming the registry entry being repaired.
+   * `mailboxId` is present only for a **reconnect**, naming the registry entry
+   * being repaired.
    *
-   * The server re-resolves this against the caller's own mailboxes and then
+   * The server re-resolves it against the caller's own mailboxes and then
    * requires the Microsoft account that comes back to match it, so signing in
    * with the wrong account is refused rather than quietly rewriting the entry
    * to point at a different mailbox.
+   *
+   * Both parameters are dropped by `apiUrl` when absent.
    */
-  if (mailboxId) {
-    url.searchParams.set('mailboxId', mailboxId)
-  }
+  const url = apiUrl(ENDPOINTS.mailboxes.connect, { returnPath, mailboxId })
 
   // `assign` rather than `replace`, so Back still works if the user abandons
   // the Microsoft consent screen.
-  window.location.assign(url.toString())
+  window.location.assign(url)
 }
 
 /**

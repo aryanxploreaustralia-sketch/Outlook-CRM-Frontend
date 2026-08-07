@@ -13,6 +13,7 @@
 
 import axios from 'axios'
 
+import { API_BASE_URL, apiPath, toEndpointPath } from '@/api/apiUrl'
 import { env } from '@/config/env'
 import { logger } from '@/utils/logger'
 
@@ -49,7 +50,10 @@ function isCancellation(error) {
 }
 
 const httpClient = axios.create({
-  baseURL: env.apiBaseUrl,
+  // Already normalised by `@/config/apiBaseUrl` and joined by `@/api/apiUrl`;
+  // read from there rather than from config, so this instance and the URLs
+  // built for navigations and downloads cannot drift apart.
+  baseURL: API_BASE_URL,
   timeout: env.apiTimeout,
   headers: {
     'Content-Type': 'application/json',
@@ -68,7 +72,21 @@ function createRequestId() {
 httpClient.interceptors.request.use(
   (config) => {
     config.headers['X-Request-Id'] = createRequestId()
-    logger.debug(`→ ${config.method?.toUpperCase()} ${config.baseURL ?? ''}${config.url}`)
+
+    // Last line of defence against a doubled prefix. `baseURL` already carries
+    // the origin and `/api`, so an endpoint that also spells one of them out
+    // would produce `/api/api/v1/...` — the class of fault this layer exists to
+    // make impossible. Absolute URLs are left alone: Axios ignores `baseURL`
+    // for those, so there is nothing to duplicate.
+    if (typeof config.url === 'string' && !/^[a-z][a-z\d+\-.]*:\/\//i.test(config.url)) {
+      config.url = toEndpointPath(config.url)
+    }
+
+    // Log what the browser will actually request, not an approximation of it.
+    // The old form concatenated `baseURL` and `url` directly, so it printed
+    // `/api/v1/health` for a base of `/api/` — one slash away from the real
+    // request, which is exactly the detail worth reading a debug log for.
+    logger.debug(`→ ${config.method?.toUpperCase()} ${apiPath(config.url)}`)
     return config
   },
   (error) => Promise.reject(error),
@@ -116,12 +134,18 @@ httpClient.interceptors.response.use(
       }
     } else {
       // No response at all — server down, DNS failure, CORS block, offline.
+      //
+      // The browser deliberately withholds which of those it was, so the log
+      // line carries the base URL instead: a wrong one and a CORS rejection are
+      // by far the most common causes in a deployed build, and both are
+      // diagnosable the moment the address being called is visible.
       normalised = {
         message: 'Unable to reach the server. Please check that the API is running.',
         status: null,
         code: 'NETWORK_ERROR',
         details: null,
         isNetwork: true,
+        baseUrl: API_BASE_URL,
       }
     }
 
@@ -129,7 +153,11 @@ httpClient.interceptors.response.use(
     // unconditionally rather than testing for its presence.
     normalised.isCanceled = false
 
-    logger.error(normalised.message, { code: normalised.code, status: normalised.status })
+    logger.error(normalised.message, {
+      code: normalised.code,
+      status: normalised.status,
+      url: apiPath(error.config?.url ?? ''),
+    })
     return Promise.reject(normalised)
   },
 )

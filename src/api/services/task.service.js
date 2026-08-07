@@ -13,6 +13,7 @@
  */
 
 import { ENDPOINTS } from '@/api/endpoints'
+import { apiUrl } from '@/api/apiUrl'
 import { httpClient } from '@/api/httpClient'
 
 /** Strips empty values, so `?status=` never reaches Zod as an empty string. */
@@ -97,8 +98,9 @@ export async function attachToTask(id, file) {
  * and the PDF viewer — all of which would have to be rebuilt around a blob.
  */
 export function taskAttachmentUrl(id, attachmentId, { download = false } = {}) {
-  const base = httpClient.defaults.baseURL ?? ''
-  return `${base}${ENDPOINTS.tasks.attachment(id, attachmentId)}${download ? '?download=1' : ''}`
+  return apiUrl(ENDPOINTS.tasks.attachment(id, attachmentId), {
+    download: download ? '1' : null,
+  })
 }
 
 // ---------------------------------------------------------------------------
