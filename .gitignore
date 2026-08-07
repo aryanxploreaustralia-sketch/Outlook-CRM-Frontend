@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Outlook Automation CRM — frontend ignore rules
+# ---------------------------------------------------------------------------
+
+# --- Dependencies ----------------------------------------------------------
+# Never commit node_modules. Several dependencies here ship prebuilt native
+# binaries chosen per platform (@rolldown/binding-*, @tailwindcss/oxide-*,
+# lightningcss-*, @oxlint/binding-*). A tree committed from Windows carries the
+# win32-x64-msvc bindings, and checking it out on a Linux build server leaves
+# npm with an already-populated directory holding binaries it cannot execute.
+# The lockfile is what makes installs reproducible — not the directory.
+node_modules/
+.pnp/
+.pnp.js
+.yarn/
+
+# --- Environment & secrets -------------------------------------------------
+# Every VITE_* value is inlined into the shipped bundle, so these are public by
+# nature — but the file is still per-environment. `.env.example` is the tracked
+# template, and `src/config/env.js` falls back to the same defaults.
+.env
+.env.*
+!.env.example
+
+# --- Build output ----------------------------------------------------------
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# --- Logs ------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Caches ----------------------------------------------------------------
+.cache/
+.npm/
+.eslintcache
+.oxlintcache
+
+# --- Editors & IDEs --------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# --- Operating system ------------------------------------------------------
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
