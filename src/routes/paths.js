@@ -84,13 +84,15 @@ export const ROUTE_PATHS = Object.freeze({
 })
 
 /**
- * Items in the Phase 1 public header.
+ * Items in the public header, which `RootLayout` renders.
  *
- * Retained so the original `RootLayout` keeps working exactly as before; the
- * dashboard chrome uses `SIDEBAR_NAV` instead.
+ * The dashboard chrome uses `SIDEBAR_NAV` instead.
+ *
+ * `ROOT` is deliberately absent: `/` is a redirect rather than a page, so a
+ * link to it would bounce the reader straight back out to wherever their
+ * session already places them.
  */
 export const NAV_ITEMS = Object.freeze([
-  { path: ROUTE_PATHS.ROOT, label: 'Overview', end: true },
   { path: ROUTE_PATHS.DASHBOARD, label: 'Dashboard', end: false },
   { path: ROUTE_PATHS.SYSTEM, label: 'System', end: false },
 ])

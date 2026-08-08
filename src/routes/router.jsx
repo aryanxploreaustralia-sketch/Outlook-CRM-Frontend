@@ -11,8 +11,12 @@
  * route change.
  *
  * **Structure.** Two shells coexist deliberately:
- *   - `RootLayout` keeps the public Phase 1 pages working exactly as before;
- *   - `DashboardLayout` is the authenticated shell every future module reuses.
+ *   - `RootLayout` carries the remaining public pages (`/system`, the 404);
+ *   - `DashboardLayout` is the authenticated shell every module reuses.
+ *
+ * `/` belongs to neither. It renders `RootRedirect`, which reads the session and
+ * forwards to `/login` or `/dashboard` — the CRM has a front door, not a
+ * landing page.
  *
  * Route titles live in `handle`, so `DashboardLayout` can read them via
  * `useMatches` and no page has to pass its title upward.
@@ -22,6 +26,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { adminRoute } from '@/admin/routes/adminRoutes'
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute'
+import { RootRedirect } from '@/components/routing/RootRedirect'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { RootLayout } from '@/layouts/RootLayout'
 import { ErrorPage } from '@/pages/ErrorPage'
@@ -49,7 +54,7 @@ export const router = createBrowserRouter([
     children: [
       {
         path: ROUTE_PATHS.DASHBOARD,
-        handle: { title: 'Dashboard', subtitle: 'Connection and platform overview' },
+        handle: { title: 'Dashboard', subtitle: 'Your enquiries, mailbox and platform' },
         lazy: async () => {
           const { DashboardPage } = await import('@/pages/DashboardPage')
           return { Component: DashboardPage }
@@ -325,19 +330,23 @@ export const router = createBrowserRouter([
   // catch-all nested under `/`.
   adminRoute,
 
-  // --- Public: Phase 1 pages, preserved unchanged -------------------------
+  // --- Public: the front door ---------------------------------------------
+  //
+  // `/` resolves to the login page or the dashboard depending on the session —
+  // see `RootRedirect`. It is declared outside `RootLayout` because it renders
+  // no page of its own: wrapping a redirect in the public header and footer
+  // would paint chrome for an instant before navigating away.
   {
     path: ROUTE_PATHS.ROOT,
+    element: <RootRedirect />,
+    errorElement: <ErrorPage />,
+  },
+
+  // --- Public: remaining unauthenticated pages ----------------------------
+  {
     element: <RootLayout />,
     errorElement: <ErrorPage />,
     children: [
-      {
-        index: true,
-        lazy: async () => {
-          const { OverviewPage } = await import('@/pages/OverviewPage')
-          return { Component: OverviewPage }
-        },
-      },
       {
         path: ROUTE_PATHS.SYSTEM,
         lazy: async () => {

@@ -1,9 +1,19 @@
 /**
- * Dashboard.
+ * Dashboard — the CRM's home, and where `/` now lands a signed-in user.
  *
- * Composes the four required cards plus the profile section from shared
- * components. Deliberately contains no API calls: `useDashboard` and
- * `useAccountStatus` own data, so this file is layout and formatting only.
+ * Reads top to bottom in the order the work happens: the register first
+ * (enquiry counts, the stage split, the newest arrivals), then the actions that
+ * start a task, then the Microsoft connection and platform health that the
+ * sending side depends on.
+ *
+ * Composes cards from shared components and deliberately contains no API calls:
+ * `useDashboard` and `useAccountStatus` own data, so this file is layout and
+ * formatting only.
+ *
+ * Every figure shown is one the server returned. Where a block of the payload
+ * is `null` — which is how the server reports a widget whose aggregation failed
+ * — the card for it says so rather than rendering a zero, because "none" and
+ * "could not count" look identical to a reader and mean opposite things.
  *
  * Loading strategy is progressive rather than all-or-nothing. `/dashboard` paints
  * the cards immediately, then `/account/status` fills in the live Microsoft Graph
@@ -20,6 +30,9 @@ import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { MicrosoftIcon } from '@/components/common/MicrosoftIcon'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { ContactsCard } from '@/components/dashboard/ContactsCard'
+import { CrmOverviewCard } from '@/components/dashboard/CrmOverviewCard'
+import { QuickActionsCard } from '@/components/dashboard/QuickActionsCard'
+import { RecentLeadsCard } from '@/components/dashboard/RecentLeadsCard'
 import { MailStatsCard } from '@/components/dashboard/MailStatsCard'
 import { ProfileCard } from '@/components/dashboard/ProfileCard'
 import { ProviderStatusCard } from '@/components/dashboard/ProviderStatusCard'
@@ -106,6 +119,13 @@ export function DashboardPage() {
           <div className="h-6 w-56 animate-pulse rounded-md bg-slate-200/80" />
           <div className="h-4 w-80 animate-pulse rounded-md bg-slate-200/60" />
         </div>
+        {/* Mirrors the final layout: register first, then the connection
+            cards, so the page does not reflow once the payload lands. */}
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SkeletonCard rows={6} />
+          <SkeletonCard rows={6} />
+        </div>
+        <SkeletonCard rows={2} />
         <div className="grid gap-5 lg:grid-cols-3">
           <div className="lg:col-span-1">
             <SkeletonProfile />
@@ -147,11 +167,28 @@ export function DashboardPage() {
             Welcome back{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Your Microsoft connection and platform health at a glance.
+            Your enquiries, your mailbox and the platform, at a glance.
           </p>
         </div>
         <ConnectionBadge connection={connection} />
       </div>
+
+      {/* --- The register --------------------------------------------------
+          Placed first because it is why the CRM exists; the Microsoft
+          connection and platform health follow below. Both read from the one
+          `/dashboard` payload already fetched, so this costs no extra request.
+
+          `sales` is null when the server's aggregation failed — each card
+          renders its own unavailable state rather than fabricating zeroes. */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <CrmOverviewCard sales={dashboard?.sales} />
+        <RecentLeadsCard
+          leads={dashboard?.sales?.recentLeads}
+          unavailable={!dashboard?.sales}
+        />
+      </div>
+
+      <QuickActionsCard />
 
       {/* --- Content grid --------------------------------------------------
           One column on mobile, two on small screens, three on large — with the
