@@ -90,8 +90,16 @@ export function CrmOverviewCard({ sales }) {
         </Link>
       </div>
 
-      <dl className="mt-3 grid grid-cols-2 gap-1 sm:grid-cols-4">
+      <dl className="mt-3 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
         <Figure label="Total" value={sales.totalLeads} to={ROUTE_PATHS.LEADS} />
+        {/*
+          `sales.recentLeads` is a COUNT — enquiries created in the last thirty
+          days — not a list. Reading it as one is what broke this page in
+          production, so it is labelled here for what it actually measures.
+          The list of recent enquiries comes from `GET /v1/leads` instead; see
+          `useRecentLeads`.
+        */}
+        <Figure label="New in 30 days" value={sales.recentLeads} to={ROUTE_PATHS.LEADS} />
         <Figure label="Companies" value={sales.companies} to={ROUTE_PATHS.COMPANIES} />
         <Figure label="Contacts" value={sales.contacts} to={ROUTE_PATHS.CONTACTS} />
         <Figure label="Campaign ready" value={sales.campaignReady} to={ROUTE_PATHS.CAMPAIGNS} />

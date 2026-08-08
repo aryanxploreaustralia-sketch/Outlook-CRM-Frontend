@@ -44,6 +44,7 @@ import { SkeletonCard, SkeletonProfile } from '@/components/ui/Skeleton'
 import { useAccountStatus } from '@/hooks/useAccountStatus'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboard } from '@/hooks/useDashboard'
+import { useRecentLeads } from '@/hooks/useRecentLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
 
@@ -89,6 +90,15 @@ export function DashboardPage() {
   // Deferred until the dashboard payload lands, so the two requests do not
   // compete for the connection on first paint.
   const accountStatus = useAccountStatus({ enabled: Boolean(dashboard) })
+
+  /**
+   * The six newest enquiries, fetched separately and deliberately.
+   *
+   * `GET /v1/dashboard` returns statistics, not records — it carries no lead
+   * list at all. Deferred like the status call so the first paint is not three
+   * requests wide.
+   */
+  const recent = useRecentLeads({ enabled: Boolean(dashboard) })
 
   const handleSignOut = useCallback(async () => {
     setIsSigningOut(true)
@@ -182,9 +192,17 @@ export function DashboardPage() {
           renders its own unavailable state rather than fabricating zeroes. */}
       <div className="grid gap-5 lg:grid-cols-2">
         <CrmOverviewCard sales={dashboard?.sales} />
+        {/*
+          The list comes from `GET /v1/leads`, not from the dashboard payload —
+          `sales.recentLeads` is a count, and rendering it as a list is the
+          defect this replaced. The two requests fail independently, so an
+          unavailable register costs this card and nothing else.
+        */}
         <RecentLeadsCard
-          leads={dashboard?.sales?.recentLeads}
-          unavailable={!dashboard?.sales}
+          leads={recent.leads}
+          isLoading={recent.isPending}
+          isError={recent.isError}
+          onRetry={recent.refresh}
         />
       </div>
 
