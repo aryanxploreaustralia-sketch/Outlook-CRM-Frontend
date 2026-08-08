@@ -132,7 +132,7 @@ export function LeadDetailPage() {
 
           <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
             {[
-              ['Quotation date', formatDate(lead.quoteDate)],
+              ['Query Date', formatDate(lead.quoteDate)],
               [
                 'Travel date',
                 // Prose values are shown verbatim; the sheet says "August" for

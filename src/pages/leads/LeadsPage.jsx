@@ -454,7 +454,7 @@ export function LeadsPage() {
                 <th scope="col" className="px-3 py-2 font-medium">Contact</th>
                 <th scope="col" className="px-3 py-2 font-medium">Company</th>
                 <th scope="col" className="px-3 py-2 font-medium">City</th>
-                <th scope="col" className="px-3 py-2 font-medium">Quoted</th>
+                <th scope="col" className="px-3 py-2 font-medium">Query Date</th>
                 <th scope="col" className="px-3 py-2 font-medium">Travel</th>
                 <th scope="col" className="px-3 py-2 font-medium">Pax</th>
                 <th scope="col" className="px-3 py-2 font-medium">Stage</th>

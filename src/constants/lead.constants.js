@@ -81,7 +81,9 @@ export const SHEET_KIND_STYLES = Object.freeze({
 /** Fields a column can be mapped onto in the wizard. */
 export const LEAD_FIELDS = Object.freeze([
   { value: 'reference', label: 'Reference (business key)' },
-  { value: 'quoteDate', label: 'Quotation Date' },
+  // `value` is the stored field name and is part of the import mapping the API
+  // receives — only the label is the user's wording.
+  { value: 'quoteDate', label: 'Query Date' },
   { value: 'travelDate', label: 'Travel Date' },
   { value: 'city', label: 'Departure City' },
   { value: 'companyName', label: 'Company / Source' },

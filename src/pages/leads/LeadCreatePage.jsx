@@ -297,7 +297,7 @@ export function LeadCreatePage() {
         <h2 className="text-sm font-semibold text-slate-900">Trip</h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field id="lead-quote-date" label="Quote Date (Q Date)" hint="dd/mm/yyyy" error={fieldErrors.quoteDate}>
+          <Field id="lead-quote-date" label="Query Date" hint="dd/mm/yyyy" error={fieldErrors.quoteDate}>
             <input
               id="lead-quote-date"
               value={form.quoteDate}
