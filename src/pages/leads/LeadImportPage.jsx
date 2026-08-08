@@ -34,6 +34,7 @@ import {
 
 import { inspectWorkbook, rollbackImport, syncWorkbook } from '@/api/services/lead.service'
 import { queueWorkbookSync } from '@/api/services/workbook.service'
+import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { WorkbookJobProgress } from '@/components/leads/WorkbookJobProgress'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
@@ -566,6 +567,15 @@ export function LeadImportPage() {
                       <th scope="col" className="px-3 py-2 font-medium">Reference</th>
                       <th scope="col" className="px-3 py-2 font-medium">Verdict</th>
                       <th scope="col" className="px-3 py-2 font-medium">Contact</th>
+                      {/*
+                        The stage the sheet's Status column resolved to.
+                        Shown because it is the one imported value the user
+                        cannot otherwise check before committing: every other
+                        column appears verbatim in the file, whereas Status is
+                        translated ("Closed" becomes Completed) and, for an
+                        enquiry already on file, is deliberately *not* applied.
+                      */}
+                      <th scope="col" className="px-3 py-2 font-medium">Stage</th>
                       <th scope="col" className="px-3 py-2 font-medium">What changed</th>
                     </tr>
                   </thead>
@@ -589,6 +599,28 @@ export function LeadImportPage() {
                         </td>
                         <td className="max-w-40 truncate px-3 py-1.5 text-slate-600">
                           {entry.data?.contactPerson ?? '—'}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-1.5">
+                          {/*
+                            Only a new enquiry takes its stage from the sheet.
+                            An enquiry already on file keeps the stage the CRM
+                            holds — `stage` is absent from both COMPARED_FIELDS
+                            and the sync's writable fields — so showing the
+                            sheet's value here would promise a change that the
+                            import will not make.
+                          */}
+                          {entry.category === 'new' && entry.data?.stage ? (
+                            <LeadStageBadge stage={entry.data.stage} />
+                          ) : entry.category === 'invalid' ? (
+                            <span className="text-slate-300">—</span>
+                          ) : (
+                            <span
+                              className="text-xs text-slate-400"
+                              title="This enquiry is already on file. The CRM's own stage is kept; the workbook's Status is not applied to it."
+                            >
+                              keeps current
+                            </span>
+                          )}
                         </td>
                         <td className="max-w-72 px-3 py-1.5 text-xs text-slate-500">
                           {entry.category === 'updated' && entry.changes?.length > 0
