@@ -47,7 +47,7 @@ const EMPTY_FORM = Object.freeze({
   travelDate: '',
   pax: '',
   handledBy: '',
-  stage: 'new',
+  stage: 'active',
   notes: '',
 })
 

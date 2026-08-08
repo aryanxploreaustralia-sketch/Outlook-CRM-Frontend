@@ -6,38 +6,36 @@
  * than fetched so a stage badge renders before any request completes.
  */
 
-/** Pipeline stages in board order. */
+/**
+ * The four lead stages, in board order.
+ *
+ * Mirrors `LEAD_STAGE` on the server, and the sales workbook's own `Status`
+ * column, which is where all three get their vocabulary. `eligible` mirrors
+ * `CAMPAIGN_ELIGIBLE_STAGES`: the server enforces it in the audience resolver,
+ * and this copy only decides whether the badge says "no mail".
+ *
+ * Every dropdown, filter and badge in the application reads this list, so it is
+ * the only place a stage is named.
+ */
 export const LEAD_STAGES = Object.freeze([
-  { value: 'new', label: 'New', eligible: true },
-  { value: 'quoted', label: 'Quoted', eligible: true },
-  { value: 'follow_up', label: 'Follow Up', eligible: true },
-  { value: 'interested', label: 'Interested', eligible: true },
-  { value: 'negotiation', label: 'Negotiation', eligible: true },
-  { value: 'visa_process', label: 'Visa Process', eligible: false },
-  { value: 'booked', label: 'Booked', eligible: false },
-  { value: 'completed', label: 'Completed', eligible: false },
-  { value: 'cancelled', label: 'Cancelled', eligible: false },
-  { value: 'lost', label: 'Lost', eligible: false },
+  { value: 'active', label: 'Active', eligible: true },
+  { value: 'inactive', label: 'Inactive', eligible: true },
+  { value: 'confirmed', label: 'Confirmed', eligible: false },
+  { value: 'closed', label: 'Closed', eligible: false },
 ])
 
 /**
  * Badge styling per stage.
  *
- * Colour carries meaning: slate is untouched, blue is in flight, amber is
- * waiting on the customer, violet is paperwork, green is won, red is dead. A
- * salesperson scanning fifty rows reads the colour before the word.
+ * Colour carries meaning: blue is live work, amber is waiting on the customer,
+ * green is won, slate is finished. A salesperson scanning fifty rows reads the
+ * colour before the word.
  */
 export const LEAD_STAGE_STYLES = Object.freeze({
-  new: { label: 'New', className: 'bg-slate-100 text-slate-700 ring-slate-200' },
-  quoted: { label: 'Quoted', className: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  follow_up: { label: 'Follow Up', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  interested: { label: 'Interested', className: 'bg-blue-50 text-blue-700 ring-blue-200' },
-  negotiation: { label: 'Negotiation', className: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
-  visa_process: { label: 'Visa Process', className: 'bg-violet-50 text-violet-700 ring-violet-200' },
-  booked: { label: 'Booked', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-800 ring-emerald-300' },
-  cancelled: { label: 'Cancelled', className: 'bg-rose-50 text-rose-700 ring-rose-200' },
-  lost: { label: 'Lost', className: 'bg-rose-100 text-rose-800 ring-rose-300' },
+  active: { label: 'Active', className: 'bg-blue-50 text-blue-700 ring-blue-200' },
+  inactive: { label: 'Inactive', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  confirmed: { label: 'Confirmed', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  closed: { label: 'Closed', className: 'bg-slate-100 text-slate-600 ring-slate-200' },
 })
 
 /** Stages a campaign may target. Mirrors `CAMPAIGN_ELIGIBLE_STAGES`. */
