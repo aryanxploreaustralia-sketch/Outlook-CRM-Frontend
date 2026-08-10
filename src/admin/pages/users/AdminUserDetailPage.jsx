@@ -70,7 +70,7 @@ import {
 } from '@/admin/constants/admin.constants'
 import { ADMIN_ROLE_BADGE } from '@/admin/constants/adminRoles.constants'
 import { PERMISSIONS } from '@/admin/constants/permissions'
-import { useAdminResource, useSectionObserver } from '@/admin/hooks'
+import { useAdminResource, useScrollToTop, useSectionObserver } from '@/admin/hooks'
 import { usePermissions } from '@/admin/hooks/usePermissions'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import {
@@ -121,6 +121,20 @@ export function AdminUserDetailPage() {
   const canSeeLeads = canSeeAnalytics && can(PERMISSIONS.LEADS_VIEW)
 
   const { activeId, hasSeen, register, scrollTo } = useSectionObserver(SECTION_IDS)
+
+  /**
+   * Open at Overview, whatever the previous page was scrolled to.
+   *
+   * `#admin-main` belongs to `AdminLayout`, the parent route, so it survives
+   * the navigation from the directory and arrives holding the directory's
+   * offset. Keyed on `id` so going straight from one user to another starts at
+   * the top for the second as well.
+   *
+   * It does not interfere with the section navigation below: this runs only
+   * when `id` changes, and choosing a section from the sidebar does not change
+   * it.
+   */
+  useScrollToTop(id)
 
   // --- Overlays and inline actions -----------------------------------------
   const [confirm, setConfirm] = useState({ action: null, user: null })
