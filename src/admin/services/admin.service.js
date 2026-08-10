@@ -136,6 +136,32 @@ export async function inviteAdminUser(input) {
   return response.data?.data ?? null
 }
 
+/**
+ * Assigns a workbook of enquiries to one user.
+ *
+ * The second, independent half of onboarding: the account is created first and
+ * this is called with the id it returned. Keeping them apart is what lets the
+ * dialog report "created, but the import failed" honestly instead of collapsing
+ * two outcomes into one.
+ *
+ * Sent exactly as the workbook importer sends a file — a raw
+ * `application/octet-stream` body with the name in `X-Filename` — so it travels
+ * through the same CORS allow-list and the same body-size ceiling.
+ *
+ * @param {string} id The **newly created** user's id. The server re-reads it and
+ *   is the authority on whether the caller may assign to that account.
+ * @param {File} file An .xlsx workbook.
+ * @param {{ signal?: AbortSignal, onUploadProgress?: Function }} [options]
+ */
+export async function importAdminUserLeads(id, file, { signal, onUploadProgress } = {}) {
+  const response = await httpClient.post(ADMIN_ENDPOINTS.users.importLeads(id), file, {
+    headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': file.name },
+    signal,
+    onUploadProgress,
+  })
+  return response.data?.data ?? null
+}
+
 /** Moves an invited or suspended account to active. */
 export async function activateAdminUser(id) {
   const response = await httpClient.patch(ADMIN_ENDPOINTS.users.activate(id))
@@ -512,6 +538,7 @@ export default {
   fetchAdminOrganization,
   fetchAdminUser,
   fetchAdminUsers,
+  importAdminUserLeads,
   inviteAdminUser,
   suspendAdminUser,
 }

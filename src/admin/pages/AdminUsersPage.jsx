@@ -537,7 +537,21 @@ export function AdminUsersPage() {
         onClose={() => setIsInviteOpen(false)}
         roles={data?.roles}
         onInvited={(result) => {
-          setNotice(`${result.user.email} has been invited. Activate them when they are ready.`)
+          /**
+           * `assignment` is present only when a workbook was uploaded *and* it
+           * imported. The dialog reports a failed import itself and does not
+           * reach here with a half-result, so this only ever adds good news.
+           */
+          const assigned = result.assignment
+            ? ` ${result.assignment.created.toLocaleString()} lead(s) assigned.` +
+              (result.assignment.invalid + result.assignment.failed > 0
+                ? ` ${result.assignment.invalid + result.assignment.failed} row(s) were skipped.`
+                : '')
+            : ''
+
+          setNotice(
+            `${result.user.email} has been invited. Activate them when they are ready.${assigned}`,
+          )
           refresh()
           setTimeout(() => setNotice(null), 6000)
         }}

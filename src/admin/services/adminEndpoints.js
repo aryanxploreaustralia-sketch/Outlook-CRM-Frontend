@@ -46,6 +46,12 @@ export const ADMIN_ENDPOINTS = Object.freeze({
     list: '/v1/admin/users',
     detail: (id) => `/v1/admin/users/${id}`,
     invite: '/v1/admin/users/invite',
+    /**
+     * Assigns a workbook of enquiries to one user, as the second half of
+     * onboarding them. A raw upload like the workbook importer — the file is
+     * the body and the name travels in `X-Filename`.
+     */
+    importLeads: (id) => `/v1/admin/users/${id}/leads/import`,
     activate: (id) => `/v1/admin/users/${id}/activate`,
     suspend: (id) => `/v1/admin/users/${id}/suspend`,
     /**
