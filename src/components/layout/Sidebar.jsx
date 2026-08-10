@@ -11,13 +11,15 @@
  * Only the positioning classes and the surrounding overlay differ.
  */
 
-import { ChevronLeft, ChevronRight, LogOut, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, ShieldCheck, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { UserAvatar } from '@/components/common/UserAvatar'
 import { SidebarNavItem } from '@/components/layout/SidebarNavItem'
 import { NAV_SECTIONS } from '@/config/navigation'
 import { env } from '@/config/env'
+import { useAdminAccess } from '@/hooks/useAdminAccess'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 /**
@@ -44,6 +46,16 @@ export function Sidebar({
   onSignOut,
   isSigningOut = false,
 }) {
+  /**
+   * Whether to offer the way through to the admin console.
+   *
+   * Read here rather than passed down, so `DashboardLayout` does not have to
+   * thread a prop it has no other use for. One `<Sidebar>` is mounted — it
+   * renders the desktop, tablet and drawer presentations from the same
+   * instance — so this is one request per CRM session, not one per mode.
+   */
+  const { hasAdminAccess } = useAdminAccess()
+
   const width = isCollapsed ? 'w-(--spacing-sidebar-collapsed)' : 'w-(--spacing-sidebar)'
 
   /** Tapping a link inside the drawer should dismiss it. */
@@ -177,6 +189,30 @@ export function Sidebar({
                 </div>
               )}
             </div>
+          )}
+
+          {/* --- The way in to the admin console ---------------------------
+              The mirror of the console's own "Back to CRM" row, in the same
+              position at the foot of the sidebar and following the same
+              collapsed pattern: icon only, with the label moved to `title` and
+              a screen-reader span.
+
+              Shown only to an account the server says holds admin access. This
+              is presentation, not protection — `AdminLayout` gates on the same
+              flag and every admin endpoint enforces its own permission. */}
+          {hasAdminAccess && (
+            <Link
+              to={ADMIN_PATHS.ROOT}
+              onClick={handleNavigate}
+              title={isCollapsed ? 'Admin Panel' : undefined}
+              className={`mb-1 flex w-full items-center rounded-lg text-sm font-medium text-sidebar-text transition-colors hover:bg-sidebar-hover hover:text-sidebar-text-strong ${
+                isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'
+              }`}
+            >
+              <ShieldCheck className="size-5 shrink-0" aria-hidden="true" />
+              {!isCollapsed && <span>Admin Panel</span>}
+              {isCollapsed && <span className="sr-only">Admin Panel</span>}
+            </Link>
           )}
 
           <button
