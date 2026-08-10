@@ -153,9 +153,27 @@ export async function inviteAdminUser(input) {
  * @param {File} file An .xlsx workbook.
  * @param {{ signal?: AbortSignal, onUploadProgress?: Function }} [options]
  */
-export async function importAdminUserLeads(id, file, { signal, onUploadProgress } = {}) {
+export async function importAdminUserLeads(
+  id,
+  file,
+  { sheets = null, mapping = null, dryRun = false, signal, onUploadProgress } = {},
+) {
+  /**
+   * Options travel in `X-Import-Options`, like every other raw upload.
+   *
+   * All three are optional and all three absent is the invitation flow's call —
+   * import every lead register in the file, unreviewed. The profile wizard
+   * supplies them: `dryRun` for the preview step, `sheets` for the selection,
+   * and `mapping` for a correction the admin made.
+   */
+  const options = clean({ sheets, mapping, dryRun: dryRun || null })
+
   const response = await httpClient.post(ADMIN_ENDPOINTS.users.importLeads(id), file, {
-    headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': file.name },
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'X-Filename': file.name,
+      'X-Import-Options': JSON.stringify(options),
+    },
     signal,
     onUploadProgress,
   })

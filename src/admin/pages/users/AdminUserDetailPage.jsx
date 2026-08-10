@@ -50,6 +50,7 @@ import {
   UserEmployeeProfileSection,
 } from '@/admin/components/users/detail/UserEmployeeSections'
 import { UserIdentitySection } from '@/admin/components/users/detail/UserIdentitySection'
+import { UserImportLeadsSection } from '@/admin/components/users/detail/UserImportLeadsSection'
 import { UserPerformanceDashboardSection } from '@/admin/components/users/detail/UserPerformanceDashboardSection'
 import { UserTasksSection } from '@/admin/components/users/detail/UserTasksSection'
 import { UserRoleSection } from '@/admin/components/users/detail/UserRoleSection'
@@ -102,6 +103,9 @@ const SECTIONS = [
   { id: 'mailboxes', label: 'Mailboxes' },
   { id: 'campaigns', label: 'Campaigns' },
   { id: 'leads', label: 'Leads' },
+  // Placed immediately after Leads: it is the same subject — what this account
+  // owns — and the natural next question once you have looked at the register.
+  { id: 'import-leads', label: 'Import leads' },
   { id: 'replies', label: 'Replies' },
   { id: 'permissions', label: 'Permissions' },
   { id: 'security', label: 'Security' },
@@ -529,6 +533,15 @@ export function AdminUserDetailPage() {
             leads={leads}
             isLoading={leadsLoading}
             canSee={canSeeLeads}
+            registerRef={register}
+          />
+
+          {/* Gated on `users.invite` — the same capability the invitation flow
+              uses to create an account and stock it. The server enforces it
+              again; this only decides whether the form is worth showing. */}
+          <UserImportLeadsSection
+            user={user}
+            canImport={can(PERMISSIONS.USERS_INVITE)}
             registerRef={register}
           />
 
