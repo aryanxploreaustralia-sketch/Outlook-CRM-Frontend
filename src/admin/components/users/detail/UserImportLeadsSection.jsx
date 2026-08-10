@@ -32,7 +32,7 @@
  * every step.
  */
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { FileSpreadsheet, TriangleAlert, Upload, X } from 'lucide-react'
 
 import { AdminCard } from '@/admin/components/AdminCard'
@@ -69,6 +69,9 @@ export function UserImportLeadsSection({ user, canImport, registerRef }) {
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
+
+  /** The hidden file input, opened programmatically — see the upload step. */
+  const fileInput = useRef(null)
 
   const reset = () => {
     setStep(STEP.UPLOAD)
@@ -212,23 +215,47 @@ export function UserImportLeadsSection({ user, canImport, registerRef }) {
 
       {busy && <p className="mb-3 text-sm text-slate-500">{busy}</p>}
 
-      {/* --- 1. Upload ---------------------------------------------------- */}
+      {/* --- 1. Upload ----------------------------------------------------
+          The input is opened through a ref, exactly as the CRM importer opens
+          its own. It is deliberately **not** wrapped in a `<label>`.
+
+          A label moves focus to the control it labels. This control is
+          `sr-only` — absolutely positioned, one pixel, clipped — and focusing
+          it makes the browser scroll it into view, which scrolls `#admin-main`
+          (the admin shell's only scroll container) to an offset with no content
+          beneath it. The profile does not crash or unmount; it scrolls away,
+          which reads as a blank page the instant the picker opens.
+
+          `.click()` on the ref opens the picker without focusing anything, so
+          nothing scrolls. This is why the CRM importer has never shown the
+          fault, and copying its pattern is the fix. */}
       {step === STEP.UPLOAD && (
-        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-600 hover:border-slate-400 hover:bg-slate-50">
-          <Upload className="size-4 shrink-0 text-slate-400" aria-hidden="true" />
-          Choose .xlsx file
+        <div className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center">
           <input
+            ref={fileInput}
             type="file"
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="sr-only"
-            disabled={Boolean(busy)}
             onChange={(event) => {
               const chosen = event.target.files?.[0] ?? null
+              // Cleared so choosing the same file twice still fires `change`.
               event.target.value = ''
+              // `handleFile` returns immediately on null, so cancelling the
+              // native picker does nothing at all.
               handleFile(chosen)
             }}
           />
-        </label>
+
+          <Button size="sm" disabled={Boolean(busy)} onClick={() => fileInput.current?.click()}>
+            <Upload className="size-4" aria-hidden="true" />
+            Choose .xlsx file
+          </Button>
+
+          <p className="mt-2 text-xs text-slate-500">
+            Every worksheet is read and classified. Nothing is written until you have seen the
+            preview.
+          </p>
+        </div>
       )}
 
       {file && step !== STEP.UPLOAD && (
