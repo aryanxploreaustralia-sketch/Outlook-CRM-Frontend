@@ -22,6 +22,15 @@ export const LEAD_STAGES = Object.freeze([
   { value: 'inactive', label: 'Inactive', eligible: true },
   { value: 'confirmed', label: 'Confirmed', eligible: false },
   { value: 'closed', label: 'Closed', eligible: false },
+  /**
+   * The agency or contact has stopped trading.
+   *
+   * `eligible: false` mirrors the server's `CAMPAIGN_ELIGIBLE_STAGES`, which
+   * omits it: a business that no longer exists is the one audience a
+   * re-engagement campaign must not reach. The server enforces that in the
+   * audience resolver; this copy only decides whether the badge says "no mail".
+   */
+  { value: 'not_operating', label: 'Not operating', eligible: false },
 ])
 
 /**
@@ -36,6 +45,9 @@ export const LEAD_STAGE_STYLES = Object.freeze({
   inactive: { label: 'Inactive', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
   confirmed: { label: 'Confirmed', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   closed: { label: 'Closed', className: 'bg-slate-100 text-slate-600 ring-slate-200' },
+  // Rose, not red-as-error: the enquiry is not faulty, the counterparty is
+  // gone. Distinct from `closed`'s neutral slate so the two do not read alike.
+  not_operating: { label: 'Not operating', className: 'bg-rose-50 text-rose-700 ring-rose-200' },
 })
 
 /** Stages a campaign may target. Mirrors `CAMPAIGN_ELIGIBLE_STAGES`. */
