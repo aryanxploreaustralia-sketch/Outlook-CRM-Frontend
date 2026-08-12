@@ -31,6 +31,10 @@ export const LEAD_STAGES = Object.freeze([
    * audience resolver; this copy only decides whether the badge says "no mail".
    */
   { value: 'not_operating', label: 'Not operating', eligible: false },
+  // `eligible` mirrors the server's CAMPAIGN_ELIGIBLE_STAGES, which does not
+  // list it — so it is blocked from campaign mail by default. See the note in
+  // the report if that should change.
+  { value: 'query', label: 'Query', eligible: false },
 ])
 
 /**
@@ -48,6 +52,7 @@ export const LEAD_STAGE_STYLES = Object.freeze({
   // Rose, not red-as-error: the enquiry is not faulty, the counterparty is
   // gone. Distinct from `closed`'s neutral slate so the two do not read alike.
   not_operating: { label: 'Not operating', className: 'bg-rose-50 text-rose-700 ring-rose-200' },
+  query: { label: 'Query', className: 'bg-sky-50 text-sky-700 ring-sky-200' },
 })
 
 /** Stages a campaign may target. Mirrors `CAMPAIGN_ELIGIBLE_STAGES`. */

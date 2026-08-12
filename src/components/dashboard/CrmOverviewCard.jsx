@@ -29,6 +29,7 @@ const STAGE_BAR = Object.freeze({
   confirmed: 'bg-emerald-500',
   closed: 'bg-slate-400',
   not_operating: 'bg-rose-400',
+  query: 'bg-sky-500',
 })
 
 /** A headline count. `null` renders an em dash rather than a zero. */
