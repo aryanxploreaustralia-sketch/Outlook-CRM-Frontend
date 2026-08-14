@@ -174,7 +174,11 @@ export function AdminUserDetailPage() {
   })
 
   const leadsLoader = useCallback((options) => fetchAdminLeads(options), [])
-  const { data: leadData, isLoading: leadsLoading } = useAdminResource(leadsLoader, {
+  const {
+    data: leadData,
+    isLoading: leadsLoading,
+    refresh: refreshLeads,
+  } = useAdminResource(leadsLoader, {
     enabled: canSeeLeads && hasSeen('leads'),
   })
 
@@ -543,6 +547,22 @@ export function AdminUserDetailPage() {
             user={user}
             canImport={can(PERMISSIONS.USERS_INVITE)}
             registerRef={register}
+            /**
+             * Re-read this person's data once the import has committed.
+             *
+             * Both matter: `refreshLeads` repopulates the Leads section below,
+             * and `refresh` re-reads the profile itself, whose activity counts
+             * include enquiries. Without them the admin sees the import's own
+             * success summary sitting above a lead list that still shows the
+             * pre-import state, which reads as the import not having worked.
+             *
+             * The target user's own CRM needs nothing here — no lead data is
+             * cached anywhere, so their register fetches fresh on next load.
+             */
+            onImported={() => {
+              refreshLeads()
+              refresh()
+            }}
           />
 
           <UserRepliesSection

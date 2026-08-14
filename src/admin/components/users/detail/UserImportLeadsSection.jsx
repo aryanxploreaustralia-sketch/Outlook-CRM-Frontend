@@ -59,7 +59,7 @@ const STEP = Object.freeze({ UPLOAD: 0, SHEETS: 1, MAPPING: 2, PREVIEW: 3, RESUL
  *   the name and address are shown so the administrator can see whose register
  *   they are filling.
  */
-export function UserImportLeadsSection({ user, canImport, registerRef }) {
+export function UserImportLeadsSection({ user, canImport, registerRef, onImported }) {
   const [step, setStep] = useState(STEP.UPLOAD)
   const [file, setFile] = useState(null)
   const [inspection, setInspection] = useState(null)
@@ -144,6 +144,11 @@ export function UserImportLeadsSection({ user, canImport, registerRef }) {
       })
       setResult(data)
       setStep(STEP.RESULT)
+
+      // Only after the write has been confirmed, and only on success — so the
+      // surrounding profile re-reads this person's enquiries rather than
+      // leaving a stale list beside a success summary.
+      onImported?.()
     } catch (thrown) {
       setError(thrown?.message ?? 'The import failed.')
     } finally {
