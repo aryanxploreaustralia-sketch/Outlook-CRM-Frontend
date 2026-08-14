@@ -23,7 +23,7 @@
  * column imply a conversation timestamp.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshCw, UserCheck } from 'lucide-react'
 
 import {
@@ -34,6 +34,7 @@ import {
   AdminFilterBar,
   AdminFilterSelect,
   AdminPageContainer,
+  AdminPagination,
   AdminSearch,
   AdminStatCard,
   AdminTable,
@@ -44,6 +45,7 @@ import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admi
 import { fetchAdminLeads } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatDate } from '@/admin/utils/format'
 import { Button } from '@/components/ui/Button'
+import { LEAD_STAGES } from '@/constants/lead.constants'
 
 /** Tone per stage. The label always carries the meaning as well. */
 const STAGE_TONE = {
@@ -59,10 +61,16 @@ const STAGE_TONE = {
   lost: 'neutral',
 }
 
-const STAGE_OPTIONS = Object.keys(STAGE_TONE).map((value) => ({
-  value,
-  label: value.replace(/_/g, ' ').replace(/^./, (character) => character.toUpperCase()),
-}))
+/**
+ * Derived from the shared vocabulary, not from `STAGE_TONE` above.
+ *
+ * `STAGE_TONE` still lists the ten stages this CRM used before the register was
+ * reduced to the workbook's own words, so building the filter from its keys
+ * offered ten dead options and none of the live ones — a filter that could only
+ * return nothing. The tone map is left alone: it is keyed lookup with a
+ * `?? 'neutral'` fallback, so stale keys are harmless.
+ */
+const STAGE_OPTIONS = LEAD_STAGES.map(({ value, label }) => ({ value, label }))
 
 export function AdminLeadMonitorPage() {
   const breadcrumb = useAdminBreadcrumbs()
@@ -72,17 +80,29 @@ export function AdminLeadMonitorPage() {
   const [attention, setAttention] = useState('')
   const search = useDebouncedValue(searchInput)
 
+  // Server-side paging. The monitor previously showed a fixed newest-200 slice
+  // and reported that as the total, so the rest of the register was unreachable.
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(50)
+
+  // Any filter change invalidates the current page number — page 7 of an
+  // unfiltered register is rarely page 7 of a search.
+  useEffect(() => {
+    setPage(1)
+  }, [search, stage, attention])
+
   const loader = useCallback(
-    (options) => fetchAdminLeads({ search, stage, attention, ...options }),
-    [search, stage, attention],
+    (options) => fetchAdminLeads({ search, stage, attention, page, limit, ...options }),
+    [search, stage, attention, page, limit],
   )
 
   const { data, error, isLoading, isRefreshing, refresh } = useAdminResource(loader, {
-    deps: [search, stage, attention],
+    deps: [search, stage, attention, page, limit],
   })
 
   const items = data?.items ?? []
   const summary = data?.summary
+  const pagination = data?.pagination
   const staleAfterDays = data?.meta?.staleAfterDays ?? 30
   const activeFilterCount = [search, stage, attention].filter(Boolean).length
 
@@ -280,6 +300,20 @@ export function AdminLeadMonitorPage() {
             )
           }
         />
+
+        {/* Every page is reachable; totals come from the API, never the row count. */}
+        {!isLoading && pagination?.total > 0 && (
+          <div className="border-t border-slate-100 px-5 py-3">
+            <AdminPagination
+              page={pagination.page}
+              pageSize={pagination.limit}
+              totalItems={pagination.total}
+              onPageChange={setPage}
+              onPageSizeChange={(next) => { setLimit(next); setPage(1) }}
+              disabled={isRefreshing}
+            />
+          </div>
+        )}
       </AdminCard>
     </AdminPageContainer>
   )
