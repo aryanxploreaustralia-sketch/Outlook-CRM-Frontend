@@ -28,9 +28,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CalendarClock,
-  ChevronDown,
   Inbox,
-  MoreHorizontal,
   UserCheck,
   UserX,
 } from 'lucide-react'
@@ -392,18 +390,22 @@ export function AdminUserDetailPage() {
               </Can>
             )}
 
-            {/* Reserved. Role changes, deletion and export land here; disabled
-                rather than absent so the control's position is settled now. */}
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled
-              aria-label="More actions — available in a later phase"
-              title="More actions arrive in a later phase"
-            >
-              <MoreHorizontal className="size-4" aria-hidden="true" />
-              <ChevronDown className="size-3" aria-hidden="true" />
-            </Button>
+            {/*
+              The reserved "more actions" control has been removed.
+
+              It was a permanently `disabled` placeholder holding a position for
+              role changes, deletion and export — none of which were ever wired
+              to it. A disabled button renders `cursor-not-allowed` on hover,
+              which is correct for a disabled control and exactly why it read as
+              broken: it advertised a menu that did not exist and refused every
+              click.
+
+              Removed rather than enabled, because the alternatives were worse.
+              Forcing `pointer-events` would leave a button that opens nothing,
+              and attaching actions to it would be inventing a feature under the
+              guise of a cursor fix. The controls that do exist — Activate and
+              Suspend — are unchanged and still to the left.
+            */}
           </div>
         </div>
 
