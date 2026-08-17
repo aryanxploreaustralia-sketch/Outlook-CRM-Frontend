@@ -14,6 +14,7 @@
  * name is absent and falls back to an address — so both rows carry `ownerId`.
  */
 
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ExternalLink,
@@ -22,11 +23,13 @@ import {
   Plug,
   RefreshCw,
   Star,
+  Trash2,
   UserMinus,
 } from 'lucide-react'
 
 import { AdminBadge } from '@/admin/components/AdminBadge'
 import { AdminCard } from '@/admin/components/AdminCard'
+import { AdminModal } from '@/admin/components/AdminModal'
 import { AdminEmptyState } from '@/admin/components/AdminEmptyState'
 import { AdminListLoading, AdminTableLoading } from '@/admin/components/AdminLoadingState'
 import { AdminTable, AdminTableIdentity } from '@/admin/components/AdminTable'
@@ -322,7 +325,68 @@ export function UserCampaignsSection({ campaigns, isLoading, canSee, registerRef
 }
 
 /** Section 5 — recent enquiries this person owns. Read-only. */
-export function UserLeadsSection({ leads, total, isLoading, canSee, registerRef }) {
+export function UserLeadsSection({
+  leads,
+  total,
+  isLoading,
+  canSee,
+  registerRef,
+  canDelete = false,
+  onDelete,
+}) {
+  /**
+   * Selection, and the pending confirmation.
+   *
+   * `confirm` holds the *intent* rather than a boolean, so the dialog can render
+   * one message per shape and the handler has everything it needs.
+   */
+  const [selected, setSelected] = useState([])
+  const [confirm, setConfirm] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState(null)
+
+  const rowIds = leads.map((lead) => lead.id)
+  const allChecked = rowIds.length > 0 && rowIds.every((id) => selected.includes(id))
+
+  const toggle = (id) =>
+    setSelected((previous) =>
+      previous.includes(id) ? previous.filter((x) => x !== id) : [...previous, id],
+    )
+
+  /**
+   * Runs the confirmed deletion.
+   *
+   * `busy` gates both the buttons and this function, so a double click cannot
+   * send the request twice. Selection is cleared only on success — a failure
+   * leaves the rows ticked so the admin can retry without re-selecting.
+   */
+  const run = async () => {
+    if (!confirm || busy) return
+
+    setBusy(true)
+    setNotice(null)
+
+    try {
+      const payload = confirm.kind === 'all' ? { all: true } : { leadIds: confirm.ids }
+      const result = await onDelete(payload)
+
+      setConfirm(null)
+      setSelected([])
+
+      // The server's numbers, not the count that was asked for — they differ
+      // when an id matched nothing, and that difference is worth showing.
+      const skipped = result?.skipped?.length ?? 0
+      setNotice(
+        `${(result?.deleted ?? 0).toLocaleString()} enquiry/enquiries deleted.` +
+          (skipped > 0 ? ` ${skipped} could not be matched and were left alone.` : ''),
+      )
+    } catch (error) {
+      setNotice(error?.message ?? 'The enquiries could not be deleted.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const columns = [
     {
       key: 'reference',
@@ -378,6 +442,48 @@ export function UserLeadsSection({ leads, total, isLoading, canSee, registerRef 
     },
   ]
 
+  const selectionColumn = {
+    key: '__select',
+    header: (
+      <input
+        type="checkbox"
+        aria-label="Select all enquiries on this page"
+        className="size-4"
+        checked={allChecked}
+        onChange={(event) => setSelected(event.target.checked ? rowIds : [])}
+      />
+    ),
+    render: (lead) => (
+      <input
+        type="checkbox"
+        aria-label={`Select ${lead.reference}`}
+        className="size-4"
+        checked={selected.includes(lead.id)}
+        onChange={() => toggle(lead.id)}
+      />
+    ),
+  }
+
+  const deleteColumn = {
+    key: '__delete',
+    header: '',
+    render: (lead) => (
+      <button
+        type="button"
+        onClick={() => setConfirm({ kind: 'one', ids: [lead.id], lead })}
+        disabled={busy}
+        className="rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+        aria-label={`Delete ${lead.reference}`}
+        title="Delete this enquiry"
+      >
+        <Trash2 className="size-4" aria-hidden="true" />
+      </button>
+    ),
+  }
+
+  // The controls appear only for a caller the server would accept anyway.
+  const tableColumns = canDelete ? [selectionColumn, ...columns, deleteColumn] : columns
+
   return (
     <UserSection
       id="leads"
@@ -396,11 +502,51 @@ export function UserLeadsSection({ leads, total, isLoading, canSee, registerRef 
         </PendingSection>
       ) : (
         <AdminCard padded={false}>
+          {canDelete && !isLoading && (leads.length > 0 || selected.length > 0) && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-2.5">
+              <span className="text-xs text-slate-500">
+                {selected.length > 0
+                  ? `${selected.length} selected`
+                  : 'Select enquiries to delete, or delete the whole register.'}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {selected.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => setConfirm({ kind: 'selected', ids: selected })}
+                  >
+                    <Trash2 className="size-3.5" aria-hidden="true" />
+                    Delete selected ({selected.length})
+                  </Button>
+                )}
+                {/* Deliberately the most destructive control here, and disabled
+                    when the register is already empty. */}
+                <Button
+                  variant="danger"
+                  size="sm"
+                  disabled={busy || !total}
+                  onClick={() => setConfirm({ kind: 'all' })}
+                >
+                  <Trash2 className="size-3.5" aria-hidden="true" />
+                  Delete all leads
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {notice && (
+            <p role="status" className="border-b border-slate-100 px-5 py-2 text-xs text-slate-600">
+              {notice}
+            </p>
+          )}
+
           {isLoading ? (
             <AdminTableLoading rows={3} columns={5} />
           ) : (
             <AdminTable
-              columns={columns}
+              columns={tableColumns}
               rows={leads}
               caption="Enquiries owned by this user"
               empty={
@@ -414,6 +560,45 @@ export function UserLeadsSection({ leads, total, isLoading, canSee, registerRef 
           )}
         </AdminCard>
       )}
+
+      <AdminModal
+        isOpen={Boolean(confirm)}
+        onClose={() => (busy ? null : setConfirm(null))}
+        busy={busy}
+        title={
+          confirm?.kind === 'all'
+            ? 'Delete all enquiries?'
+            : confirm?.kind === 'selected'
+              ? `Delete ${confirm.ids.length} enquiries?`
+              : 'Delete this enquiry?'
+        }
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setConfirm(null)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="danger" size="sm" onClick={run} isLoading={busy} loadingLabel="Deleting…">
+              {confirm?.kind === 'all' ? 'Delete all' : 'Delete'}
+            </Button>
+          </>
+        }
+      >
+        {confirm?.kind === 'all' ? (
+          <p className="text-sm text-slate-700">
+            This will permanently delete{' '}
+            <strong>all {(total ?? 0).toLocaleString()} enquiries</strong> owned by this account,
+            along with their timeline. <strong>This cannot be undone.</strong>
+          </p>
+        ) : confirm?.kind === 'selected' ? (
+          <p className="text-sm text-slate-700">
+            This will remove <strong>{confirm.ids.length}</strong> enquiry/enquiries from the CRM.
+          </p>
+        ) : (
+          <p className="text-sm text-slate-700">
+            This will remove <strong>{confirm?.lead?.reference}</strong> from the CRM.
+          </p>
+        )}
+      </AdminModal>
     </UserSection>
   )
 }

@@ -52,6 +52,8 @@ export const ADMIN_ENDPOINTS = Object.freeze({
      * the body and the name travels in `X-Filename`.
      */
     importLeads: (id) => `/v1/admin/users/${id}/leads/import`,
+    /** Deletes this user's enquiries. Owner/Admin only, enforced server-side. */
+    deleteLeads: (id) => `/v1/admin/users/${id}/leads`,
     activate: (id) => `/v1/admin/users/${id}/activate`,
     suspend: (id) => `/v1/admin/users/${id}/suspend`,
     /**

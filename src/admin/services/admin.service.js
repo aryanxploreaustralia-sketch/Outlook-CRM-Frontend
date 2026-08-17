@@ -180,6 +180,24 @@ export async function importAdminUserLeads(
   return response.data?.data ?? null
 }
 
+/**
+ * Deletes enquiries belonging to one user.
+ *
+ * Two shapes, exactly as the endpoint's schema requires — never both:
+ *   `{ leadIds: [...] }` soft-deletes that set (single delete is one id);
+ *   `{ all: true }`      purges the whole register for this user.
+ *
+ * The server scopes every query by the target user, so an id belonging to
+ * somebody else matches nothing and comes back in `skipped` rather than being
+ * deleted. The response carries `deleted`, `skipped` and `mode`.
+ */
+export async function deleteAdminUserLeads(id, { leadIds = null, all = false } = {}) {
+  const response = await httpClient.delete(ADMIN_ENDPOINTS.users.deleteLeads(id), {
+    data: all ? { all: true } : { leadIds },
+  })
+  return response.data?.data ?? null
+}
+
 /** Moves an invited or suspended account to active. */
 export async function activateAdminUser(id) {
   const response = await httpClient.patch(ADMIN_ENDPOINTS.users.activate(id))
@@ -556,6 +574,7 @@ export default {
   fetchAdminOrganization,
   fetchAdminUser,
   fetchAdminUsers,
+  deleteAdminUserLeads,
   importAdminUserLeads,
   inviteAdminUser,
   suspendAdminUser,

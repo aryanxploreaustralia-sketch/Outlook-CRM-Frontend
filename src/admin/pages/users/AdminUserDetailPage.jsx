@@ -78,6 +78,7 @@ import {
   activateAdminUser,
   fetchAdminAnalytics,
   fetchAdminCampaigns,
+  deleteAdminUserLeads,
   fetchAdminLeads,
   fetchAdminUser,
   fetchUserMailboxes,
@@ -555,6 +556,16 @@ export function AdminUserDetailPage() {
             isLoading={leadsLoading}
             canSee={canSeeLeads}
             registerRef={register}
+            /* Owner and Admin only — the same pair the endpoint itself admits. */
+            canDelete={can(PERMISSIONS.LEADS_DELETE) && can(PERMISSIONS.USERS_VIEW)}
+            onDelete={async (payload) => {
+              const result = await deleteAdminUserLeads(id, payload)
+              // Re-read this person's register and their activity counts, so
+              // the rows, the total and the profile all agree afterwards.
+              refreshLeads()
+              refresh()
+              return result
+            }}
           />
 
           {/* Gated on `users.invite` — the same capability the invitation flow
