@@ -224,6 +224,11 @@ export function AdminUserDetailPage() {
    */
   useScrollToTop(id)
 
+  // A different person's register starts at its own beginning.
+  useEffect(() => {
+    setLeadsPage(1)
+  }, [id])
+
   // --- Overlays and inline actions -----------------------------------------
   const [confirm, setConfirm] = useState({ action: null, user: null })
   const [confirmError, setConfirmError] = useState(null)
@@ -269,9 +274,20 @@ export function AdminUserDetailPage() {
    * `owner` scopes the query, so the rows and the total both describe this
    * person and nobody else.
    */
+  /**
+   * Which page of this person's register is on screen.
+   *
+   * Server-side: one page is one request. The section used to ask for ten rows
+   * and no page, so 1,861 enquiries were represented by the newest ten with no
+   * way to reach the rest.
+   */
+  const [leadsPage, setLeadsPage] = useState(1)
+  const LEADS_PAGE_SIZE = 50
+
   const leadsLoader = useCallback(
-    (options) => fetchAdminLeads({ owner: id, limit: 10, ...options }),
-    [id],
+    (options) =>
+      fetchAdminLeads({ owner: id, page: leadsPage, limit: LEADS_PAGE_SIZE, ...options }),
+    [id, leadsPage],
   )
   const {
     data: leadData,
@@ -279,6 +295,7 @@ export function AdminUserDetailPage() {
     refresh: refreshLeads,
   } = useAdminResource(leadsLoader, {
     enabled: canSeeLeads && hasSeen('leads'),
+    deps: [id, leadsPage],
   })
 
   const mailboxes = mailboxData?.items ?? []
@@ -661,9 +678,29 @@ export function AdminUserDetailPage() {
             registerRef={register}
             /* Owner and Admin only — the same pair the endpoint itself admits. */
             userName={user.displayName ?? user.email}
+            page={leadTotal ? (leadData?.pagination?.page ?? leadsPage) : 1}
+            pageSize={leadData?.pagination?.limit ?? LEADS_PAGE_SIZE}
+            onPageChange={setLeadsPage}
             canDelete={can(PERMISSIONS.LEADS_DELETE) && can(PERMISSIONS.USERS_VIEW)}
             onDelete={async (payload) => {
               const result = await deleteAdminUserLeads(id, payload)
+
+              /**
+               * Keep the page valid.
+               *
+               * Deleting every row on page 38 leaves the reader on a page that
+               * no longer exists, which renders as an empty register above a
+               * total of 1,811. Stepping back one page is the honest answer;
+               * "delete all" goes to the first page, which is also the last.
+               */
+              if (payload.all) {
+                setLeadsPage(1)
+              } else if (
+                leadsPage > 1 &&
+                (result?.deleted ?? 0) >= leads.length
+              ) {
+                setLeadsPage((previous) => Math.max(1, previous - 1))
+              }
               // Re-read this person's register and their activity counts, so
               // the rows, the total and the profile all agree afterwards.
               refreshLeads()

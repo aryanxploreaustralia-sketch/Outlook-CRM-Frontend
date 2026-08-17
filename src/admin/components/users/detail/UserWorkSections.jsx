@@ -30,6 +30,7 @@ import {
 import { AdminBadge } from '@/admin/components/AdminBadge'
 import { AdminCard } from '@/admin/components/AdminCard'
 import { AdminModal } from '@/admin/components/AdminModal'
+import { AdminPagination } from '@/admin/components/AdminPagination'
 import { AdminEmptyState } from '@/admin/components/AdminEmptyState'
 import { AdminListLoading, AdminTableLoading } from '@/admin/components/AdminLoadingState'
 import { AdminTable, AdminTableIdentity } from '@/admin/components/AdminTable'
@@ -335,6 +336,9 @@ export function UserLeadsSection({
   onDelete,
   /** Whose register this is. Named in the delete-all confirmation. */
   userName,
+  page = 1,
+  pageSize = 50,
+  onPageChange,
 }) {
   /**
    * Selection, and the pending confirmation.
@@ -559,6 +563,19 @@ export function UserLeadsSection({
                 />
               }
             />
+          )}
+
+          {/* One page is one request; the totals come from the server. */}
+          {!isLoading && typeof total === 'number' && total > 0 && (
+            <div className="border-t border-slate-100 px-5 py-3">
+              <AdminPagination
+                page={page}
+                pageSize={pageSize}
+                totalItems={total}
+                onPageChange={onPageChange}
+                disabled={busy}
+              />
+            </div>
           )}
         </AdminCard>
       )}
