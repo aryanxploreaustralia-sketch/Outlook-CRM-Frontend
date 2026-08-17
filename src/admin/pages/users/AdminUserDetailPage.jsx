@@ -557,6 +557,7 @@ export function AdminUserDetailPage() {
             canSee={canSeeLeads}
             registerRef={register}
             /* Owner and Admin only — the same pair the endpoint itself admits. */
+            userName={user.displayName ?? user.email}
             canDelete={can(PERMISSIONS.LEADS_DELETE) && can(PERMISSIONS.USERS_VIEW)}
             onDelete={async (payload) => {
               const result = await deleteAdminUserLeads(id, payload)

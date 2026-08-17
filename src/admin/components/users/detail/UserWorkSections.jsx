@@ -333,6 +333,8 @@ export function UserLeadsSection({
   registerRef,
   canDelete = false,
   onDelete,
+  /** Whose register this is. Named in the delete-all confirmation. */
+  userName,
 }) {
   /**
    * Selection, and the pending confirmation.
@@ -567,7 +569,7 @@ export function UserLeadsSection({
         busy={busy}
         title={
           confirm?.kind === 'all'
-            ? 'Delete all enquiries?'
+            ? (userName ? `Delete all leads for ${userName}?` : 'Delete all enquiries?')
             : confirm?.kind === 'selected'
               ? `Delete ${confirm.ids.length} enquiries?`
               : 'Delete this enquiry?'
@@ -586,7 +588,8 @@ export function UserLeadsSection({
         {confirm?.kind === 'all' ? (
           <p className="text-sm text-slate-700">
             This will permanently delete{' '}
-            <strong>all {(total ?? 0).toLocaleString()} enquiries</strong> owned by this account,
+            <strong>all {(total ?? 0).toLocaleString()} leads</strong> belonging to{' '}
+            <strong>{userName ?? 'this user'}</strong>,
             along with their timeline. <strong>This cannot be undone.</strong>
           </p>
         ) : confirm?.kind === 'selected' ? (
