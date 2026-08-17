@@ -438,7 +438,9 @@ export function UserLeadsSection({
       render: (row) => (
         <Button
           as={Link}
-          to={ROUTE_PATHS.LEAD_DETAIL.replace(':id', row.id)}
+          /* The console's detail route, not the CRM's — the CRM's is
+             owner-scoped and 500s for another user's enquiry. */
+          to={ADMIN_PATHS.LEAD_DETAIL.replace(':id', row.id)}
           size="sm"
           variant="ghost"
         >

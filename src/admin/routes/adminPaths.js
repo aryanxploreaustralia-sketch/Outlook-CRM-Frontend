@@ -21,6 +21,8 @@ export const ADMIN_PATHS = Object.freeze({
   /** Admin home. Index route of the shell. */
   DASHBOARD: `${ADMIN_ROOT}`,
   USERS: `${ADMIN_ROOT}/users`,
+  /** One enquiry, opened from a user's register. `:id` is the LEAD id. */
+  LEAD_DETAIL: `${ADMIN_ROOT}/leads/:id`,
   /** The user 360 dashboard. `:id` is substituted at the call site. */
   USER_DETAIL: `${ADMIN_ROOT}/users/:id`,
   ROLES: `${ADMIN_ROOT}/roles`,

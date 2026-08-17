@@ -198,6 +198,17 @@ export async function deleteAdminUserLeads(id, { leadIds = null, all = false } =
   return response.data?.data ?? null
 }
 
+/**
+ * One enquiry in full, for the console.
+ *
+ * The CRM's own detail endpoint is owner-scoped, so an administrator opening
+ * somebody else's enquiry from the user profile gets a 500 from it. This is the
+ * admin-scoped equivalent, behind the same guard as the admin lead list.
+ */
+export function fetchAdminLead(id, { signal } = {}) {
+  return get(ADMIN_ENDPOINTS.leadDetail(id), { signal })
+}
+
 /** Moves an invited or suspended account to active. */
 export async function activateAdminUser(id) {
   const response = await httpClient.patch(ADMIN_ENDPOINTS.users.activate(id))
@@ -569,6 +580,7 @@ export default {
   fetchAdminCampaigns,
   fetchAdminDashboard,
   fetchAdminHealth,
+  fetchAdminLead,
   fetchAdminLeads,
   fetchAdminMailboxes,
   fetchAdminOrganization,

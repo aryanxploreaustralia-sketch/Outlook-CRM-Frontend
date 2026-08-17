@@ -144,6 +144,11 @@ export const adminRoute = {
       lazy: gated(PERMISSIONS.CAMPAIGNS_VIEW, async () => (await import('@/admin/pages/AdminCampaignMonitorPage')).AdminCampaignMonitorPage),
     },
     {
+      path: 'leads/:id',
+      handle: { title: 'Enquiry', subtitle: 'Full detail, whoever owns it' },
+      lazy: gated(PERMISSIONS.LEADS_VIEW, async () => (await import('@/admin/pages/AdminLeadDetailPage')).AdminLeadDetailPage),
+    },
+    {
       path: 'leads',
       handle: {
         title: 'Lead monitor',
