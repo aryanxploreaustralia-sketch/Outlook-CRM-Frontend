@@ -173,7 +173,22 @@ export function AdminUserDetailPage() {
     enabled: canSeeCampaigns && hasSeen('campaigns'),
   })
 
-  const leadsLoader = useCallback((options) => fetchAdminLeads(options), [])
+  /**
+   * This person's enquiries, selected by the **server**.
+   *
+   * It used to fetch the global monitor page and filter it down here. That was
+   * only ever accidentally right: the endpoint returns the newest page across
+   * every owner, so unless this person happened to own some of those newest
+   * rows the section rendered "no enquiries" — including immediately after
+   * importing a thousand of them for them.
+   *
+   * `owner` scopes the query, so the rows and the total both describe this
+   * person and nobody else.
+   */
+  const leadsLoader = useCallback(
+    (options) => fetchAdminLeads({ owner: id, limit: 10, ...options }),
+    [id],
+  )
   const {
     data: leadData,
     isLoading: leadsLoading,
@@ -196,10 +211,11 @@ export function AdminUserDetailPage() {
     [campaignData, id],
   )
 
-  const leads = useMemo(
-    () => (leadData?.items ?? []).filter((row) => row.assignedToId === id).slice(0, 10),
-    [leadData, id],
-  )
+  // Already this person's, already the page size asked for — no client-side
+  // filtering, so the count below is the database's answer rather than
+  // whatever survived a filter.
+  const leads = leadData?.items ?? []
+  const leadTotal = leadData?.pagination?.total ?? null
 
   const performance = useMemo(
     () => (analytics?.userPerformance ?? []).find((row) => row.id === id) ?? null,
@@ -535,6 +551,7 @@ export function AdminUserDetailPage() {
 
           <UserLeadsSection
             leads={leads}
+            total={leadTotal}
             isLoading={leadsLoading}
             canSee={canSeeLeads}
             registerRef={register}

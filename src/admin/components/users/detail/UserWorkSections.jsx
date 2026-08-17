@@ -322,7 +322,7 @@ export function UserCampaignsSection({ campaigns, isLoading, canSee, registerRef
 }
 
 /** Section 5 — recent enquiries this person owns. Read-only. */
-export function UserLeadsSection({ leads, isLoading, canSee, registerRef }) {
+export function UserLeadsSection({ leads, total, isLoading, canSee, registerRef }) {
   const columns = [
     {
       key: 'reference',
@@ -383,7 +383,12 @@ export function UserLeadsSection({ leads, isLoading, canSee, registerRef }) {
       id="leads"
       ref={registerRef('leads')}
       title="Leads"
-      description="Enquiries this account owns, newest first."
+      description={
+        // The database's count for this person, not the number of preview rows.
+        typeof total === 'number'
+          ? `${total.toLocaleString()} enquiry/enquiries this account owns. Newest first.`
+          : 'Enquiries this account owns, newest first.'
+      }
     >
       {!canSee ? (
         <PendingSection title="You cannot view leads">
