@@ -23,12 +23,16 @@
  * navigation.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CalendarClock,
+  ChevronDown,
   Inbox,
+  MoreHorizontal,
+  RotateCcw,
+  Trash2,
   UserCheck,
   UserX,
 } from 'lucide-react'
@@ -74,6 +78,8 @@ import { usePermissions } from '@/admin/hooks/usePermissions'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import {
   activateAdminUser,
+  deleteAdminUser,
+  restoreAdminUser,
   fetchAdminAnalytics,
   fetchAdminCampaigns,
   deleteAdminUserLeads,
@@ -112,6 +118,85 @@ const SECTIONS = [
 ]
 
 const SECTION_IDS = SECTIONS.map((section) => section.id)
+
+/**
+ * The header's "more actions" dropdown.
+ *
+ * A local component rather than a shared one: the console has no menu
+ * primitive, and the two behaviours a menu owes the reader — close on Escape,
+ * close on an outside click — are a dozen lines. Introducing a dependency for
+ * that would be the larger change.
+ *
+ * The trigger is a real `<button>` and is never disabled, so it shows a pointer
+ * and responds to Enter and Space for free. `aria-expanded` and `aria-haspopup`
+ * tell a screen reader what it is.
+ */
+function MoreActionsMenu({ isDeleted, onDelete, onRestore }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const wrapper = useRef(null)
+
+  useEffect(() => {
+    if (!isOpen) return undefined
+
+    const onPointerDown = (event) => {
+      if (!wrapper.current?.contains(event.target)) setIsOpen(false)
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
+
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [isOpen])
+
+  // Chosen once, so the menu cannot offer Delete and Restore together.
+  const item = isDeleted
+    ? { label: 'Restore user', Icon: RotateCcw, run: onRestore, tone: 'text-slate-700' }
+    : { label: 'Delete user', Icon: Trash2, run: onDelete, tone: 'text-red-600' }
+
+  return (
+    <div className="relative" ref={wrapper}>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => setIsOpen((previous) => !previous)}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label="More actions"
+      >
+        <MoreHorizontal className="size-4" aria-hidden="true" />
+        <ChevronDown className="size-3" aria-hidden="true" />
+      </Button>
+
+      {isOpen && (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 min-w-44 rounded-lg border border-slate-200 bg-white py-1 shadow-dropdown"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              // Closed before the dialog opens, so the menu is never left
+              // hanging behind a modal.
+              setIsOpen(false)
+              item.run()
+            }}
+            className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 ${item.tone}`}
+          >
+            <item.Icon className="size-4" aria-hidden="true" />
+            {item.label}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function AdminUserDetailPage() {
   const { id } = useParams()
@@ -228,11 +313,35 @@ export function AdminUserDetailPage() {
     setConfirmError(null)
 
     try {
-      await (action === 'activate' ? activateAdminUser(id) : suspendAdminUser(id))
+      /**
+       * One handler for all four transitions.
+       *
+       * `delete` and `restore` join `activate` and `suspend` rather than
+       * getting their own handler: they share the confirmation dialog, the busy
+       * flag, the error surface and the refresh, and a second copy of that
+       * would only be a second place for them to drift.
+       *
+       * Every one calls a service that already existed. No deletion logic is
+       * written here — `deleteAdminUser` is the same soft delete the directory
+       * uses, and the server is what enforces who may call it.
+       */
+      const SERVICES = {
+        activate: () => activateAdminUser(id),
+        suspend: () => suspendAdminUser(id),
+        delete: () => deleteAdminUser(id),
+        restore: () => restoreAdminUser(id),
+      }
+
+      const MESSAGES = {
+        activate: 'This account can now sign in.',
+        suspend: 'This account has been suspended and signed out.',
+        delete: 'This account has been deleted. Its data is retained and it can be restored.',
+        restore: 'This account has been restored.',
+      }
+
+      await SERVICES[action]()
       setConfirm({ action: null, user: null })
-      setNotice(
-        action === 'activate' ? 'This account can now sign in.' : 'This account has been suspended and signed out.',
-      )
+      setNotice(MESSAGES[action])
       refresh()
       setTimeout(() => setNotice(null), 6000)
     } catch (caught) {
@@ -390,22 +499,14 @@ export function AdminUserDetailPage() {
               </Can>
             )}
 
-            {/*
-              The reserved "more actions" control has been removed.
-
-              It was a permanently `disabled` placeholder holding a position for
-              role changes, deletion and export — none of which were ever wired
-              to it. A disabled button renders `cursor-not-allowed` on hover,
-              which is correct for a disabled control and exactly why it read as
-              broken: it advertised a menu that did not exist and refused every
-              click.
-
-              Removed rather than enabled, because the alternatives were worse.
-              Forcing `pointer-events` would leave a button that opens nothing,
-              and attaching actions to it would be inventing a feature under the
-              guise of a cursor fix. The controls that do exist — Activate and
-              Suspend — are unchanged and still to the left.
-            */}
+            <MoreActionsMenu
+              /* Soft-deleted accounts offer Restore; every other state offers
+                 Delete. Activate and Suspend are not repeated here — they are
+                 already buttons to the left. */
+              isDeleted={user.isDeleted === true}
+              onDelete={() => setConfirm({ action: 'delete', user })}
+              onRestore={() => setConfirm({ action: 'restore', user })}
+            />
           </div>
         </div>
 

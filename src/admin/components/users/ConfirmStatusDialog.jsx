@@ -47,12 +47,44 @@ const VARIANTS = {
       'Nothing is deleted. Their leads, conversations and history are untouched.',
     ],
   },
+  /**
+   * Deletion, which is a **soft** delete — the wording says so plainly.
+   *
+   * The account keeps its document and everything that references it; what the
+   * person loses is access. Describing it as permanent would be untrue and
+   * would stop an administrator doing something reversible.
+   */
+  delete: {
+    Icon: AlertTriangle,
+    tone: 'text-red-600 bg-red-50',
+    title: 'Delete this account?',
+    confirmLabel: 'Delete',
+    confirmVariant: 'danger',
+    busyLabel: 'Deleting…',
+    consequences: [
+      'They are signed out immediately and can no longer sign in.',
+      'Their leads, conversations, campaigns and audit history are all kept.',
+      'The account can be restored later, and their email can be invited again.',
+    ],
+  },
+  restore: {
+    Icon: ShieldCheck,
+    tone: 'text-emerald-600 bg-emerald-50',
+    title: 'Restore this account?',
+    confirmLabel: 'Restore',
+    confirmVariant: 'primary',
+    busyLabel: 'Restoring…',
+    consequences: [
+      'The account becomes active and can sign in again.',
+      'Everything it owned is still attached to it.',
+    ],
+  },
 }
 
 /**
  * @param {{
  *   isOpen: boolean,
- *   action: 'activate' | 'suspend' | null,
+ *   action: 'activate' | 'suspend' | 'delete' | 'restore' | null,
  *   user: ?object,
  *   error: ?string,
  *   isBusy: boolean,
