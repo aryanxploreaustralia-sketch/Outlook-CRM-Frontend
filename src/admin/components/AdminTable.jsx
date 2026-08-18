@@ -10,7 +10,12 @@
  *  - **Its own horizontal scroll.** The container is `overflow-x-auto`, so a
  *    ten-column table scrolls *inside the card* and the page body never scrolls
  *    sideways. This is the single most common responsive failure in admin UIs.
- *  - **A sticky header**, so column meaning survives a long scroll.
+ *  - **A header that stays put within its own scrollport.** `sticky top-0` on
+ *    the `<th>`s, which holds the header while the *table* scrolls sideways.
+ *    It deliberately does not follow the page down: the `overflow-x-auto`
+ *    wrapper is the header's scrollport, not the viewport, so no `top` offset
+ *    can make it track the document — attempting one displaces the header
+ *    inside the table instead. See the note on the `<th>` itself.
  *  - **Loading, empty and ready as one decision.** A table that renders its
  *    empty state while still loading tells the user their data is gone.
  *  - **Accessible sorting.** Sortable headers are real `<button>`s inside the
@@ -113,7 +118,26 @@ export function AdminTable({
                   key={column.key}
                   scope="col"
                   aria-sort={column.sortable ? ariaSort : undefined}
-                  className={`sticky top-(--spacing-topbar) z-10 whitespace-nowrap bg-slate-50/95 px-6 py-3 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 backdrop-blur ${
+                  /*
+                   * `top-0`, and it must stay `top-0`.
+                   *
+                   * A previous change set this to `top-(--spacing-topbar)` to
+                   * keep the header clear of the sticky admin topbar. That
+                   * reasoning assumed this cell sticks to the viewport. It does
+                   * not: the wrapper above carries `overflow-x-auto`, and CSS
+                   * computes an `overflow` of `visible` to `auto` when the
+                   * other axis is not `visible` — so that wrapper is a scroll
+                   * container on both axes and is this cell's scrollport.
+                   *
+                   * Its top edge is the table's own top edge, and it never
+                   * scrolls vertically. A non-zero `top` therefore does not
+                   * hold the header below the topbar; it pushes the header row
+                   * *down* inside the table by that amount, while the first
+                   * data row stays put. The result is the first row's avatar
+                   * and badges showing through the gap above the header — the
+                   * "content bleeding into the header" this once caused.
+                   */
+                  className={`sticky top-0 z-10 whitespace-nowrap bg-slate-50/95 px-6 py-3 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 backdrop-blur ${
                     ALIGN[column.align] ?? ALIGN.left
                   } ${column.width ?? ''} ${column.headerClassName ?? ''}`}
                 >
