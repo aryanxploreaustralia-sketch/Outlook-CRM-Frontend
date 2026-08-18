@@ -32,6 +32,7 @@ import { Check, Loader2, Lock, X } from 'lucide-react'
  *   onToggleGroup?: (permissions: string[], next: boolean) => void,
  *   pending?: Set<string>,
  *   locked?: Set<string>,
+ *   lockedReason?: string,
  * }} props
  */
 export function PermissionList({
@@ -45,6 +46,7 @@ export function PermissionList({
   onToggleGroup,
   pending,
   locked,
+  lockedReason = 'This permission cannot be changed here.',
 }) {
   // Accepts either shape: the context holds a Set, an API response holds an array.
   const held = granted instanceof Set ? granted : new Set(granted ?? [])
@@ -141,6 +143,10 @@ export function PermissionList({
                 return (
                   <li key={permission}>
                     <label
+                      // A padlocked row says why on hover. Without it the reader
+                      // sees a control that is simply missing and assumes a bug —
+                      // which is exactly what happened with `users.invite`.
+                      title={isLocked ? lockedReason : undefined}
                       className={`flex items-start gap-2 rounded px-1 py-0.5 text-sm ${
                         isLocked
                           ? 'cursor-not-allowed opacity-70'
@@ -153,7 +159,10 @@ export function PermissionList({
                           aria-hidden="true"
                         />
                       ) : isLocked ? (
-                        <Lock className="mt-0.5 size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                        <Lock
+                          className="mt-0.5 size-3.5 shrink-0 text-slate-400"
+                          aria-hidden="true"
+                        />
                       ) : (
                         <input
                           type="checkbox"

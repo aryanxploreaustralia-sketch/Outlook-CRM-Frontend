@@ -187,6 +187,7 @@ export function AdminRolesPage() {
   }
 
   const roles = data?.roles ?? []
+  const ownerOnly = data?.ownerOnlyPermissions ?? []
   const mine = roles.find((entry) => entry.role === myRole)
 
   return (
@@ -208,6 +209,15 @@ export function AdminRolesPage() {
             permission changes what the server enforces, immediately and for everyone holding that
             role. Owner is fixed: it is the way back if another role is misconfigured.
           </p>
+          {ownerOnly.length > 0 && (
+            <p className="mt-1.5 text-slate-600">
+              <span className="font-medium text-slate-900">Reserved to the Owner:</span>{' '}
+              {ownerOnly.map((permission) => catalogue?.[permission] ?? permission).join(', ')} —
+              shown with a padlock on every other role. Inviting decides who enters the organization
+              and with what authority, so a role that could invite could grant itself a senior
+              identity.
+            </p>
+          )}
         </div>
       </div>
 
@@ -311,16 +321,23 @@ export function AdminRolesPage() {
               const editable = lockReason === null
 
               /*
-               * Permissions this actor could never grant, greyed with a padlock
-               * rather than offered and refused. Owner-only permissions are
-               * withheld from every other role by design; anything outside the
-               * actor's own set would be an escalation.
+               * Permissions this actor could never grant here, padlocked rather
+               * than offered and refused.
+               *
+               * Two sources, and missing the second was a real bug: the console
+               * only withheld what the *actor* lacked, so an Owner — who holds
+               * `users.invite` — was shown a live checkbox for it on the
+               * Administrator card. Ticking it optimistically, being refused,
+               * and snapping back is indistinguishable from a save that did not
+               * persist. Owner-only permissions are withheld from every other
+               * role by design, so on those cards they are not a choice.
                */
-              const locked = new Set(
-                Object.keys(catalogue ?? {}).filter(
+              const locked = new Set([
+                ...Object.keys(catalogue ?? {}).filter(
                   (permission) => !myPermissions.has(permission),
                 ),
-              )
+                ...(entry.role === 'owner' ? [] : ownerOnly),
+              ])
 
               return (
                 <AdminCard
@@ -382,6 +399,7 @@ export function AdminRolesPage() {
                     showMissing
                     editable={editable}
                     locked={locked}
+                    lockedReason="Reserved to the Owner, or beyond your own permissions — the server refuses it either way."
                     pending={pending}
                     onToggle={(permission, granted) => togglePermission(entry, permission, granted)}
                     onToggleGroup={(list, granted) => toggleGroup(entry, list, granted)}
