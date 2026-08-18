@@ -274,14 +274,6 @@ export const router = createBrowserRouter([
       },
       // --- Phase 18: tasks and goals --------------------------------------
       {
-        path: ROUTE_PATHS.TASKS,
-        handle: { title: 'Tasks', subtitle: 'Assigned work and the goals set against it' },
-        lazy: async () => {
-          const { TasksPage } = await import('@/pages/TasksPage')
-          return { Component: TasksPage }
-        },
-      },
-      {
         path: ROUTE_PATHS.LEADS,
         handle: { title: 'Leads', subtitle: 'Every quotation enquiry' },
         lazy: async () => {

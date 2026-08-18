@@ -15,7 +15,6 @@
 import { Link } from 'react-router-dom'
 import {
   FileSpreadsheet,
-  ListChecks,
   Mail,
   Megaphone,
   History,
@@ -28,7 +27,6 @@ const ACTIONS = Object.freeze([
   { to: ROUTE_PATHS.LEAD_IMPORT, label: 'Import workbook', Icon: FileSpreadsheet },
   { to: ROUTE_PATHS.LEAD_NEW, label: 'New enquiry', Icon: UserPlus },
   { to: ROUTE_PATHS.COMPOSE, label: 'Compose email', Icon: Mail },
-  { to: ROUTE_PATHS.TASKS, label: 'Tasks', Icon: ListChecks },
   { to: ROUTE_PATHS.CAMPAIGNS, label: 'Campaigns', Icon: Megaphone },
   { to: ROUTE_PATHS.MAIL, label: 'Mail history', Icon: History },
 ])

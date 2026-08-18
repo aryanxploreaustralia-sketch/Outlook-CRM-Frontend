@@ -56,8 +56,6 @@ export const ROUTE_PATHS = Object.freeze({
   /** Travel sales register. */
   LEADS: '/leads',
 
-  /** Phase 18 — assigned work and the goals set against it. */
-  TASKS: '/tasks',
   LEAD_PIPELINE: '/leads/pipeline',
   LEAD_IMPORT: '/leads/import',
   /** Manual entry. Literal, so it is registered before `/leads/:id`. */

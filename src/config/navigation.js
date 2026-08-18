@@ -16,7 +16,6 @@ import {
   Cloud,
   FileText,
   LayoutDashboard,
-  ListChecks,
   Megaphone,
   PenSquare,
   Send,
@@ -69,18 +68,7 @@ export const PRIMARY_NAV = Object.freeze([
     end: true,
     description: 'Every message sent, including failures',
   },
-  {
-    id: 'tasks',
-    label: 'Tasks',
-    path: ROUTE_PATHS.TASKS,
-    icon: ListChecks,
-    enabled: true,
-    // Not exact: the drawer puts the open task in a query parameter, and the
-    // tab in another, and neither should unhighlight the section.
-    end: false,
-    description: 'Your assigned work, deadlines and goals',
-  },
-  {
+    {
     id: 'leads',
     label: 'Leads',
     path: ROUTE_PATHS.LEADS,
