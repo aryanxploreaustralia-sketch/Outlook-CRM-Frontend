@@ -88,6 +88,30 @@ export function fetchAdminRoles({ signal } = {}) {
   return get(ADMIN_ENDPOINTS.roles, { signal })
 }
 
+/**
+ * Rewrites one role's permissions.
+ *
+ * The **complete** list, not a delta — the server derives what was granted and
+ * revoked by comparing it with what the role holds. Sending a delta would mean
+ * two callers had to agree on a base state that may have moved underneath them.
+ *
+ * Needs `roles.manage`, and the server re-checks every rule about which roles
+ * may be edited and what may be put in them. A refusal here is a real answer,
+ * not a client-side omission, so the caller must surface it.
+ *
+ * @param {string} role
+ * @param {string[]} permissions
+ */
+export async function updateAdminRolePermissions(role, permissions, { signal } = {}) {
+  const response = await httpClient.patch(
+    `${ADMIN_ENDPOINTS.roles}/${role}`,
+    { permissions },
+    { signal },
+  )
+
+  return response.data?.data ?? null
+}
+
 // ---------------------------------------------------------------------------
 // Overview
 // ---------------------------------------------------------------------------
