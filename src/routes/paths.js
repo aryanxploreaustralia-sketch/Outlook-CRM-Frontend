@@ -57,6 +57,8 @@ export const ROUTE_PATHS = Object.freeze({
   LEADS: '/leads',
 
   LEAD_PIPELINE: '/leads/pipeline',
+  /** Enquiries awaiting a reply. Literal, so it precedes `/leads/:id`. */
+  LEAD_FOLLOW_UP: '/leads/follow-up',
   LEAD_IMPORT: '/leads/import',
   /** Manual entry. Literal, so it is registered before `/leads/:id`. */
   LEAD_NEW: '/leads/new',

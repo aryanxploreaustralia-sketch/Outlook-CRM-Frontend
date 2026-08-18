@@ -93,7 +93,10 @@ export function LeadCreatePage() {
 
   /**
    * The reference the server would allocate, shown as the placeholder.
-   *
+   * The reference is allocated on-save so the user can leave it empty and still get one.
+   * The placeholder is purely informational - it is not a default value and does not get sent to the server.
+   * The server allocates a new reference on save, so two people with the form open cannot both take the same number.
+   * The placeholder is re-fetched when the market changes, because each market continues its own series.
    * Re-fetched when the market changes, because each market continues its own
    * series. Purely informational — leaving the field empty is what actually
    * allocates one, and the server allocates it again at save time so two people

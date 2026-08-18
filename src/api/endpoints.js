@@ -333,6 +333,9 @@ export const ENDPOINTS = Object.freeze({
     /** Resolves a campaign audience from lead criteria. */
     audience: '/v1/leads/audience',
     bulkStage: '/v1/leads/bulk-stage',
+    /** Enquiries introduced but never answered, and the send that chases them. */
+    followUp: '/v1/leads/follow-up',
+    followUpSend: '/v1/leads/follow-up/send',
     detail: (id) => `/v1/leads/${id}`,
 
     /**

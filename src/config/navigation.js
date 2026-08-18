@@ -13,6 +13,7 @@
 import {
   Building2,
   ClipboardList,
+  MailQuestion,
   Cloud,
   FileText,
   LayoutDashboard,
@@ -78,6 +79,17 @@ export const PRIMARY_NAV = Object.freeze([
     // this section and should keep it highlighted.
     end: false,
     description: 'Quotation enquiries, pipeline and workbook import',
+  },
+  {
+    id: 'follow-ups',
+    label: 'Follow-ups',
+    path: ROUTE_PATHS.LEAD_FOLLOW_UP,
+    icon: MailQuestion,
+    enabled: true,
+    // Exact: this is a literal child of /leads, and without it both this and
+    // the Leads entry would highlight together.
+    end: true,
+    description: 'Enquiries that were emailed and never answered',
   },
   {
     id: 'companies',

@@ -240,6 +240,14 @@ export const router = createBrowserRouter([
       // Literal lead paths before `/leads/:id`, so "pipeline" and "import" are
       // never mistaken for enquiry ids.
       {
+        path: ROUTE_PATHS.LEAD_FOLLOW_UP,
+        handle: { title: 'Follow-ups', subtitle: 'Enquiries awaiting a reply' },
+        lazy: async () => {
+          const { FollowUpPage } = await import('@/pages/leads/FollowUpPage')
+          return { Component: FollowUpPage }
+        },
+      },
+      {
         path: ROUTE_PATHS.LEAD_PIPELINE,
         handle: { title: 'Pipeline', subtitle: 'Enquiries by stage' },
         lazy: async () => {
