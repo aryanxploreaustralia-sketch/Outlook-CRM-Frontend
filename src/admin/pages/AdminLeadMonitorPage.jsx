@@ -9,6 +9,18 @@
  * because a problem you have to construct a query to find is a problem that gets
  * found late.
  *
+ * ## Filtering is server-side, and lives in the URL
+ *
+ * Every filter is a query parameter on this page's own address, for the reason
+ * `useDateRange` gives for the reporting period: a filtered register that cannot
+ * be linked to is a view only the person who built it can see, and Back stops
+ * meaning anything. Refresh, Back and a pasted link all reproduce the same rows.
+ *
+ * The filters go to the server rather than narrowing an array here. The register
+ * runs to thousands of enquiries and the page holds fifty of them, so filtering
+ * what arrived would filter the current page — the total would keep saying
+ * 1,671 while the table showed three rows out of the fifty that happened to load.
+ *
  * ## Two honest limitations, stated in the interface
  *
  * `Lead` has no `assignedTo` field yet — the Phase 14.0 design adds it, and
@@ -24,7 +36,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshCw, UserCheck } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { RefreshCw, UserCheck, X } from 'lucide-react'
 
 import {
   AdminBadge,
@@ -45,7 +58,7 @@ import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admi
 import { fetchAdminLeads } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatDate } from '@/admin/utils/format'
 import { Button } from '@/components/ui/Button'
-import { LEAD_STAGES } from '@/constants/lead.constants'
+import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
 
 /** Tone per stage. The label always carries the meaning as well. */
 const STAGE_TONE = {
@@ -72,49 +85,259 @@ const STAGE_TONE = {
  */
 const STAGE_OPTIONS = LEAD_STAGES.map(({ value, label }) => ({ value, label }))
 
+/** `MARKETS` leads with its own "All markets" entry; the select supplies one. */
+const MARKET_OPTIONS = MARKETS.filter((market) => market.value)
+
+/**
+ * Named periods, matching the server's `DATE_PRESETS` exactly.
+ *
+ * Only the name travels. The server resolves it, so "last 7 days" has one
+ * boundary for everybody rather than one per browser timezone — the same
+ * reasoning `AdminDateRange` documents for the analytics period.
+ *
+ * There is no default. An absent preset means no date clause at all, which is
+ * what a register should show: asking for "the enquiries" and silently getting
+ * the last thirty days of them is a lie about how many exist.
+ */
+const DATE_PRESETS = [
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: 'last7', label: 'Last 7 days' },
+  { value: 'last14', label: 'Last 14 days' },
+  { value: 'last30', label: 'Last 30 days' },
+  { value: 'thisWeek', label: 'This week' },
+  { value: 'lastWeek', label: 'Last week' },
+  { value: 'thisMonth', label: 'This month' },
+  { value: 'lastMonth', label: 'Last month' },
+  { value: 'custom', label: 'Custom range…' },
+]
+
+/**
+ * Which date the range applies to.
+ *
+ * Every one of these is a real column on `Lead`. `quoteDate` is the enquiry's
+ * own date and is labelled "Query date", the term the rest of the CRM uses for
+ * it. There is deliberately no follow-up option: the model records no follow-up
+ * date, and an option that quietly filtered something else would be worse than
+ * its absence.
+ */
+const DATE_FIELDS = [
+  { value: 'createdAt', label: 'Created date' },
+  { value: 'quoteDate', label: 'Query date' },
+  { value: 'updatedAt', label: 'Last activity' },
+  { value: 'travelDate', label: 'Travel date' },
+]
+
+const ACTIVITY_OPTIONS = [
+  { value: 'recent', label: 'Recently active' },
+  { value: 'quiet', label: 'No recent activity' },
+  { value: 'replied', label: 'Replied' },
+  { value: 'awaiting', label: 'Awaiting reply' },
+]
+
+/** Every filter this page owns, so reset and chip-building share one list. */
+const FILTER_KEYS = [
+  'search',
+  'stage',
+  'market',
+  'introduction',
+  'owner',
+  'attention',
+  'activity',
+  'preset',
+  'from',
+  'to',
+  'dateField',
+]
+
 export function AdminLeadMonitorPage() {
   const breadcrumb = useAdminBreadcrumbs()
+  const [params, setParams] = useSearchParams()
 
-  const [searchInput, setSearchInput] = useState('')
-  const [stage, setStage] = useState('')
-  const [attention, setAttention] = useState('')
-  const search = useDebouncedValue(searchInput)
+  const read = useCallback((key) => params.get(key) ?? '', [params])
 
-  // Server-side paging. The monitor previously showed a fixed newest-200 slice
-  // and reported that as the total, so the rest of the register was unreachable.
-  const [page, setPage] = useState(1)
-  const [limit, setLimit] = useState(50)
-
-  // Any filter change invalidates the current page number — page 7 of an
-  // unfiltered register is rarely page 7 of a search.
-  useEffect(() => {
-    setPage(1)
-  }, [search, stage, attention])
-
-  const loader = useCallback(
-    (options) => fetchAdminLeads({ search, stage, attention, page, limit, ...options }),
-    [search, stage, attention, page, limit],
+  /**
+   * Writes a patch of filters, and always returns to page one.
+   *
+   * Page 7 of an unfiltered register is rarely page 7 of a search, and an empty
+   * table reads as "no enquiries" rather than "no page 7" — so the page number
+   * is dropped on every filter change rather than left to be wrong.
+   *
+   * `replace` for the same reason `useDateRange` uses it: refining a view is not
+   * navigation, and Back should leave the monitor rather than step back through
+   * every dropdown that was tried.
+   */
+  const setFilters = useCallback(
+    (patch) => {
+      const next = new URLSearchParams(params)
+      for (const [key, value] of Object.entries(patch)) {
+        if (value) next.set(key, value)
+        else next.delete(key)
+      }
+      next.delete('page')
+      setParams(next, { replace: true })
+    },
+    [params, setParams],
   )
 
+  const stage = read('stage')
+  const market = read('market')
+  const introduction = read('introduction')
+  const owner = read('owner')
+  const attention = read('attention')
+  const activity = read('activity')
+  const dateField = read('dateField') || 'createdAt'
+  const from = read('from')
+  const to = read('to')
+  const urlSearch = read('search')
+
+  // An explicit pair is a custom range; the preset name is dropped when one is
+  // set, matching the server's own precedence.
+  const preset = from || to ? 'custom' : read('preset')
+
+  const page = Number(params.get('page')) || 1
+  const limit = Number(params.get('limit')) || 50
+
+  /**
+   * The search box types locally and settles into the URL.
+   *
+   * Writing every keystroke to the address would put a history entry and a
+   * request behind each letter. The debounce is the existing `useDebouncedValue`
+   * the page already used — the only change is where the settled value lands.
+   */
+  const [searchInput, setSearchInput] = useState(urlSearch)
+  const search = useDebouncedValue(searchInput)
+
+  useEffect(() => {
+    if (urlSearch === search) return
+    const next = new URLSearchParams(params)
+    if (search) next.set('search', search)
+    else next.delete('search')
+    next.delete('page')
+    setParams(next, { replace: true })
+    // `params` is deliberately absent: this effect reacts to the settled search
+    // term, and re-running it on every unrelated parameter change would rewrite
+    // the URL while the reader is using a different filter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search])
+
+  /*
+   * Back, forward and pasted links move the URL underneath the input.
+   *
+   * Guarded against the page's own writes: while a slow typist is mid-word the
+   * URL holds the previous settled term, and syncing unconditionally would snap
+   * the box back to it and eat the letters just typed. When the URL differs from
+   * what this page last settled on, the change came from outside.
+   */
+  useEffect(() => {
+    if (urlSearch !== search) setSearchInput(urlSearch)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSearch])
+
+  const query = useMemo(
+    () => ({
+      search: urlSearch,
+      stage,
+      market,
+      introduction,
+      owner,
+      attention,
+      activity,
+      // Only sent alongside a range — on its own it selects nothing and would
+      // just be noise in the request.
+      dateField: preset || from || to ? dateField : '',
+      preset: preset === 'custom' ? '' : preset,
+      from,
+      to,
+      page,
+      limit,
+    }),
+    [urlSearch, stage, market, introduction, owner, attention, activity, dateField, preset, from, to, page, limit],
+  )
+
+  const loader = useCallback((options) => fetchAdminLeads({ ...query, ...options }), [query])
+
+  // `useAdminResource` aborts the superseded request and guards the response by
+  // id, so changing three filters quickly cannot land an older answer last.
   const { data, error, isLoading, isRefreshing, refresh } = useAdminResource(loader, {
-    deps: [search, stage, attention, page, limit],
+    deps: [query],
   })
 
   const items = data?.items ?? []
   const summary = data?.summary
   const pagination = data?.pagination
-  const staleAfterDays = data?.meta?.staleAfterDays ?? 30
-  const activeFilterCount = [search, stage, attention].filter(Boolean).length
+  const meta = data?.meta
+  const staleAfterDays = meta?.staleAfterDays ?? 30
+  const activeWithinDays = meta?.activeWithinDays ?? 7
+
+  /*
+   * Owners come from the response, not a constant.
+   *
+   * They are whoever holds an enquiry today, which no client-side list can know.
+   * The server computes them over the whole register rather than the current
+   * filter, so choosing an owner does not remove every other owner from the
+   * dropdown you would use to change your mind.
+   */
+  const ownerOptions = meta?.owners ?? []
+  const introductionOptions = meta?.introductionStatuses ?? []
 
   const attentionOptions = [
     { value: 'unassigned', label: 'Unassigned' },
     { value: 'stale', label: `No activity for ${staleAfterDays}+ days` },
   ]
 
+  const activityOptions = ACTIVITY_OPTIONS.map((option) =>
+    option.value === 'recent'
+      ? { ...option, label: `Active in ${activeWithinDays} days` }
+      : option.value === 'quiet'
+        ? { ...option, label: `Quiet for ${activeWithinDays}+ days` }
+        : option,
+  )
+
+  const labelOf = (options, value) => options.find((option) => option.value === value)?.label ?? value
+
+  /**
+   * One chip per applied filter, each clearing only itself.
+   *
+   * A custom range is a single chip over two parameters, because "from" without
+   * "to" is half a thought — removing one and leaving the other would apply a
+   * filter the reader believed they had just cleared.
+   */
+  const chips = []
+  if (urlSearch) chips.push({ key: 'search', label: `“${urlSearch}”`, clear: { search: '' } })
+  if (stage) chips.push({ key: 'stage', label: labelOf(STAGE_OPTIONS, stage), clear: { stage: '' } })
+  if (market) chips.push({ key: 'market', label: labelOf(MARKET_OPTIONS, market), clear: { market: '' } })
+  if (owner) chips.push({ key: 'owner', label: labelOf(ownerOptions, owner), clear: { owner: '' } })
+  if (introduction) {
+    chips.push({
+      key: 'introduction',
+      label: `Introduction: ${labelOf(introductionOptions, introduction)}`,
+      clear: { introduction: '' },
+    })
+  }
+  if (attention) {
+    chips.push({ key: 'attention', label: labelOf(attentionOptions, attention), clear: { attention: '' } })
+  }
+  if (activity) {
+    chips.push({ key: 'activity', label: labelOf(activityOptions, activity), clear: { activity: '' } })
+  }
+  if (preset) {
+    const fieldLabel = labelOf(DATE_FIELDS, dateField)
+    chips.push({
+      key: 'date',
+      label:
+        preset === 'custom'
+          ? `${fieldLabel}: ${from || '…'} → ${to || '…'}`
+          : `${fieldLabel}: ${labelOf(DATE_PRESETS, preset)}`,
+      clear: { preset: '', from: '', to: '' },
+    })
+  }
+
+  const activeFilterCount = chips.length
+
   const resetFilters = () => {
     setSearchInput('')
-    setStage('')
-    setAttention('')
+    setFilters(Object.fromEntries(FILTER_KEYS.map((key) => [key, ''])))
   }
 
   const columns = useMemo(
@@ -256,7 +479,7 @@ export function AdminLeadMonitorPage() {
             <AdminSearch
               value={searchInput}
               onChange={setSearchInput}
-              placeholder="Search reference, customer, company…"
+              placeholder="Search reference, customer, company, email, phone…"
               label="Search enquiries"
             />
           }
@@ -264,18 +487,128 @@ export function AdminLeadMonitorPage() {
           <AdminFilterSelect
             label="Stage"
             value={stage}
-            onChange={setStage}
+            onChange={(next) => setFilters({ stage: next })}
             options={STAGE_OPTIONS}
             allLabel="All stages"
           />
           <AdminFilterSelect
+            label="Owner"
+            value={owner}
+            onChange={(next) => setFilters({ owner: next })}
+            options={ownerOptions}
+            allLabel="All owners"
+          />
+          <AdminFilterSelect
+            label="Market"
+            value={market}
+            onChange={(next) => setFilters({ market: next })}
+            options={MARKET_OPTIONS}
+            allLabel="All markets"
+          />
+          <AdminFilterSelect
+            label="Introduction"
+            value={introduction}
+            onChange={(next) => setFilters({ introduction: next })}
+            options={introductionOptions}
+            allLabel="Any introduction"
+          />
+          <AdminFilterSelect
             label="Attention"
             value={attention}
-            onChange={setAttention}
+            onChange={(next) => setFilters({ attention: next })}
             options={attentionOptions}
             allLabel="No attention filter"
           />
+          <AdminFilterSelect
+            label="Activity"
+            value={activity}
+            onChange={(next) => setFilters({ activity: next })}
+            options={activityOptions}
+            allLabel="Any activity"
+          />
+          <AdminFilterSelect
+            label="Period"
+            value={preset}
+            onChange={(next) =>
+              // Leaving custom clears the explicit pair, or it would keep
+              // overriding the named period the reader just chose.
+              setFilters(
+                next === 'custom'
+                  ? { preset: 'custom', from: '', to: '' }
+                  : { preset: next, from: '', to: '' },
+              )
+            }
+            options={DATE_PRESETS}
+            allLabel="Any date"
+          />
+
+          {/*
+            The date field only appears once a period is chosen. On its own it
+            selects nothing, and a permanently visible control that does nothing
+            is how a filter row stops being read.
+          */}
+          {preset && (
+            <AdminFilterSelect
+              label="Date field"
+              value={dateField}
+              onChange={(next) => setFilters({ dateField: next })}
+              options={DATE_FIELDS}
+              allLabel="Created date"
+            />
+          )}
         </AdminFilterBar>
+
+        {/*
+          The custom pair, on its own row so two date inputs do not have to fit
+          a filter track sized for a dropdown.
+        */}
+        {preset === 'custom' && (
+          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 px-6 py-3">
+            {[
+              { key: 'from', label: 'From' },
+              { key: 'to', label: 'To' },
+            ].map((bound) => (
+              <label key={bound.key} className="min-w-0 text-xs font-medium text-slate-600">
+                {bound.label}
+                <input
+                  type="date"
+                  value={bound.key === 'from' ? from : to}
+                  onChange={(event) => setFilters({ [bound.key]: event.target.value })}
+                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </label>
+            ))}
+            <p className="py-2 text-xs text-slate-500">
+              Applied to {labelOf(DATE_FIELDS, dateField).toLowerCase()}. Either bound may be left open.
+            </p>
+          </div>
+        )}
+
+        {/* Active filters, each removable on its own. */}
+        {chips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-6 py-3">
+            <span className="text-xs font-medium text-slate-500">Active filters</span>
+            {chips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => setFilters(chip.clear)}
+                className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 py-1 pl-2.5 pr-2 text-xs text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30"
+              >
+                <span className="truncate">{chip.label}</span>
+                <X className="size-3 shrink-0 text-slate-400" aria-hidden="true" />
+                <span className="sr-only">Remove this filter</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="ml-auto rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
 
         <AdminTable
           columns={columns}
@@ -286,8 +619,8 @@ export function AdminLeadMonitorPage() {
             activeFilterCount > 0 ? (
               <AdminEmptyState
                 variant="filtered"
-                title="No enquiries match these filters"
-                description="Nothing here is unassigned or stale under the current filters — which may be the answer you wanted."
+                title="No leads match your current filters"
+                description="Every filter is combined, so a narrow set of them can exclude everything — which may be the answer you wanted."
                 actionLabel="Clear filters"
                 onAction={resetFilters}
                 compact
@@ -308,8 +641,13 @@ export function AdminLeadMonitorPage() {
               page={pagination.page}
               pageSize={pagination.limit}
               totalItems={pagination.total}
-              onPageChange={setPage}
-              onPageSizeChange={(next) => { setLimit(next); setPage(1) }}
+              onPageChange={(next) => {
+                const updated = new URLSearchParams(params)
+                if (next > 1) updated.set('page', String(next))
+                else updated.delete('page')
+                setParams(updated, { replace: true })
+              }}
+              onPageSizeChange={(next) => setFilters({ limit: String(next) })}
               disabled={isRefreshing}
             />
           </div>

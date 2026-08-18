@@ -459,7 +459,16 @@ export function fetchAdminCampaigns({ signal, ...params } = {}) {
   return get(ADMIN_ENDPOINTS.campaigns, { params: clean(params), signal })
 }
 
-/** @param {{ search?: string, stage?: string, attention?: string, signal?: AbortSignal }} [options] */
+/**
+ * The cross-user enquiry register, filtered server-side.
+ *
+ * @param {{
+ *   search?: string, stage?: string, market?: string, introduction?: string,
+ *   owner?: string, attention?: string, activity?: string,
+ *   dateField?: string, preset?: string, from?: string, to?: string,
+ *   page?: number, limit?: number, signal?: AbortSignal,
+ * }} [options]
+ */
 export function fetchAdminLeads({ signal, ...params } = {}) {
   return get(ADMIN_ENDPOINTS.leads, { params: clean(params), signal })
 }
