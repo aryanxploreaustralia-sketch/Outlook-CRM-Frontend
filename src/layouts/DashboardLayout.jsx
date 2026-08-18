@@ -134,10 +134,29 @@ export function DashboardLayout() {
            *
            * The footer sits inside it so it trails the content instead of
            * permanently occupying viewport height that pages need.
+           *
+           * ## Not a flex column, and that is the fix for the blank page
+           *
+           * This carried `flex flex-col` alongside `flex-1`, which made it a
+           * flex container as tall as the viewport. `DashboardFooter` positions
+           * itself with `mt-auto` — in a flex column that consumes *all* the
+           * free space, so on any short page (Compose, Account, an empty list)
+           * the footer was pushed to the bottom of the viewport and the gap
+           * above it read as a large blank area below the application.
+           *
+           * Phase 16.1D diagnosed this and removed `flex-1` from the wrapper
+           * below, but the wrapper was never the space provider — this element
+           * was. Dropping the flex context here leaves the children in normal
+           * block flow, `mt-auto` becomes inert, and the footer sits directly
+           * after the content on a short page and at the end of it on a long
+           * one.
+           *
+           * `flex-1` stays: it is what sizes this box against the column so it
+           * has something to scroll.
            */}
           <main
             id="main-content"
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
           >
             {/*
               `flex-1` removed in Phase 16.1D — this wrapper is the page
