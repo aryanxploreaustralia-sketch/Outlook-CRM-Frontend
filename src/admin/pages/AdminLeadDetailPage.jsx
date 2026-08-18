@@ -15,11 +15,12 @@
  */
 
 import { useCallback } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 
 import { AdminCard, AdminErrorState, AdminPageContainer } from '@/admin/components'
 import { useAdminBreadcrumbs, useAdminResource } from '@/admin/hooks'
+import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { fetchAdminLead } from '@/admin/services/admin.service'
 import { EMPTY, formatDate } from '@/admin/utils/format'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
@@ -38,6 +39,8 @@ function Fact({ label, value }) {
 
 export function AdminLeadDetailPage() {
   const { id } = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
   const breadcrumb = useAdminBreadcrumbs()
 
   const loader = useCallback((options) => fetchAdminLead(id, options), [id])
@@ -65,9 +68,33 @@ export function AdminLeadDetailPage() {
       subtitle={`Owned by ${data.owner?.name ?? 'an unknown user'}`}
       breadcrumb={breadcrumb}
       actions={
-        <Button as={Link} to={-1} size="sm" variant="secondary" onClick={(e) => { e.preventDefault(); globalThis.history.back() }}>
+        /*
+         * Back, with a real destination behind it.
+         *
+         * The `href` is the monitor, so opening this page directly — from a
+         * pasted link, or a refresh — still leads somewhere, and middle-click
+         * behaves. The click handler prefers `history.back()` when there is
+         * in-app history to go back to, because the monitor keeps its filters
+         * and page number in its own query string: going *back* returns to the
+         * filtered view the reader left, while following the href would land
+         * them on an unfiltered register and quietly lose their work.
+         *
+         * `location.key` is `'default'` only on the first entry of a session,
+         * which is exactly the case where there is nothing to go back to.
+         */
+        <Button
+          as={Link}
+          to={ADMIN_PATHS.LEAD_MONITOR}
+          size="sm"
+          variant="secondary"
+          onClick={(event) => {
+            if (location.key === 'default') return
+            event.preventDefault()
+            navigate(-1)
+          }}
+        >
           <ArrowLeft className="size-3.5" aria-hidden="true" />
-          Back
+          Back to Lead monitor
         </Button>
       }
     >
@@ -85,6 +112,16 @@ export function AdminLeadDetailPage() {
             <Fact label="City" value={lead.city} />
             <Fact label="Market" value={lead.market} />
             <Fact label="Handled by" value={lead.handledBy} />
+            {/*
+              The automatic introduction email, which the monitor's own
+              "Introduction" column reports. Both read `autoMail.status` off the
+              same document, so the list and this page cannot disagree.
+            */}
+            <Fact label="Introduction" value={lead.autoMailStatus} />
+            <Fact
+              label="Introduction sent"
+              value={lead.autoMailSentAt ? formatDate(lead.autoMailSentAt) : null}
+            />
           </dl>
         </AdminCard>
 

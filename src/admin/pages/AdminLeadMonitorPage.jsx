@@ -54,6 +54,7 @@ import {
   AdminTableIdentity,
 } from '@/admin/components'
 import { ADMIN_SCOPE_NOTICE, ADMIN_TONE } from '@/admin/constants/admin.constants'
+import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
 import { fetchAdminLeads } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatDate } from '@/admin/utils/format'
@@ -345,8 +346,19 @@ export function AdminLeadMonitorPage() {
       {
         key: 'reference',
         header: 'Reference',
+        /*
+         * The reference opens the enquiry, addressed by id rather than by the
+         * text in the cell. Two enquiries can carry the same reference — the
+         * workbook is typed by hand — and `_id` is what the detail endpoint
+         * loads, so resolving the displayed string back to a record would be
+         * both slower and capable of opening the wrong one.
+         */
         render: (lead) => (
-          <AdminTableIdentity primary={lead.reference} secondary={lead.company ?? 'No company'} />
+          <AdminTableIdentity
+            primary={lead.reference}
+            secondary={lead.company ?? 'No company'}
+            to={ADMIN_PATHS.LEAD_DETAIL.replace(':id', lead.id)}
+          />
         ),
       },
       {

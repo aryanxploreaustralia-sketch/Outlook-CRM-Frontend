@@ -35,6 +35,7 @@
  */
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { AdminEmptyState } from '@/admin/components/AdminEmptyState'
 import { AdminTableLoading } from '@/admin/components/AdminLoadingState'
@@ -184,18 +185,45 @@ export function AdminTable({
  * audit tables, and five hand-rolled copies is how the avatar size ends up
  * different on two of them.
  *
+ * ## `to` makes only the first line a link
+ *
+ * The identifier is the thing that opens a record — a reference, a name — and
+ * the second line is context for reading, not a destination. Wrapping the whole
+ * cell would make the company name under a reference look like a link to the
+ * company, which is a different page this console does not open from here.
+ *
+ * A real `<Link>`, never a click handler on a `<div>`: it produces an `href`, so
+ * middle-click and "open in new tab" work, and it is reachable and activatable
+ * from the keyboard without anything being added for it.
+ *
  * @param {{
  *   primary: import('react').ReactNode,
  *   secondary?: import('react').ReactNode,
  *   leading?: import('react').ReactNode,
+ *   to?: string,
  * }} props
  */
-export function AdminTableIdentity({ primary, secondary, leading }) {
+export function AdminTableIdentity({ primary, secondary, leading, to }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
       {leading}
       <div className="min-w-0">
-        <p className="truncate font-medium text-slate-900">{primary}</p>
+        {to ? (
+          /*
+           * `no-underline` until hover: in a dense table a permanent underline
+           * on every row is noise, and the pointer plus the hover state carry
+           * the affordance. The focus ring is the global `:focus-visible` one,
+           * so the keyboard path looks like it does everywhere else.
+           */
+          <Link
+            to={to}
+            className="block truncate rounded font-medium text-slate-900 no-underline transition-colors hover:text-brand-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+          >
+            {primary}
+          </Link>
+        ) : (
+          <p className="truncate font-medium text-slate-900">{primary}</p>
+        )}
         {secondary && <p className="truncate text-xs text-slate-500">{secondary}</p>}
       </div>
     </div>
