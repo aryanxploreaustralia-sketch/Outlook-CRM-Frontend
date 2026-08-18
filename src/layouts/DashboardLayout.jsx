@@ -86,16 +86,16 @@ export function DashboardLayout() {
      * body background below the app, exactly the toolbar's height. `dvh` tracks
      * the live viewport, so the frame stays flush throughout.
      */
-    <div className="flex h-dvh flex-col overflow-hidden bg-slate-50">
+    <div className="flex min-h-dvh flex-col bg-slate-50">
       {/* Lets a keyboard user jump past the navigation on every page. */}
       <a href="#main-content" className="sr-only-focusable">
         Skip to main content
       </a>
 
-      {/* `min-h-0` is load-bearing: a flex child defaults to `min-height:auto`,
-          which refuses to shrink below its content and would push the frame
-          taller than the viewport, reintroducing the document scrollbar. */}
-      <div className="flex min-h-0 flex-1">
+      {/* No `min-h-0`. It existed to stop this row growing taller than the
+          viewport, back when a document scrollbar was the failure being
+          prevented. The document scrollbar is now the mechanism. */}
+      <div className="flex flex-1">
         <Sidebar
           user={auth.user}
           isCollapsed={ui.isCollapsed}
@@ -109,10 +109,10 @@ export function DashboardLayout() {
         />
 
         {/* `min-w-0` allows this column to shrink below its content's intrinsic
-            width, which is what actually prevents the flex row overflowing and
-            is why no `overflow-x-hidden` is needed here. `min-h-0` does the
-            same for the vertical axis so `<main>` can own the scrolling. */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            width, and is now the *only* thing preventing a wide table widening
+            the page - nothing below clips any more. `min-h-0` is gone with the
+            inner scroll container it existed to serve. */}
+        <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             title={title}
             subtitle={subtitle}
@@ -124,39 +124,28 @@ export function DashboardLayout() {
           />
 
           {/**
-           * The one and only scroll container in the authenticated app.
+           * No longer a scroll container, and carrying no `overflow` at all.
            *
-           * `overflow-y-auto` gives a scrollbar only when content actually
-           * overflows, so short pages show none at all. `overflow-x-hidden`
-           * clips a wide child here — at the scroll container — rather than
-           * letting it widen the page, which is what kept horizontal scroll
-           * out before, now applied somewhere it cannot break `sticky`.
+           * This owned the scrollbar: `flex-1` made it exactly as tall as the
+           * viewport allowed and `overflow-y-auto` scrolled inside that box. On
+           * a short page the box stayed viewport-tall regardless, which is the
+           * empty region every page showed below its content — the space was
+           * the container, not the page.
            *
-           * The footer sits inside it so it trails the content instead of
-           * permanently occupying viewport height that pages need.
+           * Dropping `flex-1` is what makes a page's height its content's
+           * height. Dropping the overflow is what gives the scroll back to the
+           * document.
            *
-           * ## Not a flex column, and that is the fix for the blank page
-           *
-           * This carried `flex flex-col` alongside `flex-1`, which made it a
-           * flex container as tall as the viewport. `DashboardFooter` positions
-           * itself with `mt-auto` — in a flex column that consumes *all* the
-           * free space, so on any short page (Compose, Account, an empty list)
-           * the footer was pushed to the bottom of the viewport and the gap
-           * above it read as a large blank area below the application.
-           *
-           * Phase 16.1D diagnosed this and removed `flex-1` from the wrapper
-           * below, but the wrapper was never the space provider — this element
-           * was. Dropping the flex context here leaves the children in normal
-           * block flow, `mt-auto` becomes inert, and the footer sits directly
-           * after the content on a short page and at the end of it on a long
-           * one.
-           *
-           * `flex-1` stays: it is what sizes this box against the column so it
-           * has something to scroll.
+           * Both `overflow` values had to go together. Keeping
+           * `overflow-x-hidden` to go on clipping wide tables would not work:
+           * CSS computes an `overflow` of `visible` to `auto` when the other
+           * axis is not `visible`, so `overflow-x: hidden` alone silently
+           * restores `overflow-y: auto` and this element owns the scrollbar
+           * again. Horizontal containment is `min-w-0` on the column above.
            */}
           <main
             id="main-content"
-            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+            className="flex flex-col"
           >
             {/*
               `flex-1` removed in Phase 16.1D — this wrapper is the page

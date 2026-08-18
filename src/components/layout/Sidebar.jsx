@@ -92,7 +92,7 @@ export function Sidebar({
               // overflow can silently reposition it. `h-svh` was also wrong
               // here: it ignored the frame and could exceed it by a hair,
               // which is what let the nav and the document both scroll.
-              `h-full shrink-0 transition-[width] duration-200 ease-out ${width}`,
+              `sticky top-0 h-dvh shrink-0 transition-[width] duration-200 ease-out ${width}`,
         ].join(' ')}
       >
         {/* --- Logo area ----------------------------------------------------- */}

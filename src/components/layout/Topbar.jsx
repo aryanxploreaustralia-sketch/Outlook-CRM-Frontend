@@ -53,7 +53,7 @@ export function Topbar({
   useSearchHotkey(openSearch, !isSearchOpen)
 
   return (
-    <header className="z-20 shrink-0 border-b border-slate-200 bg-white/85 backdrop-blur">
+    <header className="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white/85 backdrop-blur">
       <div className="flex h-(--spacing-topbar) items-center gap-3 px-4 sm:gap-4 sm:px-6">
         {/* --- Mobile menu button ------------------------------------------- */}
         {isMobile && (
