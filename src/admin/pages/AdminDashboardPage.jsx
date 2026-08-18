@@ -61,8 +61,6 @@ import { useAdminBreadcrumbs, useAdminResource } from '@/admin/hooks'
 import { useDateRange } from '@/admin/hooks/useDateRange'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { PerformanceWidgets } from '@/admin/components/performance/PerformanceDashboard'
-import { TaskWidgets } from '@/admin/components/performance/TaskWidgets'
-import { fetchTaskHighlights } from '@/api/services/task.service'
 import { fetchAdminDashboard, fetchPerformanceHighlights } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatMinutes, formatRelative } from '@/admin/utils/format'
 import { Button } from '@/components/ui/Button'
@@ -105,24 +103,6 @@ export function AdminDashboardPage() {
     refresh: refreshHighlights,
   } = useAdminResource(highlightsLoader, { deps: [query] })
 
-  /**
-   * Phase 18. A third request rather than a field on either of the other two.
-   *
-   * It reads a different collection and answers a different question — "what is
-   * owed today" rather than "who stood out" — and loading it separately means
-   * the page paints without it.
-   */
-  const taskLoader = useCallback(
-    (options) => fetchTaskHighlights({ range: query, ...options }),
-    [query],
-  )
-
-  const {
-    data: taskHighlights,
-    error: taskError,
-    isLoading: tasksLoading,
-    refresh: refreshTasks,
-  } = useAdminResource(taskLoader, { deps: [query] })
 
   const actions = (
     <Button variant="secondary" size="sm" onClick={refresh} isLoading={isRefreshing}>
@@ -234,21 +214,6 @@ export function AdminDashboardPage() {
         )}
       </AdminSection>
 
-      {/*
-        Phase 18 — assigned work: what is owed today, what is late, what got
-        finished. Beneath the people section because it is about the work rather
-        than the person, and a manager reads them in that order.
-      */}
-      <AdminSection
-        title="Assigned work"
-        description="Tasks across the team. Overdue is derived from the deadline and the status, never stored."
-      >
-        {taskError ? (
-          <AdminErrorState error={taskError} onRetry={refreshTasks} compact />
-        ) : (
-          <TaskWidgets data={taskHighlights} isLoading={tasksLoading} />
-        )}
-      </AdminSection>
 
       {/* --- Headline counts --------------------------------------------- */}
       <AdminSection
