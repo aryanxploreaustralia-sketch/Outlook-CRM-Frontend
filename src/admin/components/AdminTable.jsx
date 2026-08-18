@@ -90,7 +90,7 @@ export function AdminTable({
 
   return (
     // The scroll container. Everything wide lives inside it, never outside.
-    <div className={`w-full overflow-x-auto ${className}`}>
+    <div className={`scroll-x w-full overflow-x-auto ${className}`}>
       {/*
         Phase 16.1B: `table-auto`, explicitly.
         Columns size to their content rather than being divided evenly, so a

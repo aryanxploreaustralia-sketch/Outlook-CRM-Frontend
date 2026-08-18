@@ -110,7 +110,7 @@ export function CampaignAnalyticsPage() {
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="text-sm font-semibold text-slate-900">Recent campaigns</h2>
 
-        <div className="mt-4 overflow-x-auto">
+        <div className="scroll-x mt-4 overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>

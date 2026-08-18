@@ -412,7 +412,7 @@ export function AdminTeamPage() {
           title="How the score is calculated"
           description={scoring.formula}
         >
-          <div className="overflow-x-auto">
+          <div className="scroll-x overflow-x-auto">
             <table className="w-full min-w-[34rem] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">

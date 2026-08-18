@@ -329,3 +329,60 @@ body::-webkit-scrollbar {
   height: 0;
   display: none;
 }
+
+/**
+ * Horizontal scroll containers get their scrollbar back.
+ *
+ * ## Why this is the one exception
+ *
+ * The rule above weighs a scrollbar's two jobs — *hint* and *control* — against
+ * the visual noise, and hiding wins because every other input path survives:
+ * wheel, trackpad, touch, keyboard.
+ *
+ * That reasoning does not hold on the horizontal axis. A plain mouse has no
+ * horizontal wheel. Shift+wheel exists but is undiscoverable, and touch and
+ * arrow keys are not what a desktop user reaches for. So on a wide table the
+ * hidden bar removes the hint *and* the only practical control, which is how a
+ * table that scrolls perfectly well reads as a table with columns cut off.
+ *
+ * ## Why a class rather than an axis selector
+ *
+ * `::-webkit-scrollbar:horizontal` could re-enable one axis in Chrome and
+ * Safari, but Firefox's `scrollbar-width` is per-element with no axis form, so
+ * that route silently leaves Firefox broken. Opting containers in by class is
+ * uniform across engines and — more importantly — deliberate: it appears where
+ * someone judged the content genuinely wide, not everywhere a div scrolls.
+ *
+ * `overflow-x: auto` still decides *whether* a bar shows, so a table narrower
+ * than its container has none. This only governs what it looks like when the
+ * browser has already decided to paint one.
+ *
+ * ## Why it sits outside `@layer`
+ *
+ * Same reason as the block above: unlayered declarations beat layered ones
+ * whatever the specificity, so inside `@layer utilities` this would lose to the
+ * `*` selector it is meant to override.
+ */
+.scroll-x {
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+
+.scroll-x::-webkit-scrollbar {
+  display: block;
+  height: 0.5rem;
+}
+
+.scroll-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-x::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: var(--color-slate-300);
+}
+
+.scroll-x::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-400);
+}

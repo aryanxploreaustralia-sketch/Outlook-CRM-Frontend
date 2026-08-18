@@ -359,7 +359,7 @@ export function LeadImportPage() {
               </p>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <div className="scroll-x overflow-x-auto rounded-lg border border-slate-200">
               <table className="min-w-full divide-y divide-slate-200 text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <tr>
@@ -559,7 +559,7 @@ export function LeadImportPage() {
 
             {/* Row-by-row verdict */}
             {preview.rows?.length > 0 && (
-              <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <div className="scroll-x overflow-x-auto rounded-lg border border-slate-200">
                 <table className="min-w-full divide-y divide-slate-200 text-sm">
                   <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>

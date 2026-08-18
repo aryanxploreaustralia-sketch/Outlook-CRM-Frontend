@@ -138,7 +138,7 @@ export function PerformanceComparison({ people = [], range = {} }) {
       ) : isLoading || !data ? (
         <div className="mt-4 skeleton h-64" />
       ) : (
-        <div className="mt-4 overflow-x-auto">
+        <div className="scroll-x mt-4 overflow-x-auto">
           <table className="w-full min-w-[36rem] text-sm">
             <caption className="sr-only">
               Selected people compared across every measured metric
