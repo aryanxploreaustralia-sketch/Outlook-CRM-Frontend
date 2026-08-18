@@ -113,7 +113,7 @@ export function AdminTable({
                   key={column.key}
                   scope="col"
                   aria-sort={column.sortable ? ariaSort : undefined}
-                  className={`sticky top-0 z-10 whitespace-nowrap bg-slate-50/95 px-6 py-3 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 backdrop-blur ${
+                  className={`sticky top-(--spacing-topbar) z-10 whitespace-nowrap bg-slate-50/95 px-6 py-3 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 backdrop-blur ${
                     ALIGN[column.align] ?? ALIGN.left
                   } ${column.width ?? ''} ${column.headerClassName ?? ''}`}
                 >

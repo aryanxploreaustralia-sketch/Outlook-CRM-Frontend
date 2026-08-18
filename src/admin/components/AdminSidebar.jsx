@@ -98,7 +98,7 @@ export function AdminSidebar({
             ? `fixed inset-y-0 left-0 z-40 w-(--spacing-sidebar) transition-transform duration-300 ease-out ${
                 isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
               }`
-            : `h-full shrink-0 transition-[width] duration-200 ease-out ${width}`,
+            : `sticky top-0 h-dvh shrink-0 transition-[width] duration-200 ease-out ${width}`,
         ].join(' ')}
       >
         {/* --- Workspace ----------------------------------------------------- */}

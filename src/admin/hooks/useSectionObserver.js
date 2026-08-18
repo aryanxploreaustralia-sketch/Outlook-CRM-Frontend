@@ -31,7 +31,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
  *   scrollTo: (id: string) => void,
  * }}
  */
-export function useSectionObserver(sectionIds, { rootId = 'admin-main' } = {}) {
+export function useSectionObserver(sectionIds, { rootId = null } = {}) {
   const [activeId, setActiveId] = useState(sectionIds[0] ?? '')
   const [seen, setSeen] = useState(() => new Set(sectionIds.slice(0, 1)))
 

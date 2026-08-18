@@ -49,17 +49,20 @@ export function AdminTopbar({
 
   return (
     /*
-     * Not `sticky`. Reverted in Phase 16.1D.
+     * `sticky`, and now genuinely load-bearing.
      *
-     * 16.1A added `sticky top-0` for "a sticky header", which misread the
-     * shell: the frame is locked to `h-dvh overflow-hidden` and `<main>` is the
-     * only scroll container, so this bar is already fixed — it has nowhere to
-     * scroll to. The `sticky` was at best inert, and at worst the beginning of
-     * the exact failure `DashboardLayout` documents at length, where a sticky
-     * child resolves against an ancestor that quietly became a scroll container
-     * and the chrome starts drifting.
+     * This was deliberately *not* sticky for two phases, and the reasoning was
+     * right at the time: the shell was locked to `h-dvh overflow-hidden` with
+     * `<main>` as the only scroll container, so the bar had nowhere to scroll
+     * to and `sticky` was inert at best.
+     *
+     * The shell now lets the document scroll, so this bar would scroll away
+     * with the page. `sticky top-0` is what keeps it where it has always
+     * appeared to be. There is no scroll-container ancestor left for it to
+     * resolve against unexpectedly — that was the hazard, and removing the
+     * inner container removed it.
      */
-    <header className="z-20 shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-md">
+    <header className="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-md">
       <div className="flex h-(--spacing-topbar) items-center gap-3 px-4 sm:gap-3 sm:px-6">
         {isMobile && (
           <button

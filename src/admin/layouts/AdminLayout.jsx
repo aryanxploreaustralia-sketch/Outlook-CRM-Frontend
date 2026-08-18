@@ -1,17 +1,33 @@
 /**
  * The admin shell.
  *
- * Structurally the same frame as `DashboardLayout`, and identical for a reason
- * rather than by copy-paste habit. That layout's comments document three
- * compounding scroll defects it was rebuilt to fix — a nested scroll container
- * created by `overflow-x-hidden`, a shell taller than the viewport, and a
- * sidebar nav that could scroll alongside the document. The fix was to lock the
- * frame to `h-dvh overflow-hidden` so the whole authenticated app has exactly
- * one scroll container.
+ * ## The document owns the scroll
  *
- * Any divergence here would reintroduce those bugs on eleven new pages, so the
- * geometry is deliberately the same: locked frame, `min-h-0` on the flex
- * children, one `<main>` that scrolls.
+ * This frame was locked to `h-dvh overflow-hidden` with `<main>` carrying
+ * `overflow-y-auto`, so an inner element owned the scrollbar and the document
+ * never moved. That solved a real set of defects — a nested scroll container, a
+ * shell taller than the viewport, a nav scrolling alongside the page — but it
+ * paid for them with an inner scrollbar on every screen: browser find-in-page
+ * scrolled the wrong box, `window.scrollTo` did nothing, and a short page left
+ * a tall dead region because the frame was viewport-height regardless of
+ * content.
+ *
+ * The frame is now `min-h-dvh` and nothing between here and the page clips.
+ * The document scrolls, as it does everywhere else on the web.
+ *
+ * What replaces the old guarantees:
+ *
+ *  - **Nothing widens the page.** `min-w-0` on the content column, which was
+ *    always the mechanism — the `overflow-x-hidden` beside it was belt and
+ *    braces, and had to go, because `overflow-x: hidden` with a `visible`
+ *    `overflow-y` computes that `y` to `auto` and silently rebuilds the very
+ *    scroll container this removed.
+ *  - **The chrome stays put.** The sidebar and topbar are `sticky`, which is
+ *    how an element stays visible in a document that scrolls. They were merely
+ *    outside the scrolling box before.
+ *
+ * `DashboardLayout` still uses the locked-frame geometry. The two have
+ * deliberately diverged; this comment is the record of why.
  *
  * ## Reuse
  *
@@ -106,15 +122,15 @@ function AdminShell() {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-slate-50">
+    <div className="flex min-h-dvh flex-col bg-slate-50">
       <a href="#admin-main" className="sr-only-focusable">
         Skip to main content
       </a>
 
-      {/* `min-h-0` is load-bearing: a flex child defaults to `min-height:auto`
-          and refuses to shrink below its content, which would push the frame
-          past the viewport and hand the document a scrollbar. */}
-      <div className="flex min-h-0 flex-1">
+      {/* No `min-h-0` any more. It existed to stop this row growing past the
+          viewport, back when the document was forbidden to scroll — handing the
+          document a scrollbar was the failure. Now it is the goal. */}
+      <div className="flex flex-1">
         <AdminSidebar
           user={auth.user}
           isCollapsed={ui.isCollapsed}
@@ -125,10 +141,11 @@ function AdminShell() {
           onCloseDrawer={ui.closeDrawer}
         />
 
-        {/* `min-w-0` lets this column shrink below its content's intrinsic
-            width, which is what actually keeps a wide table from widening the
-            page — and is why no `overflow-x-hidden` is needed at this level. */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {/* `min-w-0` stays, and is now the *only* thing keeping a wide table
+            from widening the page: nothing below clips any more. It lets this
+            column shrink below its content's intrinsic width, so a 46rem table
+            scrolls inside its own container instead of stretching the shell. */}
+        <div className="flex min-w-0 flex-1 flex-col">
           <AdminTopbar
             title={title}
             subtitle={subtitle}
@@ -139,27 +156,29 @@ function AdminShell() {
             isSigningOut={isSigningOut}
           />
 
-          {/* The one scroll container. `overflow-x-hidden` clips a wide child
-              *here*, at the scroll container, rather than letting it widen the
-              page — tables own their horizontal scroll internally. */}
+          {/*
+            No longer a scroll container, and deliberately carrying no
+            `overflow` at all.
+
+            The obvious half-measure — drop `overflow-y-auto` but keep
+            `overflow-x-hidden` to go on clipping wide tables — does not work.
+            CSS computes an `overflow` of `visible` to `auto` when the other
+            axis is not `visible`, so `overflow-x: hidden` alone would quietly
+            reinstate `overflow-y: auto` and this element would still own the
+            scrollbar. Horizontal containment is `min-w-0` on the column above.
+          */}
           <main
             id="admin-main"
             /*
-             * `tabIndex={-1}` makes this focusable without adding it to the tab
-             * order, which does two things.
+             * `tabIndex={-1}` for the skip link, and only for that now.
              *
-             * The skip link at the top targets `#admin-main`; without a tabindex
-             * the browser scrolls to the anchor but leaves focus on the link, so
-             * the next Tab returns to the navigation the user just skipped.
-             *
-             * And it is what makes keyboard scrolling work. Arrow keys, Page
-             * Up/Down, Home and End scroll the *focused* scrollable element —
-             * with focus on `body` they try to scroll the document, which is
-             * locked at `h-dvh overflow-hidden` and does not move. Focusing the
-             * real scroll container is what connects the keyboard to it.
-             *
-             * This matters more now that the scrollbar is hidden: the keyboard
-             * path can no longer be replaced by dragging a bar.
+             * It used to do a second job: arrow keys and Page Up/Down scroll the
+             * focused scrollable element, and with the document locked the
+             * keyboard could only reach the scroll container by focusing it.
+             * The document scrolls again, so the keyboard works from `body`
+             * without help — but the skip link still needs a focusable target,
+             * or Tab after "skip to main content" returns to the navigation the
+             * reader just skipped.
              */
             tabIndex={-1}
             /*
@@ -168,7 +187,22 @@ function AdminShell() {
              * focus somewhere invisible, which is the failure the skip link
              * exists to prevent.
              */
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
+            /*
+             * No `flex-1`, and that is the whole of Phase 16.1D's lesson
+             * carried across.
+             *
+             * `DashboardFooter` positions itself with `mt-auto`. Give this
+             * element `flex-1` and it stretches to the full column height, so
+             * `mt-auto` finds free space and pins the footer to the bottom of
+             * the viewport — putting a tall blank region between the end of a
+             * short page and a full-width footer bar. That is exactly the
+             * "large white area below the application" that was reported and
+             * fixed once already.
+             *
+             * Sized to its content instead: the page ends where its content
+             * ends, and the column's own background fills whatever is left.
+             */
+            className="flex flex-col"
           >
             {/*
               No `flex-1` filler here (Phase 16.1D).

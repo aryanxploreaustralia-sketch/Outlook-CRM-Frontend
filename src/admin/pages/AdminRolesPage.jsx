@@ -26,12 +26,17 @@
  *
  * ## Every rule shown here is also a rule there
  *
- * Owner is not editable, owner-only permissions cannot be granted elsewhere,
- * nobody edits their own role, and nobody grants what they do not hold. This
- * page reflects those so a reader is not offered something that will be
- * refused — but it decides none of them. The server re-checks all four against
- * the request's own actor, so a client that ignored every one of them would
- * still be refused.
+ * Owner is not editable, nobody edits their own role, and nobody grants a
+ * permission they do not themselves hold. This page reflects those so a reader
+ * is not offered something that will be refused — but it decides none of them.
+ * The server re-checks each against the request's own actor, so a client that
+ * ignored all three would still be refused.
+ *
+ * There is deliberately **no** list of permissions that are too important to
+ * edit. `users.invite` was one until it became clear that a permission nobody
+ * can grant is not a safety feature, it is a missing feature with a padlock on
+ * it. What made it dangerous — an invitation naming any role at all — is now
+ * checked where invitations are created, against the inviter's own rank.
  */
 
 import { useCallback, useMemo, useState } from 'react'
@@ -187,7 +192,6 @@ export function AdminRolesPage() {
   }
 
   const roles = data?.roles ?? []
-  const ownerOnly = data?.ownerOnlyPermissions ?? []
   const mine = roles.find((entry) => entry.role === myRole)
 
   return (
@@ -209,15 +213,6 @@ export function AdminRolesPage() {
             permission changes what the server enforces, immediately and for everyone holding that
             role. Owner is fixed: it is the way back if another role is misconfigured.
           </p>
-          {ownerOnly.length > 0 && (
-            <p className="mt-1.5 text-slate-600">
-              <span className="font-medium text-slate-900">Reserved to the Owner:</span>{' '}
-              {ownerOnly.map((permission) => catalogue?.[permission] ?? permission).join(', ')} —
-              shown with a padlock on every other role. Inviting decides who enters the organization
-              and with what authority, so a role that could invite could grant itself a senior
-              identity.
-            </p>
-          )}
         </div>
       </div>
 
@@ -321,23 +316,20 @@ export function AdminRolesPage() {
               const editable = lockReason === null
 
               /*
-               * Permissions this actor could never grant here, padlocked rather
-               * than offered and refused.
+               * The only permissions withheld here are ones the actor does not
+               * hold themselves — granting those would be escalation, and an
+               * Owner holds everything, so an Owner sees no padlocks at all.
                *
-               * Two sources, and missing the second was a real bug: the console
-               * only withheld what the *actor* lacked, so an Owner — who holds
-               * `users.invite` — was shown a live checkbox for it on the
-               * Administrator card. Ticking it optimistically, being refused,
-               * and snapping back is indistinguishable from a save that did not
-               * persist. Owner-only permissions are withheld from every other
-               * role by design, so on those cards they are not a choice.
+               * Nothing is withheld for being "important". `users.invite` is an
+               * ordinary checkbox on every role now; the escalation it used to
+               * carry is blocked at the invite endpoint instead, which applies
+               * the inviter's own role ceiling.
                */
-              const locked = new Set([
-                ...Object.keys(catalogue ?? {}).filter(
+              const locked = new Set(
+                Object.keys(catalogue ?? {}).filter(
                   (permission) => !myPermissions.has(permission),
                 ),
-                ...(entry.role === 'owner' ? [] : ownerOnly),
-              ])
+              )
 
               return (
                 <AdminCard

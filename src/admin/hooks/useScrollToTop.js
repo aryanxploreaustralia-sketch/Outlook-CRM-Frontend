@@ -3,18 +3,16 @@
  *
  * ## Why a page needs to ask for this
  *
- * The admin shell locks the frame to `h-dvh overflow-hidden` and gives `<main
- * id="admin-main">` the only scroll container. That element belongs to
- * `AdminLayout`, which is the parent route of every admin page — so navigating
+ * A route change inside the admin shell does not reset the scroll position by
+ * itself. `AdminLayout` is the parent route of every admin page, so navigating
  * from `/admin/users` to `/admin/users/:id` swaps the `<Outlet />` content
- * while the scroll container itself stays mounted, keeping whatever
- * `scrollTop` the previous page left behind.
+ * while everything around it stays mounted — and the page keeps whatever offset
+ * the previous one left behind.
  *
  * The effect is that opening a user from row forty of the directory renders the
- * detail page already scrolled past its first several sections. Nothing resets
- * it: React Router's `<ScrollRestoration>` acts on the window, which never
- * scrolls here, and the sibling `useScrollMemory` deliberately *restores* an
- * offset rather than clearing one.
+ * detail page already scrolled past its first several sections. This app
+ * mounts no `<ScrollRestoration>`, and the sibling `useScrollMemory`
+ * deliberately *restores* an offset rather than clearing one.
  *
  * This is the counterpart to that hook. `useScrollMemory` is for a list you
  * want to come back to; this is for a page that has no business remembering
@@ -44,10 +42,18 @@ export function useScrollToTop(key, { elementId = 'admin-main', enabled = true }
   useLayoutEffect(() => {
     if (!enabled) return
 
+    // The document owns the scroll now, so this is the reset that matters.
+    // `instant`, not smooth: this is a new page appearing, not a movement
+    // within one, and animating it would show the reader the bottom of a page
+    // they never asked to see.
+    globalThis.scrollTo({ top: 0, behavior: 'instant' })
+
+    // The container is reset too, and still guarded. It no longer scrolls in
+    // the admin shell, but the hook is used by pages that could be mounted
+    // elsewhere, and a stale offset on an element that *does* scroll would
+    // survive this otherwise.
     const element = document.getElementById(elementId)
-    // Guarded rather than assumed: the hook is harmless on any screen rendered
-    // outside the admin shell, where this container does not exist.
-    if (element) element.scrollTop = 0
+    if (element && element.scrollTop !== 0) element.scrollTop = 0
   }, [key, elementId, enabled])
 }
 

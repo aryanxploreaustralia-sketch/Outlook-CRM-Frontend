@@ -33,15 +33,16 @@ const PREFIX = 'admin:scroll:'
  *   against a skeleton scrolls to an offset the real content has not reached yet,
  *   and the browser silently clamps it to the bottom of a shorter page.
  */
+/*
+ * `elementId` is retained for the call signature but is no longer read: the
+ * document owns the scroll, so the offset saved and restored is the window's.
+ */
 export function useScrollMemory({ elementId = 'admin-main', enabled = true } = {}) {
   const location = useLocation()
   const key = `${PREFIX}${location.pathname}${location.search}`
 
   // --- Save, continuously while mounted ------------------------------------
   useEffect(() => {
-    const element = document.getElementById(elementId)
-    if (!element) return undefined
-
     let frame = null
 
     const onScroll = () => {
@@ -53,7 +54,7 @@ export function useScrollMemory({ elementId = 'admin-main', enabled = true } = {
       frame = requestAnimationFrame(() => {
         frame = null
         try {
-          sessionStorage.setItem(key, String(element.scrollTop))
+          sessionStorage.setItem(key, String(globalThis.scrollY))
         } catch {
           // Private browsing or a blocked-storage policy. Losing a scroll
           // position is not worth an error.
@@ -61,10 +62,13 @@ export function useScrollMemory({ elementId = 'admin-main', enabled = true } = {
       })
     }
 
-    element.addEventListener('scroll', onScroll, { passive: true })
+    // The document scrolls, so the scroll event is heard on the window. It
+    // still fires on `window` when the user scrolls the page, regardless of
+    // which element the wheel happened to be over.
+    globalThis.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
-      element.removeEventListener('scroll', onScroll)
+      globalThis.removeEventListener('scroll', onScroll)
       if (frame !== null) cancelAnimationFrame(frame)
     }
   }, [key, elementId])
@@ -85,11 +89,10 @@ export function useScrollMemory({ elementId = 'admin-main', enabled = true } = {
     const offset = Number(stored)
     if (!Number.isFinite(offset) || offset <= 0) return undefined
 
-    // Deferred a frame so the restored rows have been laid out. Setting
-    // `scrollTop` before the list has height is clamped to zero.
+    // Deferred a frame so the restored rows have been laid out. Scrolling
+    // before the list has height is clamped to zero.
     const frame = requestAnimationFrame(() => {
-      const element = document.getElementById(elementId)
-      if (element) element.scrollTop = offset
+      globalThis.scrollTo({ top: offset, behavior: 'instant' })
     })
 
     return () => cancelAnimationFrame(frame)

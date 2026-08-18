@@ -310,10 +310,12 @@
  * A scrollbar is both a hint that content continues and a control you can drag.
  * Hiding it removes both, which matters most to pointer users who find dragging
  * easier than wheeling. Every container keeps `overflow: auto`, so wheel,
- * trackpad, touch and keyboard are unaffected — and `#admin-main` carries
- * `tabIndex={-1}` specifically so Page Up/Down, Home/End and the arrows reach
- * the real scroll container. A user who enables "always show scrollbars" at the
- * OS level still gets overlay bars, because that setting overrides page CSS.
+ * trackpad, touch and keyboard are unaffected. The keyboard case used to need
+ * help — the admin shell scrolled an inner element, which the arrows only reach
+ * when it holds focus — but the document scrolls again, so Page Up/Down, Home,
+ * End and the arrows work from `body` with nothing arranged for them. A user
+ * who enables "always show scrollbars" at the OS level still gets overlay bars,
+ * because that setting overrides page CSS.
  */
 *,
 html,
