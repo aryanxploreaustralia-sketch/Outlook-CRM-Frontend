@@ -44,6 +44,8 @@ import {
 } from 'lucide-react'
 
 import { fetchMySignature } from '@/api/services/signature.service'
+import { ROUTE_PATHS } from '@/routes/paths'
+import { Link } from 'react-router-dom'
 
 /** Toolbar actions handled by a plain `execCommand` with no argument. */
 const SIMPLE_COMMANDS = [
@@ -76,6 +78,8 @@ export function RichTextEditor({
   disabled = false,
   minHeight = '16rem',
 }) {
+  const [signatureNotice, setSignatureNotice] = useState(null)
+  const [isLoadingSignature, setIsLoadingSignature] = useState(false)
   const imageInput = useRef(null)
   const editorRef = useRef(null)
   const labelId = useId()
@@ -245,19 +249,61 @@ export function RichTextEditor({
    * `PUT /v1/account/signature` sanitises before storing — so nothing is
    * re-processed here.
    */
+  /**
+   * Inserts the caller's saved signature at the cursor.
+   *
+   * Fetched on demand rather than held in state: a signature edited in Account
+   * should be the one that lands here on the next click, and caching it would
+   * mean the editor quietly using a stale copy for the rest of the session.
+   *
+   * `insertHTML` places it at the selection, so it appends to whatever has been
+   * written rather than replacing the body. The content is already sanitised —
+   * the server sanitises before storing — so nothing is re-processed here.
+   *
+   * ## No `window.alert`
+   *
+   * Every outcome reports through `signatureNotice`, rendered as a strip under
+   * the toolbar. A native alert blocks the page, cannot be styled, announces
+   * the hostname, and — worst here — steals focus, which collapses the
+   * selection the insertion point depends on. Dismissing it would leave the
+   * caret somewhere else than where the reader left it.
+   */
   const insertSignature = useCallback(async () => {
+    setSignatureNotice(null)
+    setIsLoadingSignature(true)
+
     try {
       const signatureHtml = await fetchMySignature()
 
       if (!signatureHtml || signatureHtml.trim() === '') {
-        window.alert('No signature configured. Add your signature from Account.')
+        // Not an error: having no signature yet is an ordinary state, so it
+        // reads as guidance and offers the place to fix it.
+        setSignatureNotice({
+          tone: 'info',
+          text: 'No signature configured. Add your signature from Account.',
+          href: ROUTE_PATHS.ACCOUNT,
+          linkLabel: 'Manage signature',
+        })
         return
       }
 
       // A leading break so it never runs into the last line of the message.
       runCommand('insertHTML', `<br />${signatureHtml}`)
-    } catch {
-      window.alert('Your signature could not be loaded. Please try again.')
+    } catch (thrown) {
+      /*
+       * 401 is left alone. The API client's interceptor already handles an
+       * expired session for the whole app; reporting it here as a signature
+       * problem would send the reader looking in the wrong place.
+       */
+      if (thrown?.status === 401) return
+
+      setSignatureNotice({
+        tone: 'error',
+        text: "We couldn't load your signature. Please try again.",
+        retry: true,
+      })
+    } finally {
+      setIsLoadingSignature(false)
     }
   }, [runCommand])
 
@@ -390,7 +436,7 @@ export function RichTextEditor({
           className="rounded p-1.5 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
           title="Insert signature"
         >
-          <PenLine className="size-4" aria-hidden="true" />
+          <PenLine className={`size-4 ${isLoadingSignature ? 'animate-pulse' : ''}`} aria-hidden="true" />
           <span className="sr-only">Insert signature</span>
         </button>
 
@@ -444,6 +490,96 @@ export function RichTextEditor({
           />
         </label>
       </div>
+
+      {/*
+
+        Signature feedback, in the flow of the editor rather than in a dialog.
+
+        Non-blocking: the strip appears, the caret stays where it was, and the
+
+        editor remains fully usable while it is shown.
+
+      */}
+
+      {signatureNotice && (
+
+        <div
+
+          role={signatureNotice.tone === 'error' ? 'alert' : 'status'}
+
+          className={`flex flex-wrap items-center gap-2 border-b px-3 py-2 text-xs ${
+
+            signatureNotice.tone === 'error'
+
+              ? 'border-amber-200 bg-amber-50 text-amber-900'
+
+              : 'border-slate-200 bg-slate-50 text-slate-700'
+
+          }`}
+
+        >
+
+          <span className="min-w-0 flex-1">{signatureNotice.text}</span>
+
+
+          {signatureNotice.retry && (
+
+            <button
+
+              type="button"
+
+              onClick={insertSignature}
+
+              disabled={isLoadingSignature}
+
+              className="rounded px-2 py-0.5 font-medium text-amber-900 underline hover:bg-amber-100 disabled:opacity-60"
+
+            >
+
+              Try again
+
+            </button>
+
+          )}
+
+
+          {signatureNotice.href && (
+
+            <Link
+
+              to={signatureNotice.href}
+
+              className="rounded px-2 py-0.5 font-medium text-brand-700 underline hover:bg-slate-100"
+
+            >
+
+              {signatureNotice.linkLabel}
+
+            </Link>
+
+          )}
+
+
+          <button
+
+            type="button"
+
+            onClick={() => setSignatureNotice(null)}
+
+            className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-white/60"
+
+            aria-label="Dismiss"
+
+          >
+
+            ×
+
+          </button>
+
+        </div>
+
+      )}
+
 
       {/* --- Editable surface ---------------------------------------------- */}
       <div className="relative">
