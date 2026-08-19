@@ -69,7 +69,24 @@ export function SignatureEditor() {
       setDraft(stored)
       setNotice({ tone: 'success', text: stored === '' ? 'Signature cleared.' : 'Signature saved.' })
     } catch (thrown) {
-      setNotice({ tone: 'error', text: thrown?.message ?? 'Your signature could not be saved.' })
+      /*
+       * The field-level message, not the envelope's.
+       *
+       * A Zod rejection arrives as 422 with a generic `message` — "The
+       * submitted data failed validation" — and the useful sentence in
+       * `details`. Showing the envelope tells the reader something went wrong
+       * and nothing about what; the field message says the signature is too
+       * large and to use a smaller logo, which is the only thing they can act
+       * on.
+       */
+      const fieldMessage = Array.isArray(thrown?.details)
+        ? thrown.details.find((issue) => issue?.message)?.message
+        : (thrown?.details?.signatureHtml ?? null)
+
+      setNotice({
+        tone: 'error',
+        text: fieldMessage ?? thrown?.message ?? 'Your signature could not be saved.',
+      })
     } finally {
       setIsSaving(false)
     }
