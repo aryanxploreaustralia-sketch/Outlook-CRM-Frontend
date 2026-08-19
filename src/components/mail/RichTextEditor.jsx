@@ -25,7 +25,21 @@
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Bold, Italic, Link2, List, ListOrdered, Underline as UnderlineIcon } from 'lucide-react'
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
+  Redo2,
+  Strikethrough,
+  Table as TableIcon,
+  Underline as UnderlineIcon,
+  Undo2,
+} from 'lucide-react'
 
 /** Toolbar actions handled by a plain `execCommand` with no argument. */
 const SIMPLE_COMMANDS = [
@@ -34,6 +48,12 @@ const SIMPLE_COMMANDS = [
   { command: 'underline', icon: UnderlineIcon, label: 'Underline', shortcut: '⌘U' },
   { command: 'insertUnorderedList', icon: List, label: 'Bulleted list' },
   { command: 'insertOrderedList', icon: ListOrdered, label: 'Numbered list' },
+  { command: 'strikeThrough', icon: Strikethrough, label: 'Strikethrough' },
+  { command: 'justifyLeft', icon: AlignLeft, label: 'Align left' },
+  { command: 'justifyCenter', icon: AlignCenter, label: 'Align centre' },
+  { command: 'justifyRight', icon: AlignRight, label: 'Align right' },
+  { command: 'undo', icon: Undo2, label: 'Undo' },
+  { command: 'redo', icon: Redo2, label: 'Redo' },
 ]
 
 /**
@@ -111,6 +131,60 @@ export function RichTextEditor({
   }, [runCommand])
 
   /**
+   * Inserts a real `<table>`, styled for mail clients rather than for a browser.
+   *
+   * Every rule is an inline attribute or an inline style, and the layout is the
+   * table itself — not flex, not grid. Outlook's rendering engine is Word's: it
+   * ignores a stylesheet, drops most modern CSS, and collapses borders it was
+   * not told about explicitly. `border-collapse` plus per-cell borders and
+   * padding is the combination that survives Outlook, Gmail and Apple Mail
+   * alike, which is why the markup looks dated — it has to.
+   *
+   * The header row is real `<th>` with a background, so the table still reads
+   * as a table when a client strips colour.
+   */
+  const insertTable = useCallback(() => {
+    const rows = Number(window.prompt('Rows (including the header)', '4'))
+    const columns = Number(window.prompt('Columns', '4'))
+
+    if (!Number.isInteger(rows) || !Number.isInteger(columns)) return
+    if (rows < 1 || columns < 1 || rows > 50 || columns > 12) {
+      window.alert('Enter between 1 and 50 rows and 1 and 12 columns.')
+      return
+    }
+
+    const cell = 'border:1px solid #cbd5e1;padding:8px 10px;font-size:14px;vertical-align:top;'
+    const head = `${cell}background-color:#f1f5f9;font-weight:bold;text-align:left;`
+
+    const headerCells = Array.from({ length: columns }, () => `<th style="${head}">&nbsp;</th>`).join('')
+    const bodyRows = Array.from({ length: rows - 1 }, () =>
+      `<tr>${Array.from({ length: columns }, () => `<td style="${cell}">&nbsp;</td>`).join('')}</tr>`,
+    ).join('')
+
+    const html =
+      `<table role="presentation" cellpadding="0" cellspacing="0" border="0" ` +
+      `style="border-collapse:collapse;width:100%;margin:12px 0;font-family:Arial,Helvetica,sans-serif;">` +
+      `<thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table><p><br /></p>`
+
+    runCommand('insertHTML', html)
+  }, [runCommand])
+
+  /** Font size, via `execCommand`'s 1–7 scale — the one mail clients honour. */
+  const applyFontSize = useCallback(
+    (value) => {
+      if (value) runCommand('fontSize', value)
+    },
+    [runCommand],
+  )
+
+  const applyColour = useCallback(
+    (command, value) => {
+      if (value) runCommand(command, value)
+    },
+    [runCommand],
+  )
+
+  /**
    * Strips formatting from pasted content.
    *
    * Pasting from Word or a web page carries a payload of inline styles and
@@ -175,6 +249,70 @@ export function RichTextEditor({
         >
           <Link2 className="size-4" aria-hidden="true" />
         </button>
+
+        <span className="mx-1 h-5 w-px bg-slate-300" aria-hidden="true" />
+
+        <button
+          type="button"
+          disabled={disabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={insertTable}
+          className="rounded p-1.5 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+          title="Insert table"
+        >
+          <TableIcon className="size-4" aria-hidden="true" />
+          <span className="sr-only">Insert table</span>
+        </button>
+
+        <label className="ml-1 flex items-center gap-1 text-xs text-slate-600">
+          <span className="sr-only">Text size</span>
+          <select
+            disabled={disabled}
+            defaultValue=""
+            onMouseDown={(event) => event.stopPropagation()}
+            onChange={(event) => {
+              applyFontSize(event.target.value)
+              event.target.value = ''
+            }}
+            className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-700"
+          >
+            <option value="">Size</option>
+            <option value="2">Small</option>
+            <option value="3">Normal</option>
+            <option value="5">Large</option>
+            <option value="6">Heading</option>
+          </select>
+        </label>
+
+        {/*
+          Native colour inputs rather than a custom palette: they are already
+          keyboard-accessible and localised, and the value goes straight into
+          `foreColor`/`hiliteColor` as an inline style, which is what mail
+          clients keep.
+        */}
+        <label className="ml-1 flex items-center gap-1" title="Text colour">
+          <span className="sr-only">Text colour</span>
+          <input
+            type="color"
+            disabled={disabled}
+            defaultValue="#0f172a"
+            onMouseDown={(event) => event.stopPropagation()}
+            onChange={(event) => applyColour('foreColor', event.target.value)}
+            className="size-6 cursor-pointer rounded border border-slate-300 bg-white p-0.5"
+          />
+        </label>
+
+        <label className="flex items-center gap-1" title="Highlight colour">
+          <span className="sr-only">Highlight colour</span>
+          <input
+            type="color"
+            disabled={disabled}
+            defaultValue="#fef08a"
+            onMouseDown={(event) => event.stopPropagation()}
+            onChange={(event) => applyColour('hiliteColor', event.target.value)}
+            className="size-6 cursor-pointer rounded border border-slate-300 bg-white p-0.5"
+          />
+        </label>
       </div>
 
       {/* --- Editable surface ---------------------------------------------- */}
