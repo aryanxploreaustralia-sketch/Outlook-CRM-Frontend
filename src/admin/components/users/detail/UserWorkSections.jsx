@@ -236,7 +236,16 @@ export function UserMailboxesSection({
 }
 
 /** Section 4 — recent campaigns this person owns. Read-only. */
-export function UserCampaignsSection({ campaigns, isLoading, canSee, registerRef }) {
+export function UserCampaignsSection({
+  campaigns,
+  isLoading,
+  canSee,
+  registerRef,
+  page = 1,
+  pageSize = 10,
+  total,
+  onPageChange,
+}) {
   const columns = [
     {
       key: 'name',
@@ -318,6 +327,23 @@ export function UserCampaignsSection({ campaigns, isLoading, canSee, registerRef
                 />
               }
             />
+          )}
+
+          {/*
+            One page is one request; the total comes from the server, so it
+            counts this user's whole register rather than the rows on screen.
+            Rendered only when there is more than one page, matching the Leads
+            section above.
+          */}
+          {!isLoading && typeof total === 'number' && total > pageSize && (
+            <div className="border-t border-slate-100 px-5 py-3">
+              <AdminPagination
+                page={page}
+                pageSize={pageSize}
+                totalItems={total}
+                onPageChange={onPageChange}
+              />
+            </div>
           )}
         </AdminCard>
       )}

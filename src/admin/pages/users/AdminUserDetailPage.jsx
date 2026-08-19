@@ -257,9 +257,21 @@ export function AdminUserDetailPage() {
     enabled: canSeeAnalytics && hasSeen('performance'),
   })
 
-  const campaignsLoader = useCallback((options) => fetchAdminCampaigns(options), [])
+  /*
+   * Scoped to this user by the server, and paged.
+   *
+   * This used to fetch the monitor's global list and match `ownerId` in the
+   * browser. The endpoint caps at 200 rows across the whole deployment, so a
+   * user's campaigns were only shown if they happened to fall inside that
+   * slice — silently incomplete, with nothing on screen to say so.
+   */
+  const campaignsLoader = useCallback(
+    (options) => fetchAdminCampaigns({ owner: id, page: campaignsPage, limit: CAMPAIGNS_PAGE_SIZE, ...options }),
+    [id, campaignsPage],
+  )
   const { data: campaignData, isLoading: campaignsLoading } = useAdminResource(campaignsLoader, {
     enabled: canSeeCampaigns && hasSeen('campaigns'),
+    deps: [id, campaignsPage],
   })
 
   /**
@@ -282,7 +294,11 @@ export function AdminUserDetailPage() {
    * way to reach the rest.
    */
   const [leadsPage, setLeadsPage] = useState(1)
+  const [campaignsPage, setCampaignsPage] = useState(1)
   const LEADS_PAGE_SIZE = 50
+  // Matches the 10 rows the previous client-side `.slice(0, 10)` displayed;
+  // the difference is that the remainder is now reachable by paging.
+  const CAMPAIGNS_PAGE_SIZE = 10
 
   const leadsLoader = useCallback(
     (options) =>
@@ -307,10 +323,9 @@ export function AdminUserDetailPage() {
    * display name would attribute one person's pipeline to another whenever two
    * names collide, which is why the rows carry an id.
    */
-  const campaigns = useMemo(
-    () => (campaignData?.items ?? []).filter((row) => row.ownerId === id).slice(0, 10),
-    [campaignData, id],
-  )
+  // Already this person's, already the page size asked for — the server
+  // applied the owner filter before paging, so nothing is dropped here.
+  const campaigns = campaignData?.items ?? []
 
   // Already this person's, already the page size asked for — no client-side
   // filtering, so the count below is the database's answer rather than
@@ -668,6 +683,10 @@ export function AdminUserDetailPage() {
             isLoading={campaignsLoading}
             canSee={canSeeCampaigns}
             registerRef={register}
+            page={campaignsPage}
+            pageSize={CAMPAIGNS_PAGE_SIZE}
+            total={campaignData?.pagination?.total}
+            onPageChange={setCampaignsPage}
           />
 
           <UserLeadsSection
