@@ -188,9 +188,46 @@ export async function fetchCompany(id, { signal } = {}) {
   return response.data?.data ?? null
 }
 
+/**
+ * Edits a company.
+ *
+ * The server owns which fields are writable — `companyUpdateSchema` rejects
+ * anything else — so this sends the patch as given rather than keeping a second
+ * list of editable fields that would drift from it.
+ */
 export async function updateCompany(id, payload, { signal } = {}) {
   const response = await httpClient.put(ENDPOINTS.companies.detail(id), payload, { signal })
+
   return response.data?.data?.company ?? null
+}
+
+/**
+ * Soft-deletes one company.
+ *
+ * Its enquiries are deliberately untouched by the server — a lead keeps
+ * pointing at the company it came from. Nothing here needs to compensate.
+ */
+export async function deleteCompany(id, { signal } = {}) {
+  const response = await httpClient.delete(ENDPOINTS.companies.detail(id), { signal })
+
+  return response.data?.data ?? null
+}
+
+/**
+ * Bulk delete: either named ids, or every company in the register.
+ *
+ * `all` is resolved on the server against the database, not against whatever
+ * page happened to be loaded. The two are mutually exclusive and the server
+ * rejects a body carrying both, so exactly one is sent.
+ *
+ * Axios puts a DELETE body under `data`, not as the second argument.
+ *
+ * @param {{ ids?: string[], all?: true }} payload
+ */
+export async function deleteCompanies(payload, { signal } = {}) {
+  const response = await httpClient.delete(ENDPOINTS.companies.list, { data: payload, signal })
+
+  return response.data?.data ?? { deleted: 0 }
 }
 
 // ---------------------------------------------------------------------------
