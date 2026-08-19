@@ -31,6 +31,7 @@ import {
 } from '@/api/services/mailbox.service'
 import { Card } from '@/components/common/Card'
 import { DocumentCenter } from '@/components/profile/DocumentCenter'
+import { SignatureEditor } from '@/components/profile/SignatureEditor'
 import { ProfileCompletion } from '@/components/profile/ProfileCompletion'
 import {
   ProfileDetailCards,
@@ -462,6 +463,8 @@ export function AccountPage() {
             canEdit
             onSave={saveProfile}
           />
+
+          <SignatureEditor />
 
           <Card
             title="Documents"

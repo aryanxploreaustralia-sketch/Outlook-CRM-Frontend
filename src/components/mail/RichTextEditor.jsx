@@ -37,10 +37,13 @@ import {
   Redo2,
   Strikethrough,
   Image as ImageIcon,
+  PenLine,
   Table as TableIcon,
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react'
+
+import { fetchMySignature } from '@/api/services/signature.service'
 
 /** Toolbar actions handled by a plain `execCommand` with no argument. */
 const SIMPLE_COMMANDS = [
@@ -230,6 +233,34 @@ export function RichTextEditor({
     [runCommand],
   )
 
+  /**
+   * Inserts the caller's saved signature at the cursor.
+   *
+   * Fetched on demand rather than held in state: a signature edited in Account
+   * should be the one that lands here on the next click, and caching it would
+   * mean the editor quietly using a stale copy for the rest of the session.
+   *
+   * `insertHTML` places it at the selection, so it appends to whatever has been
+   * written rather than replacing the body. The content is already sanitised —
+   * `PUT /v1/account/signature` sanitises before storing — so nothing is
+   * re-processed here.
+   */
+  const insertSignature = useCallback(async () => {
+    try {
+      const signatureHtml = await fetchMySignature()
+
+      if (!signatureHtml || signatureHtml.trim() === '') {
+        window.alert('No signature configured. Add your signature from Account.')
+        return
+      }
+
+      // A leading break so it never runs into the last line of the message.
+      runCommand('insertHTML', `<br />${signatureHtml}`)
+    } catch {
+      window.alert('Your signature could not be loaded. Please try again.')
+    }
+  }, [runCommand])
+
   /** Font size, via `execCommand`'s 1–7 scale — the one mail clients honour. */
   const applyFontSize = useCallback(
     (value) => {
@@ -349,6 +380,18 @@ export function RichTextEditor({
         >
           <ImageIcon className="size-4" aria-hidden="true" />
           <span className="sr-only">Insert image</span>
+        </button>
+
+        <button
+          type="button"
+          disabled={disabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={insertSignature}
+          className="rounded p-1.5 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+          title="Insert signature"
+        >
+          <PenLine className="size-4" aria-hidden="true" />
+          <span className="sr-only">Insert signature</span>
         </button>
 
         <label className="ml-1 flex items-center gap-1 text-xs text-slate-600">
