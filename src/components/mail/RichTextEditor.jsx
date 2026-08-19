@@ -36,6 +36,7 @@ import {
   ListOrdered,
   Redo2,
   Strikethrough,
+  Image as ImageIcon,
   Table as TableIcon,
   Underline as UnderlineIcon,
   Undo2,
@@ -72,6 +73,7 @@ export function RichTextEditor({
   disabled = false,
   minHeight = '16rem',
 }) {
+  const imageInput = useRef(null)
   const editorRef = useRef(null)
   const labelId = useId()
   const [isEmpty, setIsEmpty] = useState(true)
@@ -169,6 +171,65 @@ export function RichTextEditor({
     runCommand('insertHTML', html)
   }, [runCommand])
 
+  /**
+   * Inserts a picture at the cursor, inline as a data URI.
+   *
+   * ## Why base64 and not an upload
+   *
+   * There is no media storage in this product, and inventing one to hold a
+   * signature logo would be a larger change than this control. A data URI needs
+   * no endpoint, no bucket and no cleanup job, and it survives every step that
+   * matters here: the template stores it in `bodyHtml`, the sanitiser allows
+   * `data:` on `img` specifically (it cannot execute there), and the preview
+   * renders it.
+   *
+   * ## What it costs
+   *
+   * Base64 is a third larger than the file, and the bytes live in the template
+   * document and in every message built from it. Hence the 512 KB ceiling — a
+   * logo or a screenshot fits comfortably; a photograph straight off a camera
+   * does not, and is refused with a message saying so rather than silently
+   * producing a template too large to save.
+   *
+   * Outlook and Gmail both restrict remote and embedded images by default, so a
+   * recipient may see a placeholder until they choose to load pictures. That is
+   * true of every image in every email and is not something this control can
+   * change.
+   */
+  const insertImage = useCallback(
+    (file) => {
+      if (!file) return
+
+      if (!file.type.startsWith('image/')) {
+        window.alert('Choose an image file.')
+        return
+      }
+
+      if (file.size > 512 * 1024) {
+        window.alert(
+          `That image is ${Math.round(file.size / 1024)} KB. Images are embedded in the message, so please use one under 512 KB.`,
+        )
+        return
+      }
+
+      const reader = new FileReader()
+
+      reader.onload = () => {
+        // `max-width` keeps a wide image inside the message column; `height:auto`
+        // stops mail clients stretching it. Both inline, because Outlook ignores
+        // stylesheets.
+        const alt = file.name.replace(/\.[^.]+$/, '').replace(/["<>]/g, '')
+        runCommand(
+          'insertHTML',
+          `<img src="${reader.result}" alt="${alt}" style="max-width:100%;height:auto;" />`,
+        )
+      }
+
+      reader.readAsDataURL(file)
+    },
+    [runCommand],
+  )
+
   /** Font size, via `execCommand`'s 1–7 scale — the one mail clients honour. */
   const applyFontSize = useCallback(
     (value) => {
@@ -262,6 +323,32 @@ export function RichTextEditor({
         >
           <TableIcon className="size-4" aria-hidden="true" />
           <span className="sr-only">Insert table</span>
+        </button>
+
+        {/* A hidden input driven by the button, so the control matches the rest
+            of the toolbar instead of showing a browser file field. */}
+        <input
+          ref={imageInput}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp"
+          className="hidden"
+          onChange={(event) => {
+            insertImage(event.target.files?.[0])
+            // Cleared so choosing the same file twice fires `change` again.
+            event.target.value = ''
+          }}
+        />
+
+        <button
+          type="button"
+          disabled={disabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => imageInput.current?.click()}
+          className="rounded p-1.5 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+          title="Insert image"
+        >
+          <ImageIcon className="size-4" aria-hidden="true" />
+          <span className="sr-only">Insert image</span>
         </button>
 
         <label className="ml-1 flex items-center gap-1 text-xs text-slate-600">
