@@ -120,12 +120,12 @@ export function AdminSidebar({
             onClick={handleNavigate}
             className="flex min-w-0 flex-1 items-center gap-3 rounded-[--radius-control]"
           >
-            <span
-              className="grid size-9 shrink-0 place-items-center rounded-[--radius-control] bg-brand-600 text-sm font-semibold text-white shadow-card"
+            <img
+              src="/xplore-logo-mark.png"
+              alt=""
               aria-hidden="true"
-            >
-              X
-            </span>
+              className="size-9 shrink-0 rounded-[--radius-control] bg-white object-contain p-0.5 shadow-card"
+            />
             {!isCollapsed && (
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold leading-tight text-sidebar-text-strong">

@@ -166,12 +166,12 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         {/* --- Brand ------------------------------------------------------- */}
         <div className="mb-6 flex flex-col items-center text-center">
-          <span
-            className="grid size-12 place-items-center rounded-xl bg-brand-600 text-base font-bold text-white shadow-card"
+          <img
+            src="/xplore-logo-mark.png"
+            alt=""
             aria-hidden="true"
-          >
-            OA
-          </span>
+            className="size-12 rounded-xl bg-white object-contain p-1 shadow-card"
+          />
           <h1 className="mt-3 text-xl font-semibold tracking-tight text-slate-900">
             {env.appName}
           </h1>

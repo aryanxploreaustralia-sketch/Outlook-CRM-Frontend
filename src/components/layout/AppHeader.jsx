@@ -22,12 +22,12 @@ export function AppHeader() {
     <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-6 px-6 py-3">
         <div className="flex items-center gap-2.5">
-          <span
-            className="grid size-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white"
+          <img
+            src="/xplore-logo-mark.png"
+            alt=""
             aria-hidden="true"
-          >
-            OA
-          </span>
+            className="size-8 rounded-lg bg-white object-contain p-0.5"
+          />
           <span className="text-sm font-semibold text-slate-900">{env.appName}</span>
         </div>
 

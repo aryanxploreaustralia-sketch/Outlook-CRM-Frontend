@@ -106,12 +106,15 @@ export function Sidebar({
             onClick={handleNavigate}
             className="flex min-w-0 items-center gap-2.5 rounded-md"
           >
-            <span
-              className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white"
+            {/* `object-contain` keeps the mark's aspect ratio inside the fixed
+                square; the white tile keeps it legible on the dark sidebar
+                whether or not the asset has a transparent background. */}
+            <img
+              src="/xplore-logo-mark.png"
+              alt=""
               aria-hidden="true"
-            >
-              OA
-            </span>
+              className="size-8 shrink-0 rounded-lg bg-white object-contain p-0.5"
+            />
             {!isCollapsed && (
               <span className="truncate text-sm font-semibold text-sidebar-text-strong">
                 {env.appName}

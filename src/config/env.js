@@ -74,7 +74,7 @@ const resolvedApi = resolveApiBaseUrl(
 export const env = Object.freeze({
   /** Human-readable application name, shown in the UI and document title. */
   appName: read('VITE_APP_NAME', import.meta.env.VITE_APP_NAME, {
-    fallback: 'Outlook Automation CRM',
+    fallback: 'Xplore Australia',
   }),
 
   /**
