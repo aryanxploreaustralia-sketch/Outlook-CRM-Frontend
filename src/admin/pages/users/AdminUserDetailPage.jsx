@@ -265,6 +265,20 @@ export function AdminUserDetailPage() {
    * user's campaigns were only shown if they happened to fall inside that
    * slice — silently incomplete, with nothing on screen to say so.
    */
+  /*
+   * Declared before the loader below, not beside the leads paging further down.
+   *
+   * `useCallback`'s dependency array is evaluated during render, so a `const`
+   * declared later is still in its temporal dead zone when the loader is
+   * created — which threw `Cannot access 'campaignsPage' before
+   * initialization` and took the whole page down. The leads equivalent happens
+   * to be declared above its own loader, which is why only this one broke.
+   */
+  const [campaignsPage, setCampaignsPage] = useState(1)
+  // Matches the 10 rows the previous client-side `.slice(0, 10)` displayed;
+  // the difference is that the remainder is now reachable by paging.
+  const CAMPAIGNS_PAGE_SIZE = 10
+
   const campaignsLoader = useCallback(
     (options) => fetchAdminCampaigns({ owner: id, page: campaignsPage, limit: CAMPAIGNS_PAGE_SIZE, ...options }),
     [id, campaignsPage],
@@ -294,11 +308,7 @@ export function AdminUserDetailPage() {
    * way to reach the rest.
    */
   const [leadsPage, setLeadsPage] = useState(1)
-  const [campaignsPage, setCampaignsPage] = useState(1)
   const LEADS_PAGE_SIZE = 50
-  // Matches the 10 rows the previous client-side `.slice(0, 10)` displayed;
-  // the difference is that the remainder is now reachable by paging.
-  const CAMPAIGNS_PAGE_SIZE = 10
 
   const leadsLoader = useCallback(
     (options) =>
