@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 
 /**
- * Vite configuration for the Outlook Automation CRM frontend.
+ * Vite configuration for the Xplore Australia CRM frontend.
  *
  * `loadEnv` is used instead of `process.env` so that the dev-server proxy can be
  * pointed at a different backend host per environment without editing this file.

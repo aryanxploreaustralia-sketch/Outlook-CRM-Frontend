@@ -129,7 +129,7 @@ export function AdminSidebar({
             {!isCollapsed && (
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold leading-tight text-sidebar-text-strong">
-                  Xplore Australia
+                  Xplore Australia CRM
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5">
                   <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
@@ -140,7 +140,7 @@ export function AdminSidebar({
               </span>
             )}
             <span className="sr-only">
-              Xplore Australia, administration — go to the admin dashboard
+              Xplore Australia CRM, administration — go to the admin dashboard
             </span>
           </Link>
 
