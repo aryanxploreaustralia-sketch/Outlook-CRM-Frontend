@@ -16,7 +16,7 @@
  * nothing.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Camera, Check, Lock, Pencil, Trash2, X } from 'lucide-react'
 
 import { AdminBadge } from '@/admin/components/AdminBadge'
@@ -135,7 +135,33 @@ export function ProfileOverviewCard({ profile, onPhoto, onRemovePhoto, canEdit =
    * version, so it no longer matches and the image is attempted again.
    */
   const [failedUrl, setFailedUrl] = useState(null)
-  const showPhoto = Boolean(photoUrl) && failedUrl !== photoUrl
+  const hasStoredPhoto = Boolean(photoUrl) && failedUrl !== photoUrl
+
+  /*
+   * The image the user just chose, shown before the upload finishes.
+   *
+   * Without this the avatar has nothing new to render between selection and the
+   * refreshed server response, so it keeps showing initials and the choice
+   * appears to have been ignored. `createObjectURL` points straight at the file
+   * already on disk — no read, no base64, no copy in memory.
+   */
+  const [preview, setPreview] = useState(null)
+  const [saved, setSaved] = useState(false)
+
+  /*
+   * Revoke the blob URL when it is replaced or the card unmounts.
+   *
+   * The cleanup runs when `preview` changes *away* from this value, never while
+   * it is still on screen — revoking earlier is what makes a preview vanish the
+   * instant it appears.
+   */
+  useEffect(() => {
+    if (!preview) return undefined
+    return () => URL.revokeObjectURL(preview)
+  }, [preview])
+
+  // Preview wins while it exists; the stored photo takes over once saved.
+  const displayUrl = preview ?? (hasStoredPhoto ? photoUrl : null)
   const [error, setError] = useState(null)
 
   const pick = () => {
@@ -153,12 +179,27 @@ export function ProfileOverviewCard({ profile, onPhoto, onRemovePhoto, canEdit =
         return
       }
 
+      // Shown immediately, before the request is even sent.
+      setPreview(URL.createObjectURL(file))
       setIsBusy(true)
       setError(null)
+      setSaved(false)
 
       try {
         await onPhoto(file)
+
+        /*
+         * Cleared only once the upload resolved. `onPhoto` refreshes the
+         * profile, so by now `photoUrl` carries a new version and the canonical
+         * stored image renders in place of the blob.
+         */
+        setPreview(null)
+        setFailedUrl(null)
+        setSaved(true)
       } catch (caught) {
+        // Drop the preview so the previous photo — not the rejected file —
+        // remains on screen alongside the reason.
+        setPreview(null)
         setError(caught?.message ?? 'That photo could not be uploaded.')
       } finally {
         setIsBusy(false)
@@ -172,12 +213,16 @@ export function ProfileOverviewCard({ profile, onPhoto, onRemovePhoto, canEdit =
     <AdminCard>
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
         <div className="relative shrink-0">
-          {showPhoto ? (
+          {displayUrl ? (
             <img
-              src={photoUrl}
+              src={displayUrl}
               alt=""
-              onError={() => setFailedUrl(photoUrl)}
-              className="size-20 rounded-full object-cover ring-1 ring-slate-200"
+              // Only the stored URL can "fail" in a way worth remembering; a
+              // blob that fails is transient and the upload result decides.
+              onError={preview ? undefined : () => setFailedUrl(photoUrl)}
+              className={`size-20 rounded-full object-cover ring-1 ring-slate-200 ${
+                isBusy ? 'opacity-60' : ''
+              }`}
             />
           ) : (
             <UserAvatar name={profile.displayName} email={profile.email} size="xl" />
@@ -231,6 +276,13 @@ export function ProfileOverviewCard({ profile, onPhoto, onRemovePhoto, canEdit =
           {error && (
             <p role="alert" className="mt-2 text-sm text-red-700">
               {error}
+            </p>
+          )}
+
+          {saved && !error && (
+            <p role="status" className="mt-2 flex items-center gap-1.5 text-sm text-emerald-700">
+              <Check className="size-3.5 shrink-0" aria-hidden="true" />
+              Profile photo updated.
             </p>
           )}
         </div>
