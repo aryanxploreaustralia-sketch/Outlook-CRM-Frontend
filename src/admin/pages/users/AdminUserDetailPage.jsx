@@ -54,7 +54,6 @@ import {
 import { UserIdentitySection } from '@/admin/components/users/detail/UserIdentitySection'
 import { UserImportLeadsSection } from '@/admin/components/users/detail/UserImportLeadsSection'
 import { UserPerformanceDashboardSection } from '@/admin/components/users/detail/UserPerformanceDashboardSection'
-import { UserTasksSection } from '@/admin/components/users/detail/UserTasksSection'
 import { UserRoleSection } from '@/admin/components/users/detail/UserRoleSection'
 import { UserTrendSection } from '@/admin/components/users/detail/UserTrendSection'
 import {
@@ -102,7 +101,6 @@ const SECTIONS = [
   { id: 'employee-profile', label: 'Employee profile' },
   { id: 'documents', label: 'Documents' },
   { id: 'performance-dashboard', label: 'Employee performance' },
-  { id: 'tasks', label: 'Tasks and goals' },
   { id: 'performance', label: 'Performance' },
   { id: 'trend', label: 'Activity over time' },
   { id: 'mailboxes', label: 'Mailboxes' },
@@ -656,13 +654,6 @@ export function AdminUserDetailPage() {
             registerRef={register}
             enabled={hasSeen('performance-dashboard')}
           />
-
-          {/*
-            Phase 18. Directly after the performance dashboard, because assigned
-            work is the part of somebody's output that was *decided* rather than
-            measured — and the two are read together.
-          */}
-          <UserTasksSection user={user} registerRef={register} enabled={hasSeen('tasks')} />
 
           <UserPerformanceSection
             user={user}
