@@ -26,6 +26,7 @@ import { ADMIN_ROLE_BADGE } from '@/admin/constants/adminRoles.constants'
 import { EMPTY, formatDate } from '@/admin/utils/format'
 import { UserAvatar } from '@/components/common/UserAvatar'
 import { Button } from '@/components/ui/Button'
+import { profilePhotoUrl } from '@/api/services/profile.service'
 
 const GENDERS = [
   { value: 'female', label: 'Female' },
@@ -115,6 +116,26 @@ function EditableCard({ title, description, canEdit = true, onSave, children, fo
  */
 export function ProfileOverviewCard({ profile, onPhoto, onRemovePhoto, canEdit = false }) {
   const [isBusy, setIsBusy] = useState(false)
+
+  /*
+   * The photo's absolute URL, versioned.
+   *
+   * `profile.profilePhoto` is only read as "does a photo exist" — the path it
+   * carries is relative and resolves against the front end rather than the API.
+   * See `profilePhotoUrl`.
+   */
+  const photoUrl = profile.profilePhoto
+    ? profilePhotoUrl(profile.id, profile.photoUpdatedAt)
+    : null
+
+  /*
+   * Which URL failed to load, so a missing file degrades to initials instead of
+   * the browser's broken-image icon. Storing the URL rather than a boolean is
+   * what lets a fresh upload recover on its own: the new URL carries a new
+   * version, so it no longer matches and the image is attempted again.
+   */
+  const [failedUrl, setFailedUrl] = useState(null)
+  const showPhoto = Boolean(photoUrl) && failedUrl !== photoUrl
   const [error, setError] = useState(null)
 
   const pick = () => {
@@ -151,10 +172,11 @@ export function ProfileOverviewCard({ profile, onPhoto, onRemovePhoto, canEdit =
     <AdminCard>
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
         <div className="relative shrink-0">
-          {profile.profilePhoto ? (
+          {showPhoto ? (
             <img
-              src={profile.profilePhoto}
+              src={photoUrl}
               alt=""
+              onError={() => setFailedUrl(photoUrl)}
               className="size-20 rounded-full object-cover ring-1 ring-slate-200"
             />
           ) : (

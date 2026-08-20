@@ -109,9 +109,31 @@ export function documentFileUrl(id, { download = false } = {}) {
   return apiUrl(ENDPOINTS.profile.documentFile(id), { download: download ? '1' : null })
 }
 
+/**
+ * Absolute URL for a user's profile photo.
+ *
+ * Built here rather than taken from the profile response. The API returns a
+ * relative `/api/v1/...` path, and this deployment serves the API from a
+ * different origin than the app — so putting that string straight into an
+ * `<img src>` resolves it against the front end and yields a 404, which the
+ * browser renders as a broken image. `apiUrl()` resolves it against the
+ * configured API base, exactly as `documentFileUrl` above already does.
+ *
+ * `version` is appended as a cache-buster. The path is identical for a given
+ * user for all time, so without it a replaced photo keeps showing the old
+ * bytes until the cache expires. Pass the profile's `photoUpdatedAt`.
+ *
+ * @param {string} userId
+ * @param {?string} version
+ */
+export function profilePhotoUrl(userId, version) {
+  return apiUrl(ENDPOINTS.profile.photoOf(userId), { v: version ? Date.parse(version) : null })
+}
+
 export default {
   deleteMyDocument,
   documentFileUrl,
+  profilePhotoUrl,
   fetchMyDocuments,
   fetchMyPerformance,
   fetchMyProfile,
