@@ -285,6 +285,19 @@ export function ProfileOverviewCard({ profile, onPhoto, onRemovePhoto, canEdit =
               Profile photo updated.
             </p>
           )}
+
+          {/*
+            The saved photo exists in the database but could not be fetched.
+            Said out loud rather than silently falling back to initials — a
+            silent fallback is indistinguishable from "no photo set", which is
+            what made this hard to diagnose in the first place.
+          */}
+          {photoUrl && failedUrl === photoUrl && (
+            <p role="status" className="mt-2 text-sm text-amber-700">
+              Your saved photo could not be loaded. It is still on your profile —
+              try refreshing, or upload it again.
+            </p>
+          )}
         </div>
       </div>
     </AdminCard>
