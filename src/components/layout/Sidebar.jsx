@@ -110,7 +110,7 @@ export function Sidebar({
                 square; the white tile keeps it legible on the dark sidebar
                 whether or not the asset has a transparent background. */}
             <img
-              src="/xplore-logo-mark.png"
+              src="/xplore-logo-mark.svg"
               alt=""
               aria-hidden="true"
               className="size-8 shrink-0 rounded-lg bg-white object-contain p-0.5"

@@ -121,7 +121,7 @@ export function AdminSidebar({
             className="flex min-w-0 flex-1 items-center gap-3 rounded-[--radius-control]"
           >
             <img
-              src="/xplore-logo-mark.png"
+              src="/xplore-logo-mark.svg"
               alt=""
               aria-hidden="true"
               className="size-9 shrink-0 rounded-[--radius-control] bg-white object-contain p-0.5 shadow-card"

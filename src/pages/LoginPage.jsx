@@ -167,7 +167,7 @@ export function LoginPage() {
         {/* --- Brand ------------------------------------------------------- */}
         <div className="mb-6 flex flex-col items-center text-center">
           <img
-            src="/xplore-logo-mark.png"
+            src="/xplore-logo-mark.svg"
             alt=""
             aria-hidden="true"
             className="size-12 rounded-xl bg-white object-contain p-1 shadow-card"

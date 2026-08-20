@@ -23,7 +23,7 @@ export function AppHeader() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-6 px-6 py-3">
         <div className="flex items-center gap-2.5">
           <img
-            src="/xplore-logo-mark.png"
+            src="/xplore-logo-mark.svg"
             alt=""
             aria-hidden="true"
             className="size-8 rounded-lg bg-white object-contain p-0.5"
