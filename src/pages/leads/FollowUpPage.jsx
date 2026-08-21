@@ -411,8 +411,11 @@ export function FollowUpPage() {
                 <th scope="col" className="px-3 py-2">Customer</th>
                 <th scope="col" className="px-3 py-2">Market</th>
                 <th scope="col" className="px-3 py-2">Remarks</th>
+                <th scope="col" className="px-3 py-2">Quoted</th>
                 <th scope="col" className="px-3 py-2">Introduced</th>
-                <th scope="col" className="px-3 py-2">Waiting</th>
+                <th scope="col" className="px-3 py-2" title="Whole days since the quote date">
+                  Waiting
+                </th>
                 <th scope="col" className="px-3 py-2">Reply</th>
                 <th scope="col" className="px-3 py-2">Follow-up</th>
               </tr>
@@ -462,8 +465,15 @@ export function FollowUpPage() {
                     <td className="max-w-56 px-3 py-2.5 text-slate-600">
                       <RemarkCell remarks={row.remarks} reference={row.reference} />
                     </td>
+                    {/* The reference date the follow-up clock runs from. */}
+                    <td className="px-3 py-2.5 text-slate-600">{formatDate(row.quoteDate)}</td>
                     <td className="px-3 py-2.5 text-slate-600">{formatDate(row.initialEmailSentAt)}</td>
-                    <td className="px-3 py-2.5 tabular-nums text-slate-700">
+                    <td
+                      className="px-3 py-2.5 tabular-nums text-slate-700"
+                      title={row.quoteDate ? 'Days since the quote date' : 'This enquiry has no quote date'}
+                    >
+                      {/* Server-computed. Nothing here re-derives the age — the
+                          counts and the list would drift apart if it did. */}
                       {row.waitingDays === null ? '—' : `${row.waitingDays}d`}
                     </td>
                     <td className="px-3 py-2.5"><Pill status={row.replyStatus} /></td>
