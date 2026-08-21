@@ -1,8 +1,16 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "oxc"],
+  "env": { "browser": true, "es2024": true },
   "rules": {
     "react/rules-of-hooks": "error",
+    "no-undef": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["vite.config.js", "*.config.js"],
+      "env": { "node": true }
+    }
+  ]
 }
