@@ -121,12 +121,18 @@ const DATE_PRESETS = [
  * it. There is deliberately no follow-up option: the model records no follow-up
  * date, and an option that quietly filtered something else would be worse than
  * its absence.
+ *
+ * **Travel date is first, and is the default.** It is the enquiry's operative
+ * business date and the one the table now shows; defaulting to `createdAt`
+ * meant the column read "travel date" while the range silently narrowed on when
+ * the record was written. The other three stay available — they answer real
+ * questions ("what came in last week?") and a saved URL naming one still works.
  */
 const DATE_FIELDS = [
-  { value: 'createdAt', label: 'Created date' },
-  { value: 'quoteDate', label: 'Query date' },
-  { value: 'updatedAt', label: 'Last activity' },
   { value: 'travelDate', label: 'Travel date' },
+  { value: 'quoteDate', label: 'Query date' },
+  { value: 'createdAt', label: 'Created date' },
+  { value: 'updatedAt', label: 'Last activity' },
 ]
 
 const ACTIVITY_OPTIONS = [
@@ -187,7 +193,7 @@ export function AdminLeadMonitorPage() {
   const owner = read('owner')
   const attention = read('attention')
   const activity = read('activity')
-  const dateField = read('dateField') || 'createdAt'
+  const dateField = read('dateField') || 'travelDate'
   const from = read('from')
   const to = read('to')
   const urlSearch = read('search')
@@ -571,7 +577,9 @@ export function AdminLeadMonitorPage() {
               value={dateField}
               onChange={(next) => setFilters({ dateField: next })}
               options={DATE_FIELDS}
-              allLabel="Created date"
+              // Matches the default an empty value resolves to, so the control
+              // can never name a different date from the one being filtered.
+              allLabel="Travel date"
             />
           )}
         </AdminFilterBar>
