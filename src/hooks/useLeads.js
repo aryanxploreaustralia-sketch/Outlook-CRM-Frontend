@@ -123,6 +123,15 @@ export function useLead(id, { enabled = true } = {}) {
     lead: resource.data?.lead ?? null,
     company: resource.data?.company ?? null,
     contact: resource.data?.contact ?? null,
+    /*
+     * The server's answer to "may this caller edit this enquiry?".
+     *
+     * Read from the response rather than compared client-side, so the Edit
+     * control is driven by the same rule `PUT /leads/:id` enforces. Defaults to
+     * false: a payload from an older API should hide the control, not offer one
+     * the server will refuse.
+     */
+    canEdit: resource.data?.canEdit === true,
     isInitialLoading: resource.isInitialLoading,
     isError: resource.isError,
     error: resource.error,
