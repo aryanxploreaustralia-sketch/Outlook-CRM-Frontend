@@ -37,7 +37,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { RefreshCw, UserCheck, X } from 'lucide-react'
+import { RefreshCw, RotateCcw, UserCheck, X } from 'lucide-react'
 
 import {
   AdminBadge,
@@ -59,6 +59,8 @@ import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admi
 import { fetchAdminLeads } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatDate } from '@/admin/utils/format'
 import { RemarkCell } from '@/components/leads/RemarkCell'
+import { STORAGE_KEYS } from '@/constants/app.constants'
+import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { Button } from '@/components/ui/Button'
 import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
 
@@ -338,7 +340,7 @@ export function AdminLeadMonitorPage() {
     setFilters(Object.fromEntries(FILTER_KEYS.map((key) => [key, ''])))
   }
 
-  const columns = useMemo(
+  const columnDefs = useMemo(
     () => [
       {
         key: 'reference',
@@ -412,8 +414,23 @@ export function AdminLeadMonitorPage() {
     [],
   )
 
+  /*
+   * The order is the reader's, the definitions are the page's. `columnDefs`
+   * above is the default; this returns the same objects in the saved order, and
+   * the table renders headers and cells from that one array.
+   */
+  const columnOrder = useColumnOrder(STORAGE_KEYS.LEAD_COLUMNS_ADMIN_MONITOR, columnDefs)
+
   const actions = (
     <>
+      {/* Only once the order has actually been changed — a permanent reset
+          button on a default table is clutter that explains nothing. */}
+      {columnOrder.isCustomised && (
+        <Button variant="secondary" size="sm" onClick={columnOrder.reset}>
+          <RotateCcw className="size-3.5" aria-hidden="true" />
+          Reset columns
+        </Button>
+      )}
       <Button variant="secondary" size="sm" onClick={refresh} isLoading={isRefreshing}>
         <RefreshCw className="size-3.5" aria-hidden="true" />
         Refresh
@@ -616,7 +633,8 @@ export function AdminLeadMonitorPage() {
         )}
 
         <AdminTable
-          columns={columns}
+          columns={columnOrder.columns}
+          reorder={columnOrder}
           rows={items}
           isLoading={isLoading}
           caption="Enquiries across every consultant"

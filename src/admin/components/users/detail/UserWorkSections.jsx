@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Plug,
   RefreshCw,
+  RotateCcw,
   Star,
   Trash2,
   UserMinus,
@@ -48,6 +49,8 @@ import { PERMISSIONS } from '@/admin/constants/permissions'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { formatCount, formatDate, formatRelative } from '@/admin/utils/format'
 import { RemarkCell } from '@/components/leads/RemarkCell'
+import { STORAGE_KEYS } from '@/constants/app.constants'
+import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { Button } from '@/components/ui/Button'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -532,8 +535,17 @@ export function UserLeadsSection({
     ),
   }
 
+  /*
+   * Only the data columns are reorderable. Selection stays at the leading edge
+   * and delete at the trailing one: both are controls rather than fields, and a
+   * checkbox floating into the middle of a register would read as data.
+   */
+  const columnOrder = useColumnOrder(STORAGE_KEYS.LEAD_COLUMNS_ADMIN_USER_LEADS, columns)
+
   // The controls appear only for a caller the server would accept anyway.
-  const tableColumns = canDelete ? [selectionColumn, ...columns, deleteColumn] : columns
+  const tableColumns = canDelete
+    ? [selectionColumn, ...columnOrder.columns, deleteColumn]
+    : columnOrder.columns
 
   return (
     <UserSection
@@ -553,6 +565,18 @@ export function UserLeadsSection({
         </PendingSection>
       ) : (
         <AdminCard padded={false}>
+          {/* Its own row, and only once the order has been changed: the toolbar
+              below belongs to deletion and appears only for a caller who may
+              delete, whereas anyone can reorder. */}
+          {columnOrder.isCustomised && (
+            <div className="flex justify-end border-b border-slate-100 px-5 py-2">
+              <Button variant="secondary" size="sm" onClick={columnOrder.reset}>
+                <RotateCcw className="size-3.5" aria-hidden="true" />
+                Reset columns
+              </Button>
+            </div>
+          )}
+
           {canDelete && !isLoading && (leads.length > 0 || selected.length > 0) && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-2.5">
               <span className="text-xs text-slate-500">
@@ -598,6 +622,13 @@ export function UserLeadsSection({
           ) : (
             <AdminTable
               columns={tableColumns}
+              /* Only the data columns carry drag handlers; `headerProps` is
+                 called per column key and the two pinned ones are not in the
+                 reorderable set, so they are simply never asked for. */
+              reorder={{
+                headerProps: (key) =>
+                  key === '__select' || key === '__delete' ? null : columnOrder.headerProps(key),
+              }}
               rows={leads}
               caption="Enquiries owned by this user"
               empty={

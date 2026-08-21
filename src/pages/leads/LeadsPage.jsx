@@ -17,6 +17,7 @@ import {
   Megaphone,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Trash2,
   Upload,
@@ -30,7 +31,9 @@ import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { STORAGE_KEYS } from '@/constants/app.constants'
 import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
+import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
@@ -184,6 +187,86 @@ export function LeadsPage() {
     [stage, city, market, handledBy, travelMonth, campaignEligible],
   )
 
+  /*
+   * The register's columns, in their default order.
+   *
+   * Each entry owns both its heading and its cell, so the two cannot drift
+   * apart when the reader reorders them — `useColumnOrder` returns these same
+   * objects in a different sequence and the table maps over that one array
+   * twice. Selection stays pinned outside this list.
+   *
+   * Static, so the memo has no dependencies: every cell reads from the `lead`
+   * it is handed rather than from anything in scope.
+   */
+  const columnDefs = useMemo(
+    () => [
+      {
+        key: 'reference',
+        header: 'Reference',
+        cellClassName: 'whitespace-nowrap px-3 py-2',
+        render: (lead) => (
+          <Link
+            to={ROUTE_PATHS.LEAD_DETAIL.replace(':id', lead.id)}
+            className="font-mono text-xs font-medium text-blue-600 hover:underline"
+          >
+            {lead.reference}
+          </Link>
+        ),
+      },
+      {
+        key: 'contact',
+        header: 'Contact',
+        cellClassName: 'max-w-48 px-3 py-2',
+        render: (lead) => (
+          <>
+            <span className="block truncate text-slate-900">{lead.contactPerson}</span>
+            <span className="block truncate text-xs text-slate-400">{lead.email}</span>
+          </>
+        ),
+      },
+      {
+        key: 'company',
+        header: 'Company',
+        cellClassName: 'max-w-48 truncate px-3 py-2 text-slate-600',
+        render: (lead) => lead.companyName ?? '—',
+      },
+      {
+        key: 'travel',
+        header: 'Travel',
+        cellClassName: 'whitespace-nowrap px-3 py-2 text-slate-500',
+        // Prose travel dates like "August" are shown as written — the sheet's
+        // only timing signal for those enquiries.
+        render: (lead) =>
+          lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—'),
+      },
+      {
+        key: 'pax',
+        header: 'Pax',
+        cellClassName: 'whitespace-nowrap px-3 py-2 text-slate-500',
+        render: (lead) => lead.paxText ?? '—',
+      },
+      {
+        key: 'remarks',
+        header: 'Remarks',
+        // One truncated line keeps the row height fixed; clicking it opens the
+        // whole remark. Column width is unchanged.
+        cellClassName: 'max-w-56 px-3 py-2 text-slate-500',
+        render: (lead) => <RemarkCell remarks={lead.internalNotes} reference={lead.reference} />,
+      },
+      {
+        key: 'stage',
+        header: 'Stage',
+        cellClassName: 'whitespace-nowrap px-3 py-2',
+        render: (lead) => (
+          <LeadStageBadge stage={lead.stage} showEligibility eligible={lead.campaignEligible} />
+        ),
+      },
+    ],
+    [],
+  )
+
+  const columnOrder = useColumnOrder(STORAGE_KEYS.LEAD_COLUMNS_CRM, columnDefs)
+
   const clearFilters = () => {
     setStage('')
     setCity('')
@@ -225,6 +308,15 @@ export function LeadsPage() {
           <RefreshCw className={`size-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
           Refresh
         </Button>
+
+        {/* Only once the order has been changed. A permanent reset button on a
+            default table is clutter that explains nothing. */}
+        {columnOrder.isCustomised && (
+          <Button variant="secondary" onClick={columnOrder.reset}>
+            <RotateCcw className="size-4" aria-hidden="true" />
+            Reset columns
+          </Button>
+        )}
 
         <Button as={Link} to={ROUTE_PATHS.LEAD_PIPELINE} variant="secondary">
           <ClipboardList className="size-4" aria-hidden="true" />
@@ -440,6 +532,9 @@ export function LeadsPage() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
+                {/* Selection is pinned to the leading edge. It is a control, not
+                    a field, and a checkbox adrift in the middle of the register
+                    would read as data. */}
                 <th scope="col" className="w-10 px-3 py-2">
                   <input
                     type="checkbox"
@@ -451,13 +546,17 @@ export function LeadsPage() {
                     className="size-4 rounded border-slate-300"
                   />
                 </th>
-                <th scope="col" className="px-3 py-2 font-medium">Reference</th>
-                <th scope="col" className="px-3 py-2 font-medium">Contact</th>
-                <th scope="col" className="px-3 py-2 font-medium">Company</th>
-                <th scope="col" className="px-3 py-2 font-medium">Travel</th>
-                <th scope="col" className="px-3 py-2 font-medium">Pax</th>
-                <th scope="col" className="px-3 py-2 font-medium">Remarks</th>
-                <th scope="col" className="px-3 py-2 font-medium">Stage</th>
+                {columnOrder.columns.map((column) => (
+                  <th
+                    key={column.key}
+                    scope="col"
+                    {...columnOrder.headerProps(column.key)}
+                    title="Drag to reorder · Ctrl+← / Ctrl+→"
+                    className="cursor-grab select-none px-3 py-2 font-medium outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
+                  >
+                    {column.header}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -479,33 +578,13 @@ export function LeadsPage() {
                       className="size-4 rounded border-slate-300"
                     />
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <Link
-                      to={ROUTE_PATHS.LEAD_DETAIL.replace(':id', lead.id)}
-                      className="font-mono text-xs font-medium text-blue-600 hover:underline"
-                    >
-                      {lead.reference}
-                    </Link>
-                  </td>
-                  <td className="max-w-48 px-3 py-2">
-                    <span className="block truncate text-slate-900">{lead.contactPerson}</span>
-                    <span className="block truncate text-xs text-slate-400">{lead.email}</span>
-                  </td>
-                  <td className="max-w-48 truncate px-3 py-2 text-slate-600">{lead.companyName ?? '—'}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-500">
-                    {/* Prose travel dates like "August" are shown as written —
-                        the sheet's only timing signal for those enquiries. */}
-                    {lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—')}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-500">{lead.paxText ?? '—'}</td>
-                  {/* One truncated line keeps the row height fixed; clicking it
-                      opens the whole remark. Column width is unchanged. */}
-                  <td className="max-w-56 px-3 py-2 text-slate-500">
-                    <RemarkCell remarks={lead.internalNotes} reference={lead.reference} />
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <LeadStageBadge stage={lead.stage} showEligibility eligible={lead.campaignEligible} />
-                  </td>
+                  {/* The same array as the header row above, so a header can
+                      never sit over another column's data. */}
+                  {columnOrder.columns.map((column) => (
+                    <td key={column.key} className={column.cellClassName}>
+                      {column.render(lead)}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

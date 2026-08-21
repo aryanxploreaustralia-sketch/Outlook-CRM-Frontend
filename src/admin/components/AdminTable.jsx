@@ -37,6 +37,14 @@
  *   srOnlyHeader?: boolean             for an actions column with no visible label
  * }
  * ```
+ *
+ * ## Reordering
+ *
+ * Optional, and off unless a `reorder` prop is passed — every other table in the
+ * console renders exactly as it did. When present it is
+ * `{ headerProps(key) }` from `useColumnOrder`, and the caller has already
+ * reordered `columns`. Headers and cells both map over that one array, so a
+ * header can never sit above another column's data.
  */
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
@@ -66,6 +74,7 @@ const ALIGN = {
  * }} props
  */
 export function AdminTable({
+  reorder,
   columns,
   rows,
   rowKey = (row, index) => row.id ?? String(index),
@@ -112,12 +121,21 @@ export function AdminTable({
             {columns.map((column) => {
               const isSorted = sort?.key === column.key
               const ariaSort = isSorted ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'
+              /*
+               * Resolved once. A caller may decline a particular column — a
+               * selection checkbox or a delete control is not a field and does
+               * not move — and then this is null, so that header keeps its
+               * ordinary markup with no handlers, no tab stop and no tooltip.
+               */
+              const dragProps = reorder ? reorder.headerProps(column.key) : null
 
               return (
                 <th
                   key={column.key}
                   scope="col"
                   aria-sort={column.sortable ? ariaSort : undefined}
+                  {...dragProps}
+                  title={dragProps ? 'Drag to reorder · Ctrl+← / Ctrl+→' : undefined}
                   /*
                    * `top-0`, and it must stay `top-0`.
                    *
@@ -139,7 +157,11 @@ export function AdminTable({
                    */
                   className={`sticky top-0 z-10 whitespace-nowrap bg-slate-50/95 px-6 py-3 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 backdrop-blur ${
                     ALIGN[column.align] ?? ALIGN.left
-                  } ${column.width ?? ''} ${column.headerClassName ?? ''}`}
+                  } ${column.width ?? ''} ${column.headerClassName ?? ''} ${
+                    dragProps
+                      ? 'cursor-grab select-none outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40'
+                      : ''
+                  }`}
                 >
                   {column.srOnlyHeader ? (
                     <span className="sr-only">{column.header}</span>

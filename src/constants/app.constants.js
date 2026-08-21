@@ -11,6 +11,18 @@ export const STORAGE_KEYS = Object.freeze({
   ACCESS_TOKEN: 'oac:access-token',
   /** Desktop sidebar collapse preference, persisted across reloads. */
   SIDEBAR_COLLAPSED: 'oac:sidebar-collapsed',
+
+  /*
+   * Column order per lead table.
+   *
+   * One key per table rather than one per panel, because the three tables do
+   * not share a column set — a single key would have each of them discarding
+   * the others' keys on every read. Keeping them apart is also what guarantees
+   * the console's layout never follows somebody into the CRM.
+   */
+  LEAD_COLUMNS_CRM: 'oac:lead-columns:user',
+  LEAD_COLUMNS_ADMIN_MONITOR: 'oac:lead-columns:admin-monitor',
+  LEAD_COLUMNS_ADMIN_USER_LEADS: 'oac:lead-columns:admin-user-leads',
 })
 
 /** Request lifecycle states, used by data-fetching hooks. */
