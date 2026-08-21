@@ -33,6 +33,7 @@ import { useApiResource } from '@/hooks/useApiResource'
 // it. Imported rather than copied: two debounce hooks is how two screens end up
 // with different delays and neither is the one anybody tuned.
 import { useDebouncedValue } from '@/admin/hooks/useDebouncedValue'
+import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 const PAGE_SIZE = 50
@@ -456,11 +457,10 @@ export function FollowUpPage() {
                       <p className="truncate text-xs text-slate-500">{row.email}</p>
                     </td>
                     <td className="px-3 py-2.5 text-slate-600">{row.market ?? '—'}</td>
-                    {/* Truncated to one line so the queue stays scannable. */}
+                    {/* Truncated to one line so the queue stays scannable;
+                        clicking opens the whole remark. */}
                     <td className="max-w-56 px-3 py-2.5 text-slate-600">
-                      <span className="block truncate" title={row.remarks || undefined}>
-                        {row.remarks || '—'}
-                      </span>
+                      <RemarkCell remarks={row.remarks} reference={row.reference} />
                     </td>
                     <td className="px-3 py-2.5 text-slate-600">{formatDate(row.initialEmailSentAt)}</td>
                     <td className="px-3 py-2.5 tabular-nums text-slate-700">

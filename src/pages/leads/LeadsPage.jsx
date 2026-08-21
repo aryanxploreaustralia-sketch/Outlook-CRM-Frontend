@@ -26,6 +26,7 @@ import {
 import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
+import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -497,13 +498,10 @@ export function LeadsPage() {
                     {lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—')}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-slate-500">{lead.paxText ?? '—'}</td>
-                  {/* Remarks run to 4,000 characters. One truncated line keeps the
-                      row height fixed; the full text is on the enquiry's detail,
-                      and `title` gives it to a hover without opening anything. */}
+                  {/* One truncated line keeps the row height fixed; clicking it
+                      opens the whole remark. Column width is unchanged. */}
                   <td className="max-w-56 px-3 py-2 text-slate-500">
-                    <span className="block truncate" title={lead.internalNotes || undefined}>
-                      {lead.internalNotes || '—'}
-                    </span>
+                    <RemarkCell remarks={lead.internalNotes} reference={lead.reference} />
                   </td>
                   <td className="whitespace-nowrap px-3 py-2">
                     <LeadStageBadge stage={lead.stage} showEligibility eligible={lead.campaignEligible} />
