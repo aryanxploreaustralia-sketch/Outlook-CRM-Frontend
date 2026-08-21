@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Building2, Mail, Pencil, Trash2 } from 'lucide-react'
 
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
+import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
@@ -351,7 +352,17 @@ export function CompanyDetailPage() {
                         are shown as written. */}
                     {lead.contactPerson} ·{' '}
                     {lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—')}
-                    {lead.internalNotes ? ` · ${lead.internalNotes}` : ''}
+                    {lead.internalNotes && (
+                      <>
+                        {' · '}
+                        <RemarkCell
+                          variant="inline"
+                          remarks={lead.internalNotes}
+                          reference={lead.reference}
+                          emptyFallback={null}
+                        />
+                      </>
+                    )}
                   </p>
                 </div>
                 <LeadStageBadge stage={lead.stage} />

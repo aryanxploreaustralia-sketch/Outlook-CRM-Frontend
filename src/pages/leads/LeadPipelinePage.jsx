@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 
 import { ErrorScreen } from '@/components/common/ErrorScreen'
+import { RemarkCell } from '@/components/leads/RemarkCell'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { usePipeline } from '@/hooks/useLeads'
@@ -74,28 +75,42 @@ export function LeadPipelinePage() {
 
               <div className="flex-1 space-y-2 overflow-y-auto p-2" style={{ maxHeight: '60vh' }}>
                 {column.items.map((lead) => (
-                  <Link
+                  /*
+                    The card frame sits on this wrapper rather than on the link.
+                    The remark opens a dialog, and an interactive element cannot
+                    be nested inside an anchor — so the link covers the card's
+                    body and the remark is its sibling. Hover still lights the
+                    whole card because the border lives out here.
+                  */
+                  <div
                     key={lead.id}
-                    to={ROUTE_PATHS.LEAD_DETAIL.replace(':id', lead.id)}
-                    className="block rounded-lg border border-slate-200 bg-white p-2.5 transition hover:border-blue-400"
+                    className="rounded-lg border border-slate-200 bg-white p-2.5 transition hover:border-blue-400"
                   >
-                    <p className="font-mono text-xs text-blue-600">{lead.reference}</p>
-                    <p className="mt-0.5 truncate text-sm font-medium text-slate-900">{lead.contactPerson}</p>
-                    <p className="truncate text-xs text-slate-500">{lead.companyName ?? '—'}</p>
-                    <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-slate-400">
-                      {lead.paxText && <span>{lead.paxText}</span>}
-                      {(lead.travelDate || lead.travelDateText) && (
-                        <span>· {formatDate(lead.travelDate) ?? lead.travelDateText}</span>
-                      )}
-                    </p>
+                    <Link to={ROUTE_PATHS.LEAD_DETAIL.replace(':id', lead.id)} className="block">
+                      <p className="font-mono text-xs text-blue-600">{lead.reference}</p>
+                      <p className="mt-0.5 truncate text-sm font-medium text-slate-900">{lead.contactPerson}</p>
+                      <p className="truncate text-xs text-slate-500">{lead.companyName ?? '—'}</p>
+                      <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-slate-400">
+                        {lead.paxText && <span>{lead.paxText}</span>}
+                        {(lead.travelDate || lead.travelDateText) && (
+                          <span>· {formatDate(lead.travelDate) ?? lead.travelDateText}</span>
+                        )}
+                      </p>
+                    </Link>
+
                     {/* Its own line, truncated: a card is fixed-width and remarks
                         are not, so appending them to the meta row would wrap it. */}
                     {lead.internalNotes && (
-                      <p className="mt-1 truncate text-xs text-slate-400" title={lead.internalNotes}>
-                        {lead.internalNotes}
+                      <p className="mt-1 truncate text-xs text-slate-400">
+                        <RemarkCell
+                          variant="inline"
+                          remarks={lead.internalNotes}
+                          reference={lead.reference}
+                          emptyFallback={null}
+                        />
                       </p>
                     )}
-                  </Link>
+                  </div>
                 ))}
 
                 {column.items.length === 0 && (

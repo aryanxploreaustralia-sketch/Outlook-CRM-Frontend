@@ -34,6 +34,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Inbox } from 'lucide-react'
 
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
+import { RemarkCell } from '@/components/leads/RemarkCell'
 import { RECENT_LEADS_LIMIT } from '@/hooks/useRecentLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 
@@ -137,7 +138,19 @@ export function RecentLeadsCard({ leads, isLoading = false, isError = false, onR
                   {lead.contactPerson || lead.reference || 'Untitled enquiry'}
                 </Link>
                 <p className="truncate text-xs text-slate-500">
-                  {[lead.reference, lead.companyName, lead.internalNotes].filter(Boolean).join(' · ') || '—'}
+                  {[lead.reference, lead.companyName].filter(Boolean).join(' · ') || '—'}
+                  {/* Split out of the join so the remark itself is clickable. */}
+                  {lead.internalNotes && (
+                    <>
+                      {' · '}
+                      <RemarkCell
+                        variant="inline"
+                        remarks={lead.internalNotes}
+                        reference={lead.reference}
+                        emptyFallback={null}
+                      />
+                    </>
+                  )}
                 </p>
               </div>
               <span

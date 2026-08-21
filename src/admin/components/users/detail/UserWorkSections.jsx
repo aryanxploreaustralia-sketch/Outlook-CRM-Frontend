@@ -47,6 +47,7 @@ import {
 import { PERMISSIONS } from '@/admin/constants/permissions'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { formatCount, formatDate, formatRelative } from '@/admin/utils/format'
+import { RemarkCell } from '@/components/leads/RemarkCell'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { Button } from '@/components/ui/Button'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -459,9 +460,7 @@ export function UserLeadsSection({
       // hover and on the enquiry's detail page.
       width: 'max-w-64',
       render: (row) => (
-        <span className="block max-w-64 truncate text-slate-600" title={row.remarks || undefined}>
-          {row.remarks || '—'}
-        </span>
+        <RemarkCell remarks={row.remarks} reference={row.reference} className="max-w-64 text-slate-600" />
       ),
     },
     {

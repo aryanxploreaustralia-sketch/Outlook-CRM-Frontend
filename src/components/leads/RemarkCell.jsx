@@ -29,15 +29,35 @@ import { AdminModal } from '@/admin/components/AdminModal'
 import { Button } from '@/components/ui/Button'
 
 /**
+ * How the trigger sits in its container.
+ *
+ * `block` owns a table cell and does its own truncating. `inline` sits inside a
+ * line of prose — a card subtitle — where the surrounding `<p>` already
+ * truncates and a block-level button would break the line.
+ */
+const VARIANTS = {
+  block: 'block w-full truncate text-left',
+  inline: 'inline text-left',
+}
+
+/**
  * @param {{
  *   remarks: ?string,
  *   reference?: ?string,
+ *   variant?: keyof typeof VARIANTS,
+ *   emptyFallback?: import('react').ReactNode,
  *   className?: string,
  * }} props
  *   `reference` only names the enquiry in the dialog's heading, so a reader who
  *   opened one from a long page can see which row they are looking at.
  */
-export function RemarkCell({ remarks, reference = null, className = '' }) {
+export function RemarkCell({
+  remarks,
+  reference = null,
+  variant = 'block',
+  emptyFallback = <span className="text-slate-400">—</span>,
+  className = '',
+}) {
   const [isOpen, setIsOpen] = useState(false)
 
   // Whitespace-only remarks exist in the sheet and are not worth a dialog.
@@ -45,21 +65,27 @@ export function RemarkCell({ remarks, reference = null, className = '' }) {
 
   // The empty placeholder is deliberately not a button: nothing to open, and a
   // focus stop on every blank row would make the table tedious to tab through.
-  if (!text) return <span className="text-slate-400">—</span>
+  // Inline callers pass `null`, because a card that has no remark shows no line.
+  if (!text) return emptyFallback
 
   return (
     <>
       <button
         type="button"
         onClick={(event) => {
-          // The row is not clickable today, but a cell that opens a dialog
-          // should not also fire whatever the row grows into later.
+          /*
+           * A card is often wrapped in a link, and a row may grow a click
+           * handler later. Both are stopped here so the remark opens its dialog
+           * and nothing else — `preventDefault` for the anchor, `stopPropagation`
+           * for the row.
+           */
+          event.preventDefault()
           event.stopPropagation()
           setIsOpen(true)
         }}
         title={text}
         aria-label={`View full remark${reference ? ` for ${reference}` : ''}`}
-        className={`block w-full cursor-pointer truncate text-left underline-offset-2 hover:text-slate-900 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${className}`}
+        className={`cursor-pointer underline-offset-2 hover:text-slate-900 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${VARIANTS[variant] ?? VARIANTS.block} ${className}`}
       >
         {text}
       </button>

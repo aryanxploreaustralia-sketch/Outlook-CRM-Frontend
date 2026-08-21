@@ -58,6 +58,7 @@ import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
 import { fetchAdminLeads } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatDate } from '@/admin/utils/format'
+import { RemarkCell } from '@/components/leads/RemarkCell'
 import { Button } from '@/components/ui/Button'
 import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
 
@@ -424,12 +425,15 @@ export function AdminLeadMonitorPage() {
       {
         key: 'remarks',
         header: 'Remarks',
-        // Truncated to one line; the full text is on the lead's detail page.
+        // Truncated to one line; clicking opens the whole remark.
         width: 'max-w-64',
         render: (lead) => (
-          <span className="block max-w-64 truncate text-slate-600" title={lead.remarks || undefined}>
-            {lead.remarks || EMPTY}
-          </span>
+          <RemarkCell
+            remarks={lead.remarks}
+            reference={lead.reference}
+            className="max-w-64 text-slate-600"
+            emptyFallback={<span className="text-slate-400">{EMPTY}</span>}
+          />
         ),
       },
       {
