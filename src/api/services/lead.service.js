@@ -110,6 +110,19 @@ export async function exportLeads(params = {}, { signal } = {}) {
   }
 }
 
+/**
+ * Updates the enquiry, its contact and its company in one request.
+ *
+ * `payload` is `{ lead?, contact?, company? }`; omit a section and it is not
+ * touched. The contact and company ids are never sent — the server reads them
+ * off the enquiry, which is what stops this endpoint being a lever on records
+ * the caller has no claim to.
+ */
+export async function updateLeadFull(id, payload, { signal } = {}) {
+  const response = await httpClient.put(ENDPOINTS.leads.detailFull(id), payload, { signal })
+  return response.data?.data ?? response.data
+}
+
 export async function updateLead(id, payload, { signal } = {}) {
   const response = await httpClient.put(ENDPOINTS.leads.detail(id), payload, { signal })
   return response.data?.data?.lead ?? null

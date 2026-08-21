@@ -14,15 +14,17 @@
  * is invented, and nothing is editable — the console reads.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 
 import { AdminCard, AdminErrorState, AdminPageContainer } from '@/admin/components'
 import { useAdminBreadcrumbs, useAdminResource } from '@/admin/hooks'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { fetchAdminLead } from '@/admin/services/admin.service'
 import { EMPTY, formatDate } from '@/admin/utils/format'
+import { updateLeadFull } from '@/api/services/lead.service'
+import { LeadEditDialog } from '@/components/leads/LeadEditDialog'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { LoadingScreen } from '@/components/common/LoadingScreen'
 import { Button } from '@/components/ui/Button'
@@ -45,6 +47,37 @@ export function AdminLeadDetailPage() {
 
   const loader = useCallback((options) => fetchAdminLead(id, options), [id])
   const { data, error, isLoading, refresh } = useAdminResource(loader, { deps: [id] })
+
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+
+  /*
+   * The console saves through the CRM's own endpoint rather than a console
+   * copy of it.
+   *
+   * One handler, one validator, one authorization rule — `PUT /v1/leads/:id/full`
+   * decides whether this caller may edit this enquiry, exactly as it does for
+   * the CRM. A second admin-only write path would be a second set of rules to
+   * keep in step, and the one that drifts is always the one used less.
+   */
+  const saveFull = useCallback(
+    async (payload) => {
+      setIsSaving(true)
+      setSaveError(null)
+      try {
+        const result = await updateLeadFull(id, payload)
+        await refresh()
+        return result
+      } catch (saveFailure) {
+        setSaveError(saveFailure)
+        return null
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [id, refresh],
+  )
 
   if (isLoading) return <LoadingScreen fullScreen message="Loading the enquiry" />
 
@@ -82,22 +115,47 @@ export function AdminLeadDetailPage() {
          * `location.key` is `'default'` only on the first entry of a session,
          * which is exactly the case where there is nothing to go back to.
          */
-        <Button
-          as={Link}
-          to={ADMIN_PATHS.LEAD_MONITOR}
-          size="sm"
-          variant="secondary"
-          onClick={(event) => {
-            if (location.key === 'default') return
-            event.preventDefault()
-            navigate(-1)
-          }}
-        >
-          <ArrowLeft className="size-3.5" aria-hidden="true" />
-          Back to Lead monitor
-        </Button>
+        <>
+          {/* Offered on the server's answer, not the console's guess: the same
+              `canEdit` the CRM's detail returns, decided by the same rule. */}
+          {data.canEdit && (
+            <Button size="sm" variant="secondary" onClick={() => setIsEditOpen(true)}>
+              <Pencil className="size-3.5" aria-hidden="true" />
+              Edit lead
+            </Button>
+          )}
+
+          <Button
+            as={Link}
+            to={ADMIN_PATHS.LEAD_MONITOR}
+            size="sm"
+            variant="secondary"
+            onClick={(event) => {
+              if (location.key === 'default') return
+              event.preventDefault()
+              navigate(-1)
+            }}
+          >
+            <ArrowLeft className="size-3.5" aria-hidden="true" />
+            Back to Lead monitor
+          </Button>
+        </>
       }
     >
+      {isEditOpen && (
+        <LeadEditDialog
+          key={lead.updatedAt ?? lead.id}
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          lead={lead}
+          contact={data.contact}
+          company={data.company}
+          isSaving={isSaving}
+          error={saveError}
+          onSave={saveFull}
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <AdminCard title="Enquiry">
           <dl>

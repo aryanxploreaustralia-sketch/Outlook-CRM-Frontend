@@ -18,6 +18,7 @@ import {
   fetchLeads,
   fetchPipeline,
   updateLead,
+  updateLeadFull,
 } from '@/api/services/lead.service'
 import { useApiResource } from '@/hooks/useApiResource'
 
@@ -119,6 +120,31 @@ export function useLead(id, { enabled = true } = {}) {
     [id, refresh],
   )
 
+  /**
+   * The composite save: enquiry, contact and company together.
+   *
+   * Shares `save`'s busy and error state so a caller has one place to look, and
+   * refreshes the same way — the detail page shows the saved values without
+   * anybody reloading the browser.
+   */
+  const saveFull = useCallback(
+    async (payload) => {
+      setAction('save')
+      setActionError(null)
+      try {
+        const result = await updateLeadFull(id, payload)
+        await refresh({ isBackground: true })
+        return result
+      } catch (error) {
+        setActionError(error)
+        return null
+      } finally {
+        setAction(null)
+      }
+    },
+    [id, refresh],
+  )
+
   return {
     lead: resource.data?.lead ?? null,
     company: resource.data?.company ?? null,
@@ -140,6 +166,7 @@ export function useLead(id, { enabled = true } = {}) {
     isBusy: action !== null,
     actionError,
     save,
+    saveFull,
   }
 }
 

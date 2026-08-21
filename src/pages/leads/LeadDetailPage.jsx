@@ -11,6 +11,7 @@ import { AlertTriangle, ArrowLeft, Building2, Mail, Pencil, Phone, User } from '
 
 import { fetchLeadConversation } from '@/api/services/conversation.service'
 import { LeadConversation } from '@/components/leads/LeadConversation'
+import { LeadEditDialog } from '@/components/leads/LeadEditDialog'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { Button } from '@/components/ui/Button'
@@ -23,53 +24,17 @@ import { resolveErrorVariant } from '@/utils/apiError'
 
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—')
 
-/** An ISO instant as the `yyyy-mm-dd` a date input expects. */
-const asDateInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : '')
-
-/**
- * The fields `PUT /api/v1/leads/:id` accepts, and therefore the fields this
- * form offers.
- *
- * Deliberately not every field on the record. `reference` is the business key,
- * `market` drives the reference series, and `companyName`/`contactPerson` are
- * denormalised copies the importer's company resolver maintains alongside the
- * linked documents and their counts — editing those here would desynchronise
- * them. Offering an input the API silently discards would be worse than not
- * offering one, so the read-only fields stay read-only in edit mode too.
- */
-const EDITABLE_FIELDS = [
-  { field: 'travelDate', label: 'Travel date', type: 'date' },
-  {
-    field: 'travelDateText',
-    label: 'Travel date (as written)',
-    hint: 'Used when the sheet gives a period rather than a date, such as "August".',
-  },
-  { field: 'city', label: 'Departure city' },
-  { field: 'paxText', label: 'Party' },
-  { field: 'adultCount', label: 'Adults', type: 'number', min: 0 },
-  { field: 'childCount', label: 'Children', type: 'number', min: 0 },
-  { field: 'handledBy', label: 'Handled by' },
-]
-
-const INPUT = 'mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
-const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '—')
-
 export function LeadDetailPage() {
   const { id } = useParams()
   const {
     lead, company, contact, canEdit,
-    isInitialLoading, isError, error, refresh, action, isBusy, actionError, save,
+    isInitialLoading, isError, error, refresh, action, isBusy, actionError, save, saveFull,
   } = useLead(id)
 
   const [notes, setNotes] = useState(null)
 
-  /**
-   * The edit draft. `null` means the card is being read rather than edited, so
-   * one piece of state carries both the mode and the pending values.
-   */
-  const [draft, setDraft] = useState(null)
-  const isEditing = draft !== null
-  const setField = (field) => (event) => setDraft((current) => ({ ...current, [field]: event.target.value }))
+  /** Whether the edit dialog is open. The dialog owns the draft itself. */
+  const [isEditOpen, setIsEditOpen] = useState(false)
 
   /**
    * The correspondence, fetched separately from the enquiry itself.
@@ -165,6 +130,25 @@ export function LeadDetailPage() {
         </p>
       )}
 
+      {/*
+        Keyed on the enquiry so a fresh draft is built each time it opens —
+        without the key, React would keep the previous record's values in the
+        dialog's own state after a background refresh.
+      */}
+      {isEditOpen && (
+        <LeadEditDialog
+          key={lead.updatedAt ?? lead.id}
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          lead={lead}
+          contact={contact}
+          company={company}
+          isSaving={action === 'save'}
+          error={actionError}
+          onSave={saveFull}
+        />
+      )}
+
       <div className="grid gap-5 lg:grid-cols-3">
         {/* --- Enquiry ---------------------------------------------------- */}
         <section className="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
@@ -177,116 +161,46 @@ export function LeadDetailPage() {
               disagree. An imported enquiry is an ordinary enquiry here: nothing
               on this page reads `sourceSheet` to decide anything.
             */}
-            {canEdit && !isEditing && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  setDraft({
-                    travelDate: asDateInput(lead.travelDate),
-                    travelDateText: lead.travelDateText ?? '',
-                    city: lead.city ?? '',
-                    paxText: lead.paxText ?? '',
-                    adultCount: lead.adultCount ?? '',
-                    childCount: lead.childCount ?? '',
-                    handledBy: lead.handledBy ?? '',
-                  })
-                }
-              >
+            {canEdit && (
+              <Button variant="secondary" size="sm" onClick={() => setIsEditOpen(true)}>
                 <Pencil className="size-3.5" aria-hidden="true" />
-                Edit enquiry
+                Edit lead
               </Button>
             )}
           </div>
 
-          {isEditing ? (
-            <form
-              className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2"
-              onSubmit={async (event) => {
-                event.preventDefault()
-                const blank = (value) => (value === '' || value === null ? null : value)
-                const number = (value) => (value === '' || value === null ? null : Number(value))
-
-                const result = await save({
-                  travelDate: blank(draft.travelDate),
-                  travelDateText: blank(draft.travelDateText),
-                  city: blank(draft.city),
-                  paxText: blank(draft.paxText),
-                  adultCount: number(draft.adultCount),
-                  childCount: number(draft.childCount),
-                  handledBy: blank(draft.handledBy),
-                })
-                // `save` returns null on failure and surfaces `actionError`; the
-                // draft stays open so nothing typed is lost.
-                if (result) setDraft(null)
-              }}
-            >
-              {EDITABLE_FIELDS.map(({ field, label, type, hint, min }) => (
-                <div key={field}>
-                  <label
-                    htmlFor={`lead-${field}`}
-                    className="block text-xs font-medium uppercase tracking-wide text-slate-500"
-                  >
-                    {label}
-                  </label>
-                  <input
-                    id={`lead-${field}`}
-                    type={type ?? 'text'}
-                    min={min}
-                    value={draft[field]}
-                    onChange={setField(field)}
-                    className={INPUT}
-                  />
-                  {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
-                </div>
-              ))}
-
-              <div className="flex flex-wrap items-center gap-2 pt-1 sm:col-span-2">
-                <Button type="submit" size="sm" disabled={isBusy} isLoading={action === 'save'}>
-                  Save changes
-                </Button>
-                <Button type="button" variant="ghost" size="sm" disabled={isBusy} onClick={() => setDraft(null)}>
-                  Cancel
-                </Button>
-                <span className="text-xs text-slate-400">
-                  Reference, destination, company and contact are set at import and are not edited here.
-                </span>
+          <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {[
+              ['Query Date', formatDate(lead.quoteDate)],
+              [
+                'Travel date',
+                // Prose values are shown verbatim; the sheet says "August" for
+                // 24 enquiries and inventing a date would be a fabrication.
+                lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—'),
+              ],
+              ['Departure city', lead.city ?? '—'],
+              ['Party', lead.paxText ?? '—'],
+              [
+                'Adults / children',
+                lead.adultCount === null && lead.childCount === null
+                  ? 'Not parsed'
+                  : `${lead.adultCount ?? '?'} / ${lead.childCount ?? 0}`,
+              ],
+              ['Handled by', lead.handledBy ?? '—'],
+              ['Days open', lead.ageInDays === null ? '—' : `${lead.ageInDays}`],
+              ['Source sheet', lead.sourceSheet ? `${lead.sourceSheet} row ${lead.sourceRow}` : '—'],
+              // Record metadata. Travel date is the enquiry's operative date and
+              // leads the listings; when the record entered the CRM is still
+              // worth knowing, so it lives here rather than in a column.
+              ['Created', formatDate(lead.createdAt)],
+              ['Updated', formatDate(lead.updatedAt)],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+                <dd className="mt-0.5 text-sm text-slate-900">{value}</dd>
               </div>
-            </form>
-          ) : (
-            <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              {[
-                ['Query Date', formatDate(lead.quoteDate)],
-                [
-                  'Travel date',
-                  // Prose values are shown verbatim; the sheet says "August" for
-                  // 24 enquiries and inventing a date would be a fabrication.
-                  lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—'),
-                ],
-                ['Departure city', lead.city ?? '—'],
-                ['Party', lead.paxText ?? '—'],
-                [
-                  'Adults / children',
-                  lead.adultCount === null && lead.childCount === null
-                    ? 'Not parsed'
-                    : `${lead.adultCount ?? '?'} / ${lead.childCount ?? 0}`,
-                ],
-                ['Handled by', lead.handledBy ?? '—'],
-                ['Days open', lead.ageInDays === null ? '—' : `${lead.ageInDays}`],
-                ['Source sheet', lead.sourceSheet ? `${lead.sourceSheet} row ${lead.sourceRow}` : '—'],
-                // Record metadata. Travel date is the enquiry's operative date and
-                // leads the listings; when the record entered the CRM is still
-                // worth knowing, so it lives here rather than in a column.
-                ['Created', formatDate(lead.createdAt)],
-                ['Updated', formatDate(lead.updatedAt)],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
-                  <dd className="mt-0.5 text-sm text-slate-900">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
+            ))}
+          </dl>
 
           <div className="mt-5">
             <label htmlFor="lead-notes" className="block text-xs font-medium uppercase tracking-wide text-slate-500">
