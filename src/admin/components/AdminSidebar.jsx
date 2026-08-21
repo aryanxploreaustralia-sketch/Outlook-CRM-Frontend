@@ -31,6 +31,7 @@ import { ADMIN_NAV_SECTIONS } from '@/admin/constants/adminNavigation'
 import { usePermissions } from '@/admin/hooks/usePermissions'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { UserAvatar } from '@/components/common/UserAvatar'
+import { env } from '@/config/env'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 /**
@@ -128,8 +129,14 @@ export function AdminSidebar({
             />
             {!isCollapsed && (
               <span className="min-w-0 flex-1">
+                {/*
+                  The one canonical name, the same value the CRM's own sidebar
+                  reads. It was a literal here, which meant the console and the
+                  CRM could disagree about what the product is called — and did,
+                  whenever `VITE_APP_NAME` was stale in the running instance.
+                */}
                 <span className="block truncate text-sm font-semibold leading-tight text-sidebar-text-strong">
-                  Xplore Australia CRM
+                  {env.appName}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5">
                   <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
@@ -140,7 +147,7 @@ export function AdminSidebar({
               </span>
             )}
             <span className="sr-only">
-              Xplore Australia CRM, administration — go to the admin dashboard
+              {env.appName}, administration — go to the admin dashboard
             </span>
           </Link>
 
