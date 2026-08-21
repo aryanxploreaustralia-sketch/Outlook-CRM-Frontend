@@ -433,6 +433,17 @@ export function UserLeadsSection({
       render: (row) => row.company ?? <span className="text-slate-400">No company</span>,
     },
     {
+      key: 'travelDate',
+      header: 'Travel date',
+      // Prose travel dates are shown as written; the workbook's only timing
+      // signal for those enquiries. Created now lives on the lead's detail.
+      render: (row) => (
+        <span className="text-slate-600">
+          {row.travelDate ? formatDate(row.travelDate) : (row.travelDateText ?? '—')}
+        </span>
+      ),
+    },
+    {
       key: 'stage',
       header: 'Status',
       render: (row) => (
@@ -440,11 +451,6 @@ export function UserLeadsSection({
           {row.stageLabel ?? row.stage}
         </AdminBadge>
       ),
-    },
-    {
-      key: 'createdAt',
-      header: 'Created',
-      render: (row) => <span className="text-slate-600">{formatDate(row.createdAt)}</span>,
     },
     {
       key: 'lastActivityAt',

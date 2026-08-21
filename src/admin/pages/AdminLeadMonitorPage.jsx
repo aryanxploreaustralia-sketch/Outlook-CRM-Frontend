@@ -416,9 +416,15 @@ export function AdminLeadMonitorPage() {
         ),
       },
       {
-        key: 'createdAt',
-        header: 'Created',
-        render: (lead) => <span className="text-slate-600">{formatDate(lead.createdAt)}</span>,
+        key: 'travelDate',
+        header: 'Travel date',
+        // Prose travel dates are shown as written. Created is still a filter
+        // option above, and still shown on the lead's detail page.
+        render: (lead) => (
+          <span className="text-slate-600">
+            {lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? EMPTY)}
+          </span>
+        ),
       },
     ],
     [],
