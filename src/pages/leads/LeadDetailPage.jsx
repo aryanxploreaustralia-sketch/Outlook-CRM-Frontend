@@ -150,6 +150,11 @@ export function LeadDetailPage() {
               ['Handled by', lead.handledBy ?? '—'],
               ['Days open', lead.ageInDays === null ? '—' : `${lead.ageInDays}`],
               ['Source sheet', lead.sourceSheet ? `${lead.sourceSheet} row ${lead.sourceRow}` : '—'],
+              // Record metadata. Travel date is the enquiry's operative date and
+              // leads the listings; when the record entered the CRM is still
+              // worth knowing, so it lives here rather than in a column.
+              ['Created', formatDate(lead.createdAt)],
+              ['Updated', formatDate(lead.updatedAt)],
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>

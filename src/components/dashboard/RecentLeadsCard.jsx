@@ -139,8 +139,13 @@ export function RecentLeadsCard({ leads, isLoading = false, isError = false, onR
                   {[lead.reference, lead.companyName, lead.city].filter(Boolean).join(' · ') || '—'}
                 </p>
               </div>
-              <span className="hidden shrink-0 text-xs tabular-nums text-slate-400 sm:block">
-                {formatDate(lead.quoteDate)}
+              <span
+                className="hidden shrink-0 text-xs tabular-nums text-slate-400 sm:block"
+                title="Travel date"
+              >
+                {/* Prose travel dates like "August" are shown as written — the
+                    sheet's only timing signal for those enquiries. */}
+                {lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—')}
               </span>
               <LeadStageBadge stage={lead.stage} />
             </li>
