@@ -577,9 +577,12 @@ export function AdminLeadMonitorPage() {
               value={dateField}
               onChange={(next) => setFilters({ dateField: next })}
               options={DATE_FIELDS}
-              // Matches the default an empty value resolves to, so the control
-              // can never name a different date from the one being filtered.
-              allLabel="Travel date"
+              /*
+                No "all" row. `dateField` always holds one of DATE_FIELDS —
+                it coalesces to 'travelDate' — so an empty option could never
+                be selected, and labelling it duplicated the first entry.
+              */
+              includeAll={false}
             />
           )}
         </AdminFilterBar>

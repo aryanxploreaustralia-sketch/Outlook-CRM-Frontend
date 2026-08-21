@@ -28,6 +28,7 @@ import { X } from 'lucide-react'
  *   onChange: (next: string) => void,
  *   options: Array<{ value: string, label: string }>,
  *   allLabel?: string,
+ *   includeAll?: boolean,
  *   disabled?: boolean,
  *   className?: string,
  * }} props
@@ -38,6 +39,15 @@ export function AdminFilterSelect({
   onChange,
   options,
   allLabel,
+  /*
+   * Whether the empty "no filter" row is offered.
+   *
+   * Defaults to true, which is every filter on the console: absent means "all".
+   * A select whose value is always one of `options` — a *mode* rather than a
+   * filter — passes false, because an empty row there is either dead (the value
+   * can never be '') or a duplicate of whichever option shares its label.
+   */
+  includeAll = true,
   disabled = false,
   className = '',
 }) {
@@ -55,7 +65,7 @@ export function AdminFilterSelect({
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
       >
-        <option value="">{allLabel ?? `All ${label.toLowerCase()}`}</option>
+        {includeAll && <option value="">{allLabel ?? `All ${label.toLowerCase()}`}</option>}
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
