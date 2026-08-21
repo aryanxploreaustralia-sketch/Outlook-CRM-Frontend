@@ -62,28 +62,18 @@ import { RemarkCell } from '@/components/leads/RemarkCell'
 import { Button } from '@/components/ui/Button'
 import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
 
-/** Tone per stage. The label always carries the meaning as well. */
-const STAGE_TONE = {
-  new: 'brand',
-  quoted: 'violet',
-  follow_up: 'info',
-  interested: 'info',
-  negotiation: 'warning',
-  visa_process: 'warning',
-  booked: 'success',
-  completed: 'success',
-  cancelled: 'neutral',
-  lost: 'neutral',
-}
-
 /**
- * Derived from the shared vocabulary, not from `STAGE_TONE` above.
+ * The Stage filter's options, derived from the shared vocabulary.
  *
- * `STAGE_TONE` still lists the ten stages this CRM used before the register was
- * reduced to the workbook's own words, so building the filter from its keys
- * offered ten dead options and none of the live ones — a filter that could only
- * return nothing. The tone map is left alone: it is keyed lookup with a
- * `?? 'neutral'` fallback, so stale keys are harmless.
+ * Never from a local map. This file used to carry a `STAGE_TONE` table listing
+ * the ten stages the CRM used before the register was reduced to the workbook's
+ * own words; building the filter from its keys offered ten dead options and none
+ * of the live ones — a filter that could only return nothing. The map went with
+ * the Stage column it coloured, but the rule it taught is the reason this line
+ * reads from `LEAD_STAGES`.
+ *
+ * The filter itself is unaffected by the column's removal: it narrows the query,
+ * and the stage is still on every row of the response and on the lead's detail.
  */
 const STAGE_OPTIONS = LEAD_STAGES.map(({ value, label }) => ({ value, label }))
 
@@ -379,40 +369,11 @@ export function AdminLeadMonitorPage() {
         ),
       },
       {
-        key: 'stage',
-        header: 'Stage',
-        render: (lead) => (
-          <AdminBadge tone={STAGE_TONE[lead.stage] ?? 'neutral'}>
-            {lead.stageLabel ?? lead.stage}
-          </AdminBadge>
-        ),
-      },
-      {
         key: 'assignedTo',
         header: 'Owner',
         render: (lead) => lead.assignedTo ?? <AdminBadge tone="warning">Unassigned</AdminBadge>,
       },
       { key: 'market', header: 'Market', cellClassName: 'text-slate-600' },
-      {
-        key: 'autoMailStatus',
-        header: 'Introduction',
-        render: (lead) =>
-          lead.autoMailStatus ? (
-            <AdminBadge
-              tone={
-                lead.autoMailStatus === 'sent'
-                  ? 'success'
-                  : lead.autoMailStatus === 'failed'
-                    ? 'danger'
-                    : 'neutral'
-              }
-            >
-              {lead.autoMailStatus}
-            </AdminBadge>
-          ) : (
-            EMPTY
-          ),
-      },
       {
         key: 'lastActivityDays',
         header: 'Last activity',

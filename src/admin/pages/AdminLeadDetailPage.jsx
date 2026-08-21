@@ -113,9 +113,10 @@ export function AdminLeadDetailPage() {
             <Fact label="Market" value={lead.market} />
             <Fact label="Handled by" value={lead.handledBy} />
             {/*
-              The automatic introduction email, which the monitor's own
-              "Introduction" column reports. Both read `autoMail.status` off the
-              same document, so the list and this page cannot disagree.
+              The automatic introduction email. The monitor no longer carries an
+              "Introduction" column — its outer table was trimmed to the fields a
+              reader scans — so this page is where the status is read. The
+              monitor still *filters* on it, from the same `autoMail.status`.
             */}
             <Fact label="Introduction" value={lead.autoMailStatus} />
             <Fact
