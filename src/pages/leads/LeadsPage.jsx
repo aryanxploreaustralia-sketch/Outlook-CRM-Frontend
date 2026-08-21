@@ -453,10 +453,9 @@ export function LeadsPage() {
                 <th scope="col" className="px-3 py-2 font-medium">Reference</th>
                 <th scope="col" className="px-3 py-2 font-medium">Contact</th>
                 <th scope="col" className="px-3 py-2 font-medium">Company</th>
-                <th scope="col" className="px-3 py-2 font-medium">City</th>
-                <th scope="col" className="px-3 py-2 font-medium">Query Date</th>
                 <th scope="col" className="px-3 py-2 font-medium">Travel</th>
                 <th scope="col" className="px-3 py-2 font-medium">Pax</th>
+                <th scope="col" className="px-3 py-2 font-medium">Remarks</th>
                 <th scope="col" className="px-3 py-2 font-medium">Stage</th>
               </tr>
             </thead>
@@ -492,14 +491,20 @@ export function LeadsPage() {
                     <span className="block truncate text-xs text-slate-400">{lead.email}</span>
                   </td>
                   <td className="max-w-48 truncate px-3 py-2 text-slate-600">{lead.companyName ?? '—'}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600">{lead.city ?? '—'}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-500">{formatDate(lead.quoteDate)}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-slate-500">
                     {/* Prose travel dates like "August" are shown as written —
                         the sheet's only timing signal for those enquiries. */}
                     {lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—')}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-slate-500">{lead.paxText ?? '—'}</td>
+                  {/* Remarks run to 4,000 characters. One truncated line keeps the
+                      row height fixed; the full text is on the enquiry's detail,
+                      and `title` gives it to a hover without opening anything. */}
+                  <td className="max-w-56 px-3 py-2 text-slate-500">
+                    <span className="block truncate" title={lead.internalNotes || undefined}>
+                      {lead.internalNotes || '—'}
+                    </span>
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2">
                     <LeadStageBadge stage={lead.stage} showEligibility eligible={lead.campaignEligible} />
                   </td>

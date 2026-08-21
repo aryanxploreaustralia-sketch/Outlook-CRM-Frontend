@@ -409,6 +409,7 @@ export function FollowUpPage() {
                 <th scope="col" className="px-3 py-2">Reference</th>
                 <th scope="col" className="px-3 py-2">Customer</th>
                 <th scope="col" className="px-3 py-2">Market</th>
+                <th scope="col" className="px-3 py-2">Remarks</th>
                 <th scope="col" className="px-3 py-2">Introduced</th>
                 <th scope="col" className="px-3 py-2">Waiting</th>
                 <th scope="col" className="px-3 py-2">Reply</th>
@@ -455,6 +456,12 @@ export function FollowUpPage() {
                       <p className="truncate text-xs text-slate-500">{row.email}</p>
                     </td>
                     <td className="px-3 py-2.5 text-slate-600">{row.market ?? '—'}</td>
+                    {/* Truncated to one line so the queue stays scannable. */}
+                    <td className="max-w-56 px-3 py-2.5 text-slate-600">
+                      <span className="block truncate" title={row.remarks || undefined}>
+                        {row.remarks || '—'}
+                      </span>
+                    </td>
                     <td className="px-3 py-2.5 text-slate-600">{formatDate(row.initialEmailSentAt)}</td>
                     <td className="px-3 py-2.5 tabular-nums text-slate-700">
                       {row.waitingDays === null ? '—' : `${row.waitingDays}d`}

@@ -83,12 +83,18 @@ export function LeadPipelinePage() {
                     <p className="mt-0.5 truncate text-sm font-medium text-slate-900">{lead.contactPerson}</p>
                     <p className="truncate text-xs text-slate-500">{lead.companyName ?? '—'}</p>
                     <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-slate-400">
-                      {lead.city && <span>{lead.city}</span>}
-                      {lead.paxText && <span>· {lead.paxText}</span>}
+                      {lead.paxText && <span>{lead.paxText}</span>}
                       {(lead.travelDate || lead.travelDateText) && (
                         <span>· {formatDate(lead.travelDate) ?? lead.travelDateText}</span>
                       )}
                     </p>
+                    {/* Its own line, truncated: a card is fixed-width and remarks
+                        are not, so appending them to the meta row would wrap it. */}
+                    {lead.internalNotes && (
+                      <p className="mt-1 truncate text-xs text-slate-400" title={lead.internalNotes}>
+                        {lead.internalNotes}
+                      </p>
+                    )}
                   </Link>
                 ))}
 

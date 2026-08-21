@@ -5,7 +5,8 @@
  *
  * `leads` is **always an array** of lead summaries — the shape
  * `GET /v1/leads` returns, which is `Lead.toSummaryJSON()`: `id`, `reference`,
- * `contactPerson`, `companyName`, `city`, `quoteDate`, `stage`. `useRecentLeads`
+ * `contactPerson`, `companyName`, `internalNotes`, `travelDate`, `stage`.
+ * `useRecentLeads`
  * guarantees it, defaulting to `[]` before the first response and after a
  * failure, so nothing here re-checks the type.
  *
@@ -136,7 +137,7 @@ export function RecentLeadsCard({ leads, isLoading = false, isError = false, onR
                   {lead.contactPerson || lead.reference || 'Untitled enquiry'}
                 </Link>
                 <p className="truncate text-xs text-slate-500">
-                  {[lead.reference, lead.companyName, lead.city].filter(Boolean).join(' · ') || '—'}
+                  {[lead.reference, lead.companyName, lead.internalNotes].filter(Boolean).join(' · ') || '—'}
                 </p>
               </div>
               <span

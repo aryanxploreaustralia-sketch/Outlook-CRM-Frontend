@@ -349,8 +349,9 @@ export function CompanyDetailPage() {
                   <p className="truncate text-xs text-slate-500">
                     {/* Travel date leads the listing; prose values like "August"
                         are shown as written. */}
-                    {lead.contactPerson} · {lead.city ?? '—'} ·{' '}
+                    {lead.contactPerson} ·{' '}
                     {lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—')}
+                    {lead.internalNotes ? ` · ${lead.internalNotes}` : ''}
                   </p>
                 </div>
                 <LeadStageBadge stage={lead.stage} />

@@ -422,6 +422,17 @@ export function AdminLeadMonitorPage() {
         ),
       },
       {
+        key: 'remarks',
+        header: 'Remarks',
+        // Truncated to one line; the full text is on the lead's detail page.
+        width: 'max-w-64',
+        render: (lead) => (
+          <span className="block max-w-64 truncate text-slate-600" title={lead.remarks || undefined}>
+            {lead.remarks || EMPTY}
+          </span>
+        ),
+      },
+      {
         key: 'travelDate',
         header: 'Travel date',
         // Prose travel dates are shown as written. Created is still a filter

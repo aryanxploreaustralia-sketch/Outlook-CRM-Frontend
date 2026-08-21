@@ -453,6 +453,18 @@ export function UserLeadsSection({
       ),
     },
     {
+      key: 'remarks',
+      header: 'Remarks',
+      // 4,000-character field in a fixed row. One truncated line, full text on
+      // hover and on the enquiry's detail page.
+      width: 'max-w-64',
+      render: (row) => (
+        <span className="block max-w-64 truncate text-slate-600" title={row.remarks || undefined}>
+          {row.remarks || '—'}
+        </span>
+      ),
+    },
+    {
       key: 'lastActivityAt',
       header: 'Updated',
       render: (row) => (
