@@ -31,6 +31,7 @@ import { AVAILABLE_CONTROLS, CAMPAIGN_FILTERS, CONTROL_LABELS } from '@/constant
 import { useCampaignList } from '@/hooks/useCampaigns'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDateTime } from '@/utils/datetime'
 
 const PAGE_SIZE = 25
 
@@ -199,7 +200,7 @@ export function CampaignsPage() {
                 {campaign.status === 'running' && campaign.estimatedCompletion && (
                   <p className="mt-2 text-xs text-slate-500">
                     {campaign.remaining.toLocaleString()} remaining — estimated finish{' '}
-                    {new Date(campaign.estimatedCompletion).toLocaleString()}
+                    {formatDateTime(campaign.estimatedCompletion)}
                   </p>
                 )}
               </li>

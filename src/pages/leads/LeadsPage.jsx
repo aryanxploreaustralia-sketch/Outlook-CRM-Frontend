@@ -37,10 +37,10 @@ import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDate } from '@/utils/datetime'
 
 const PAGE_SIZE = 50
 
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—')
 
 export function LeadsPage() {
   const [page, setPage] = useState(1)

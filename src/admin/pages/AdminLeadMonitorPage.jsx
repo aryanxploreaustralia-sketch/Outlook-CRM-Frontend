@@ -377,13 +377,15 @@ export function AdminLeadMonitorPage() {
       },
       { key: 'market', header: 'Market', cellClassName: 'text-slate-600' },
       {
-        key: 'lastActivityDays',
-        header: 'Last activity',
-        render: (lead) => (
-          <span className={lead.isStale ? 'font-medium text-amber-700' : 'tabular-nums text-slate-600'}>
-            {lead.lastActivityDays === 0 ? 'Today' : `${lead.lastActivityDays}d ago`}
-          </span>
-        ),
+        /*
+         * The enquiry's own date, from `Lead.quoteDate` — the workbook's
+         * "Q Date" column. Deliberately not `createdAt`, which records when the
+         * row reached the CRM and drifts weeks from the quote whenever a
+         * workbook is imported late.
+         */
+        key: 'quoteDate',
+        header: 'Query date',
+        render: (lead) => <span className="text-slate-600">{formatDate(lead.quoteDate)}</span>,
       },
       {
         key: 'remarks',

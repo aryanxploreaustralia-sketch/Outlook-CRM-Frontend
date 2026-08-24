@@ -7,6 +7,7 @@
  */
 
 import { env } from '@/config/env'
+import { formatTime } from '@/utils/datetime'
 
 /** @param {{ generatedAt?: ?string }} props */
 export function DashboardFooter({ generatedAt }) {
@@ -37,7 +38,7 @@ export function DashboardFooter({ generatedAt }) {
         </p>
         <p className="font-mono text-[11px]">
           {env.mode}
-          {generatedAt && ` · data ${new Date(generatedAt).toLocaleTimeString()}`}
+          {generatedAt && ` · data ${formatTime(generatedAt)}`}
         </p>
       </div>
     </footer>

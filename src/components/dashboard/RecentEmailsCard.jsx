@@ -11,6 +11,7 @@ import { ArrowRight, Inbox, Paperclip, PenSquare } from 'lucide-react'
 
 import { MailStatusBadge } from '@/components/mail/MailStatusBadge'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { formatDate, formatDateTime } from '@/utils/datetime'
 
 /**
  * Formats a timestamp as a short relative age.
@@ -32,7 +33,7 @@ function formatRelative(value) {
   if (seconds < 86_400) return `${Math.floor(seconds / 3600)}h ago`
   if (seconds < 604_800) return `${Math.floor(seconds / 86_400)}d ago`
 
-  return date.toLocaleDateString()
+  return formatDate(date)
 }
 
 /**
@@ -101,7 +102,7 @@ export function RecentEmailsCard({ items = [] }) {
 
                 <span
                   className="hidden shrink-0 text-xs text-slate-400 sm:block"
-                  title={new Date(mail.sentAt ?? mail.createdAt).toLocaleString()}
+                  title={formatDateTime(mail.sentAt ?? mail.createdAt)}
                 >
                   {formatRelative(mail.sentAt ?? mail.createdAt)}
                 </span>

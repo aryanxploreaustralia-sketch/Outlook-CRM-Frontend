@@ -27,14 +27,12 @@ import {
   Paperclip,
   Send,
 } from 'lucide-react'
+import { formatDateTime } from '@/utils/datetime'
+
+/** Absent renders as nothing here; the callers supply their own wording. */
+const displayDateTimeOrNull = (value) => formatDateTime(value, { empty: null })
 
 /** Formats an ISO timestamp, tolerating null and invalid input. */
-function formatDateTime(value) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString()
-}
-
 function formatBytes(bytes) {
   if (!bytes) return null
   if (bytes < 1024) return `${bytes} B`
@@ -97,7 +95,7 @@ function Message({ message, attachments }) {
             {isIncoming ? (message.from?.name || message.from?.address || 'Customer') : 'You'}
           </span>
 
-          <span className="text-[11px] text-slate-400">{formatDateTime(message.occurredAt)}</span>
+          <span className="text-[11px] text-slate-400">{displayDateTimeOrNull(message.occurredAt)}</span>
 
           {badge && (
             <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${badge.tone}`}>
@@ -214,7 +212,7 @@ export function LeadConversation({ messages = [], attachments = [], lead, isLoad
             </span>
           )}
           {lead?.lastReplyAt && (
-            <span className="text-slate-400">last {formatDateTime(lead.lastReplyAt)}</span>
+            <span className="text-slate-400">last {displayDateTimeOrNull(lead.lastReplyAt)}</span>
           )}
         </div>
       </header>

@@ -12,14 +12,12 @@ import { ConnectionBadge } from '@/components/common/ConnectionBadge'
 import { UserAvatar } from '@/components/common/UserAvatar'
 import { Button } from '@/components/ui/Button'
 import { CardRow } from '@/components/dashboard/StatusCard'
+import { formatDateTime } from '@/utils/datetime'
+
+/** Absent renders as nothing here; the callers supply their own wording. */
+const displayDateTimeOrNull = (value) => formatDateTime(value, { empty: null })
 
 /** Formats an ISO timestamp for display, tolerating null and invalid values. */
-function formatDateTime(value) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString()
-}
-
 /**
  * @param {{
  *   user?: ?object,
@@ -70,7 +68,7 @@ export function ProfileCard({
           <CardRow label="Provider" value={user?.providerLabel ?? user?.provider} />
           <CardRow label="Role" value={user?.roleLabel ?? user?.role} />
           <CardRow label="Account type" value={user?.accountTypeLabel ?? user?.accountType} />
-          <CardRow label="Last login" value={formatDateTime(user?.lastLoginAt)} />
+          <CardRow label="Last login" value={displayDateTimeOrNull(user?.lastLoginAt)} />
         </dl>
       </div>
 

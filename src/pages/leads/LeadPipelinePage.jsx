@@ -16,8 +16,10 @@ import { Spinner } from '@/components/ui/Spinner'
 import { usePipeline } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDate as displayDate } from '@/utils/datetime'
 
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : null)
+/* Null, not a dash: the card falls back to the sheet's prose travel date. */
+const formatDate = (value) => displayDate(value, { empty: null })
 
 export function LeadPipelinePage() {
   const { columns, total, isInitialLoading, isError, error, refresh } = usePipeline({ perStage: 12 })

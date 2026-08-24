@@ -54,6 +54,7 @@ import {
   formatPercent,
   formatRelative,
 } from '@/admin/utils/format'
+import { formatTime } from '@/utils/datetime'
 
 /** The tone each performance band carries. Sent by the server with the level. */
 const LEVEL_TONE = {
@@ -377,10 +378,7 @@ function TimelineSection({ data }) {
                     dateTime={entry.at}
                     className="text-xs font-medium tabular-nums text-slate-500"
                   >
-                    {new Date(entry.at).toLocaleTimeString('en-AU', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatTime(entry.at)}
                   </time>
                   <span className="text-sm font-medium text-slate-800">{entry.label}</span>
                   <span className="text-xs text-slate-400">{formatRelative(entry.at)}</span>

@@ -16,6 +16,7 @@
 
 import { useState } from 'react'
 import { CalendarRange, Check } from 'lucide-react'
+import { formatDate } from '@/utils/datetime'
 
 const PRESETS = [
   { value: 'today', label: 'Today' },
@@ -30,7 +31,8 @@ const PRESETS = [
 ]
 
 const formatBound = (value) =>
-  value ? new Date(value).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : null
+  // The house format, so the chip and the rows it filters read alike.
+  value ? formatDate(value, { empty: null }) : null
 
 /**
  * @param {{

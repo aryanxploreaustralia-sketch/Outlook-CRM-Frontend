@@ -56,6 +56,10 @@ import { Button } from '@/components/ui/Button'
 import { useApiResource } from '@/hooks/useApiResource'
 import { useAuth } from '@/hooks/useAuth'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { formatDateTime } from '@/utils/datetime'
+
+/* Named `formatDate` historically but it has always shown the time too. */
+const formatDateOrNull = (value) => formatDateTime(value, { empty: null })
 
 /** Explains a failed mailbox connection in words an office user can act on. */
 const CONNECT_ERRORS = {
@@ -106,12 +110,6 @@ function StatusPill({ status }) {
 }
 
 /** Formats an ISO date as a readable local string. */
-function formatDate(value) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString()
-}
-
 /**
  * One connected mailbox.
  *
@@ -142,7 +140,7 @@ function MailboxRow({ mailbox, isBusy, onSetDefault, onDisconnect }) {
           <StatusPill status={mailbox.status} />
           {mailbox.isDefault && <span>Automatic emails are sent from here.</span>}
           {!mailbox.isDefault && mailbox.connectedAt && (
-            <span>Connected {formatDate(mailbox.connectedAt)}</span>
+            <span>Connected {formatDateOrNull(mailbox.connectedAt)}</span>
           )}
 
           {/*

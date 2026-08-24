@@ -47,14 +47,12 @@ import { useDashboard } from '@/hooks/useDashboard'
 import { useRecentLeads } from '@/hooks/useRecentLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDateTime } from '@/utils/datetime'
+
+/** Absent renders as nothing here; the callers supply their own wording. */
+const displayDateTimeOrNull = (value) => formatDateTime(value, { empty: null })
 
 /** Formats an ISO timestamp, tolerating null and invalid input. */
-function formatDateTime(value) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString()
-}
-
 /**
  * Describes a token expiry in human terms.
  *
@@ -65,7 +63,7 @@ function formatDateTime(value) {
 function formatTokenExpiry(tokenExpiry) {
   if (!tokenExpiry?.expiresAt) return null
 
-  const absolute = formatDateTime(tokenExpiry.expiresAt)
+  const absolute = displayDateTimeOrNull(tokenExpiry.expiresAt)
   if (tokenExpiry.isExpired) return `${absolute} · expired, renewing`
 
   const seconds = tokenExpiry.expiresInSeconds
@@ -241,7 +239,7 @@ export function DashboardPage() {
               label="Status"
               value={<ConnectionBadge connection={connection} size="sm" />}
             />
-            <CardRow label="Connected" value={formatDateTime(outlook?.connectedAt)} />
+            <CardRow label="Connected" value={displayDateTimeOrNull(outlook?.connectedAt)} />
           </StatusCard>
 
           {/* Card 2 — Authentication */}
@@ -252,15 +250,15 @@ export function DashboardPage() {
             iconTone="bg-teal-50 text-teal-600 ring-teal-600/10"
             badge={<StatusBadge state={authentication?.status ?? 'unknown'} size="sm" />}
           >
-            <CardRow label="Last login" value={formatDateTime(user?.lastLoginAt)} />
+            <CardRow label="Last login" value={displayDateTimeOrNull(user?.lastLoginAt)} />
             <CardRow
               label="Last authentication"
-              value={formatDateTime(authentication?.lastAuthenticatedAt)}
+              value={displayDateTimeOrNull(authentication?.lastAuthenticatedAt)}
             />
             <CardRow label="Token expiry" value={formatTokenExpiry(tokenExpiry)} />
             <CardRow
               label="Session expires"
-              value={formatDateTime(authentication?.sessionExpiresAt)}
+              value={displayDateTimeOrNull(authentication?.sessionExpiresAt)}
             />
           </StatusCard>
 

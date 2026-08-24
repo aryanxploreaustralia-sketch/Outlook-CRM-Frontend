@@ -36,8 +36,7 @@ import {
 import { useTemplateList } from '@/hooks/useTemplates'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
-
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—')
+import { formatDate } from '@/utils/datetime'
 
 function StatusBadge({ status }) {
   return (

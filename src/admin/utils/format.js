@@ -11,34 +11,26 @@
  * is handled once rather than at forty call sites.
  */
 
+import { formatDate as displayDate, formatDateTime as displayDateTime } from '@/utils/datetime'
+
 /** The em dash used everywhere a value is absent. One character, one meaning. */
 export const EMPTY = '—'
 
 /**
- * Locale date, e.g. `5/08/2026`.
+ * `DD/MM/YYYY`.
  *
- * Deliberately locale-derived rather than hard-formatted: the organization's
- * date format is a setting, and in Phase 14.2 it comes from
- * `Organization.regional.dateFormat` rather than the browser.
+ * Was locale-derived, which meant the console rendered `8/21/2026` or
+ * `21/08/2026` depending on the reader's machine. In a register where a query
+ * date sits beside a travel date those two formats are indistinguishable, so
+ * the format is now fixed for everyone — see `@/utils/datetime`.
  */
 export function formatDate(value) {
-  if (!value) return EMPTY
-
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? EMPTY : date.toLocaleDateString()
+  return displayDate(value, { empty: EMPTY })
 }
 
-/** Locale date and time, for audit rows where the minute matters. */
+/** `DD/MM/YYYY HH:mm`, for audit rows where the minute matters. */
 export function formatDateTime(value) {
-  if (!value) return EMPTY
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return EMPTY
-
-  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  })}`
+  return displayDateTime(value, { empty: EMPTY })
 }
 
 /**

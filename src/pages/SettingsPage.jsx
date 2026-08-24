@@ -52,6 +52,10 @@ import { useApiResource } from '@/hooks/useApiResource'
 import { useAuth } from '@/hooks/useAuth'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDateTime } from '@/utils/datetime'
+
+/** Absent renders as nothing here; the callers supply their own wording. */
+const displayDateTimeOrNull = (value) => formatDateTime(value, { empty: null })
 
 /**
  * Roles allowed to change the schedule.
@@ -63,12 +67,6 @@ import { resolveErrorVariant } from '@/utils/apiError'
 const ADMIN_ROLES = new Set(['owner', 'admin'])
 
 /** Formats an ISO timestamp, tolerating null and invalid input. */
-function formatDateTime(value) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString()
-}
-
 /** Bytes as something a person reads. */
 function formatBytes(bytes) {
   if (!bytes) return null
@@ -169,7 +167,7 @@ function RunRow({ run }) {
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="text-sm font-medium text-slate-900">{run.statusLabel}</span>
           <span className="text-xs text-slate-500">
-            {formatDateTime(run.startedAt)}
+            {displayDateTimeOrNull(run.startedAt)}
             {run.manual && ' · run manually'}
             {run.attempt > 1 && ` · attempt ${run.attempt}`}
           </span>
@@ -423,14 +421,14 @@ export function SettingsPage() {
           <div className="rounded-lg border border-slate-200 px-3 py-2.5">
             <span className="block text-xs text-slate-500">Last scheduled run</span>
             <span className="mt-0.5 block truncate text-sm font-medium text-slate-900">
-              {formatDateTime(lastRun?.at) ?? 'Never'}
+              {displayDateTimeOrNull(lastRun?.at) ?? 'Never'}
             </span>
           </div>
 
           <div className="rounded-lg border border-slate-200 px-3 py-2.5">
             <span className="block text-xs text-slate-500">Next scheduled run</span>
             <span className="mt-0.5 block truncate text-sm font-medium text-slate-900">
-              {formatDateTime(data?.nextRunAt) ?? '—'}
+              {displayDateTimeOrNull(data?.nextRunAt) ?? '—'}
             </span>
           </div>
 
@@ -447,7 +445,7 @@ export function SettingsPage() {
               </span>
               {lastRun?.nextAttemptAt && (
                 <span className="mt-0.5 block text-xs text-amber-700">
-                  Next attempt at {formatDateTime(lastRun.nextAttemptAt)}.
+                  Next attempt at {displayDateTimeOrNull(lastRun.nextAttemptAt)}.
                 </span>
               )}
             </div>
@@ -682,10 +680,10 @@ export function SettingsPage() {
               id="reply-sync-last"
               className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-700"
             >
-              {formatDateTime(replySync?.lastRunAt) ?? 'Never'}
+              {displayDateTimeOrNull(replySync?.lastRunAt) ?? 'Never'}
               {replySync?.enabled && replySync?.nextRunAt && (
                 <span className="block text-xs text-slate-400">
-                  next {formatDateTime(replySync.nextRunAt)}
+                  next {displayDateTimeOrNull(replySync.nextRunAt)}
                 </span>
               )}
             </p>

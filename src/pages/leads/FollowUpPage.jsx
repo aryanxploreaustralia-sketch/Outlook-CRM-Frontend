@@ -35,6 +35,7 @@ import { useApiResource } from '@/hooks/useApiResource'
 import { useDebouncedValue } from '@/admin/hooks/useDebouncedValue'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { formatDate } from '@/utils/datetime'
 
 const PAGE_SIZE = 50
 
@@ -97,8 +98,6 @@ function Stat({ label, value, tone = 'text-slate-900' }) {
   )
 }
 
-const formatDate = (value) =>
-  value ? new Date(value).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
 export function FollowUpPage() {
   const [searchInput, setSearchInput] = useState('')

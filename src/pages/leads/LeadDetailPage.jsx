@@ -21,10 +21,8 @@ import { useApiResource } from '@/hooks/useApiResource'
 import { useLead } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDate, formatDateTime } from '@/utils/datetime'
 
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—')
-/** With the time, for the stage history — the minute is the point there. */
-const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '—')
 
 export function LeadDetailPage() {
   const { id } = useParams()

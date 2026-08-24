@@ -16,8 +16,8 @@ import { COMPANY_STATUS_STYLES, LEAD_STAGES } from '@/constants/lead.constants'
 import { useCompany } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDate } from '@/utils/datetime'
 
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '—')
 
 export function CompanyDetailPage() {
   const { id } = useParams()

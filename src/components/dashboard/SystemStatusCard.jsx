@@ -14,6 +14,7 @@ import { Activity, Cloud, Database, RefreshCw, Server } from 'lucide-react'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { Spinner } from '@/components/ui/Spinner'
 import { SERVICE_STATUS } from '@/constants/status.constants'
+import { formatTime } from '@/utils/datetime'
 
 /** Severity order, worst first. Drives the headline badge. */
 const SEVERITY = [
@@ -113,7 +114,7 @@ export function SystemStatusCard({ status, isRefreshing = false, onRefresh }) {
           <h2 className="truncate text-sm font-semibold text-slate-900">System status</h2>
           <p className="mt-0.5 truncate text-xs text-slate-500">
             {status?.timestamp
-              ? `Checked ${new Date(status.timestamp).toLocaleTimeString()}`
+              ? `Checked ${formatTime(status.timestamp)}`
               : 'Awaiting first check'}
           </p>
         </div>

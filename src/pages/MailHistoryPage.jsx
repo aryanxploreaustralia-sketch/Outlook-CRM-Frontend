@@ -34,16 +34,11 @@ import { formatBytes, MAIL_STATUS_FILTERS } from '@/constants/mail.constants'
 import { useMailHistory } from '@/hooks/useMailHistory'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDateTime } from '@/utils/datetime'
 
 const PAGE_SIZE = 20
 
 /** Formats an ISO timestamp, tolerating null and invalid input. */
-function formatDateTime(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString()
-}
-
 /**
  * Expanded detail for one message.
  *

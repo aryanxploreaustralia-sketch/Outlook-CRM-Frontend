@@ -5,6 +5,8 @@
  * part of the API contract, so a change on either side must be made on both.
  */
 
+import { formatDateTime as displayDateTime } from '@/utils/datetime'
+
 export const CONNECTION_STATUS = Object.freeze({
   CONNECTED: 'connected',
   DISCONNECTED: 'disconnected',
@@ -129,11 +131,10 @@ export const FALLBACK_REASONS = Object.freeze({
   no_mailbox: 'No mailbox is connected yet.',
 })
 
-/** Formats an ISO timestamp, tolerating null and invalid input. */
+/** `DD/MM/YYYY HH:mm`, tolerating null and invalid input. */
 export function formatDateTime(value) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString()
+  // `null` rather than a dash: these callers supply their own absent wording.
+  return displayDateTime(value, { empty: null })
 }
 
 /**

@@ -29,6 +29,7 @@ import { AVAILABLE_CONTROLS, CONTROL_LABELS } from '@/constants/campaign.constan
 import { useCampaign } from '@/hooks/useCampaigns'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { formatDateTime, formatTime } from '@/utils/datetime'
 
 const CONTROL_ICONS = { pause: Pause, resume: Play, cancel: Square, archive: Copy }
 
@@ -172,7 +173,7 @@ export function CampaignDetailPage() {
         {campaign.estimatedCompletion && campaign.remaining > 0 && (
           <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
             {campaign.remaining.toLocaleString()} remaining. At {campaign.throttle.perMinute}/minute the
-            send finishes around {new Date(campaign.estimatedCompletion).toLocaleString()} — derived from
+            send finishes around {formatDateTime(campaign.estimatedCompletion)} — derived from
             the configured rate, not observed speed, so it never promises sooner than is possible.
           </p>
         )}
@@ -225,7 +226,7 @@ export function CampaignDetailPage() {
                     </td>
                     <td className="px-4 py-2 tabular-nums text-slate-600">{recipient.attempts}</td>
                     <td className="px-4 py-2 text-slate-500">
-                      {recipient.sentAt ? new Date(recipient.sentAt).toLocaleString() : '—'}
+                      {formatDateTime(recipient.sentAt)}
                     </td>
                     <td className="max-w-64 truncate px-4 py-2 text-xs text-slate-500">
                       {recipient.failure?.message ?? recipient.skipReason ?? '—'}
@@ -249,7 +250,7 @@ export function CampaignDetailPage() {
             {events.map((event) => (
               <li key={event.id} className="flex items-baseline gap-3 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm">
                 <span className="font-mono text-xs text-slate-400">
-                  {new Date(event.occurredAt).toLocaleTimeString()}
+                  {formatTime(event.occurredAt)}
                 </span>
                 <span className="font-medium text-slate-700">{event.type.replace(/_/g, ' ')}</span>
                 <span className="truncate text-slate-500">{event.email ?? ''}</span>

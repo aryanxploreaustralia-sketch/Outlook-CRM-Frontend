@@ -6,6 +6,8 @@
  * on both.
  */
 
+import { formatDate as displayDate } from '@/utils/datetime'
+
 export const CONTACT_SOURCE = Object.freeze({
   OUTLOOK: 'outlook',
   CRM: 'crm',
@@ -123,9 +125,8 @@ export function initialsOf(contact) {
 
 /** Formats an ISO timestamp, tolerating null and invalid input. */
 export function formatDate(value) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString()
+  // `null` rather than a dash: callers here fall back to their own wording.
+  return displayDate(value, { empty: null })
 }
 
 /** Short relative age — "3d ago" answers the question a list reader has. */
@@ -139,7 +140,7 @@ export function formatRelative(value) {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
   if (seconds < 86_400) return `${Math.floor(seconds / 3600)}h ago`
   if (seconds < 2_592_000) return `${Math.floor(seconds / 86_400)}d ago`
-  return date.toLocaleDateString()
+  return displayDate(date)
 }
 
 export default CONTACT_SOURCE

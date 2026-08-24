@@ -37,14 +37,9 @@ import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { RECENT_LEADS_LIMIT } from '@/hooks/useRecentLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { formatDate } from '@/utils/datetime'
 
 /** Renders a date, tolerating null and unparseable values. */
-function formatDate(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString()
-}
-
 /** Placeholder rows sized to the real ones, so the card does not resize on load. */
 function LoadingRows() {
   return (

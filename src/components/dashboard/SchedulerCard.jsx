@@ -24,14 +24,12 @@ import {
 
 import { Button } from '@/components/ui/Button'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { formatDateTime } from '@/utils/datetime'
+
+/** Absent renders as nothing here; the callers supply their own wording. */
+const displayDateTimeOrNull = (value) => formatDateTime(value, { empty: null })
 
 /** Formats an ISO timestamp, tolerating null and invalid input. */
-function formatDateTime(value) {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString()
-}
-
 /**
  * How each outcome is presented.
  *
@@ -59,8 +57,8 @@ export function SchedulerCard({ scheduler }) {
   const presentation = STATUS_PRESENTATION[status] ?? STATUS_PRESENTATION.idle
   const StatusIcon = presentation.icon
 
-  const lastRunAt = formatDateTime(scheduler.lastRunAt)
-  const nextRunAt = formatDateTime(scheduler.nextRunAt)
+  const lastRunAt = displayDateTimeOrNull(scheduler.lastRunAt)
+  const nextRunAt = displayDateTimeOrNull(scheduler.nextRunAt)
 
   return (
     <section className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
