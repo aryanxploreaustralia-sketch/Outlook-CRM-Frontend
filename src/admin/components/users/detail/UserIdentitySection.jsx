@@ -39,7 +39,11 @@ import { AdminTextField } from '@/admin/components/AdminField'
 import { UserSection } from '@/admin/components/users/detail/UserDetailPrimitives'
 import { PERMISSIONS } from '@/admin/constants/permissions'
 import { usePermission } from '@/admin/hooks/usePermissions'
-import { linkMicrosoftIdentity, unlinkMicrosoftIdentity } from '@/admin/services/admin.service'
+import {
+  linkMicrosoftIdentity,
+  unlinkGoogleIdentity,
+  unlinkMicrosoftIdentity,
+} from '@/admin/services/admin.service'
 import { EMPTY, formatDateTime } from '@/admin/utils/format'
 import { GoogleIcon } from '@/components/common/GoogleIcon'
 import { MicrosoftIcon } from '@/components/common/MicrosoftIcon'
@@ -82,6 +86,7 @@ export function UserIdentitySection({ user, registerRef, onChanged }) {
 
   const [isLinking, setIsLinking] = useState(false)
   const [isUnlinking, setIsUnlinking] = useState(false)
+  const [isUnlinkingGoogle, setIsUnlinkingGoogle] = useState(false)
   const [address, setAddress] = useState('')
   const [isBusy, setIsBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -99,6 +104,7 @@ export function UserIdentitySection({ user, registerRef, onChanged }) {
       await action()
       setIsLinking(false)
       setIsUnlinking(false)
+      setIsUnlinkingGoogle(false)
       setAddress('')
       setNotice(successMessage)
       onChanged?.()
@@ -132,7 +138,29 @@ export function UserIdentitySection({ user, registerRef, onChanged }) {
           name="Google"
           audience="Employee portal — the CRM"
           identity={{ ...google, email: google.linked ? user.email : null, verified: google.linked }}
-        />
+        >
+          {/*
+            Releasing a Google identity matters most on a *removed* account.
+            The unique index on `googleId` covers deleted documents, so a
+            removed account goes on holding the sub and the replacement account
+            for the same person can never be stamped with it — they simply
+            cannot sign in. This is the remediation the sign-in error names.
+          */}
+          {canManage && google.linked && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={() => {
+                setError(null)
+                setIsUnlinkingGoogle(true)
+              }}
+            >
+              <Link2Off className="size-3.5" aria-hidden="true" />
+              Unlink
+            </Button>
+          )}
+        </IdentityRow>
 
         <IdentityRow
           icon={MicrosoftIcon}
@@ -239,7 +267,50 @@ export function UserIdentitySection({ user, registerRef, onChanged }) {
         </div>
       </AdminModal>
 
-      {/* --- Unlink ------------------------------------------------------- */}
+      {/* --- Unlink Google ------------------------------------------------ */}
+      <AdminModal
+        isOpen={isUnlinkingGoogle}
+        onClose={() => setIsUnlinkingGoogle(false)}
+        title="Remove this Google identity?"
+        busy={isBusy}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsUnlinkingGoogle(false)} disabled={isBusy}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => run(() => unlinkGoogleIdentity(user.id), 'Google identity removed.')}
+              isLoading={isBusy}
+            >
+              Unlink
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-700">
+            <span className="font-medium">{user.email}</span> will no longer sign in to the CRM
+            through this Google account.
+          </p>
+          <p className="text-sm text-slate-600">
+            Do this to a <span className="font-medium">removed</span> account when the same person
+            has been created again and cannot sign in: the removed account is still holding their
+            Google identity, and releasing it lets the new account claim it on their next attempt.
+          </p>
+          <p className="text-sm text-slate-600">
+            On a live account the server refuses unless another identity exists — an account nobody
+            can sign in to cannot be recovered.
+          </p>
+
+          {error && (
+            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {error}
+            </p>
+          )}
+        </div>
+      </AdminModal>
+
+      {/* --- Unlink Microsoft ---------------------------------------------- */}
       <AdminModal
         isOpen={isUnlinking}
         onClose={() => setIsUnlinking(false)}

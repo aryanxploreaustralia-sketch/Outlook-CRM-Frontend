@@ -88,6 +88,7 @@ export const ADMIN_ENDPOINTS = Object.freeze({
      * capability, because linking onto an owner grants the organization door.
      */
     microsoftIdentity: (id) => `/v1/admin/users/${id}/microsoft-identity`,
+    googleIdentity: (id) => `/v1/admin/users/${id}/google-identity`,
   },
 
   /**

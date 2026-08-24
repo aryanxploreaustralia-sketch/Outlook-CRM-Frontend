@@ -102,6 +102,31 @@ const ERROR_MESSAGES = {
   google_token_expired: 'That sign-in expired. Please try again.',
   google_bad_audience: 'That sign-in was not issued for this application.',
   google_bad_signature: 'That sign-in could not be verified. Please try again.',
+
+  /*
+   * The one refusal an operator can actually clear.
+   *
+   * The account was removed and re-created; the removed record still holds this
+   * Google identity, and the unique index covers deleted documents — so the new
+   * account cannot claim it. An administrator releases it from
+   * Admin -> Users -> the removed account -> Sign-in identities -> Unlink.
+   */
+  google_identity_held_by_deleted:
+    'This Google account is still linked to a removed CRM account. Ask an administrator to unlink it from that account, then try again.',
+
+  /*
+   * Token-verification failures, deliberately given one shared wording.
+   *
+   * Which check failed — algorithm, issuer, key, timing — describes our
+   * verification internals and says nothing a person signing in can act on. The
+   * distinction is kept in the server log, where it is useful.
+   */
+  google_no_id_token: 'That sign-in could not be verified. Please try again.',
+  google_malformed_token: 'That sign-in could not be verified. Please try again.',
+  google_bad_algorithm: 'That sign-in could not be verified. Please try again.',
+  google_unknown_key: 'That sign-in could not be verified. Please try again.',
+  google_bad_issuer: 'That sign-in could not be verified. Please try again.',
+  google_token_not_yet_valid: 'That sign-in could not be verified. Please try again.',
 }
 
 /**

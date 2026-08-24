@@ -274,6 +274,19 @@ export async function linkMicrosoftIdentity(id, microsoftEmail) {
 }
 
 /** Revokes that route in. Refuses if Microsoft is the only way into the account. */
+/**
+ * Releases an account's Google identity.
+ *
+ * Its usual subject is a *removed* account still holding the identity of
+ * somebody who has since been re-created — which is what stops the new account
+ * signing in at all. The server refuses to strip the last route into a live
+ * account.
+ */
+export async function unlinkGoogleIdentity(id) {
+  const response = await httpClient.delete(ADMIN_ENDPOINTS.users.googleIdentity(id))
+  return response.data?.data ?? response.data
+}
+
 export async function unlinkMicrosoftIdentity(id) {
   const response = await httpClient.delete(ADMIN_ENDPOINTS.users.microsoftIdentity(id))
   return response.data?.data ?? null
@@ -588,6 +601,7 @@ export default {
   restoreAdminUser,
   fetchBootstrapStatus,
   linkMicrosoftIdentity,
+  unlinkGoogleIdentity,
   unlinkMicrosoftIdentity,
   assignMailboxUsers,
   fetchAdminMailbox,
