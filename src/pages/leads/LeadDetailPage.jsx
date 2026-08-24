@@ -29,7 +29,7 @@ const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '�
 export function LeadDetailPage() {
   const { id } = useParams()
   const {
-    lead, company, contact, canEdit,
+    lead, company, contact, canEdit, holder,
     isInitialLoading, isError, error, refresh, action, isBusy, actionError, save, saveFull,
   } = useLead(id)
 
@@ -190,6 +190,9 @@ export function LeadDetailPage() {
               ],
               ['Handled by', lead.handledBy ?? '—'],
               ['From', lead.source ?? '—'],
+              // Who the enquiry belongs to. `handledBy` above is the
+              // sheet's initials column and is not a user reference.
+              ['Assigned to', holder?.name ?? '—'],
               ['Days open', lead.ageInDays === null ? '—' : `${lead.ageInDays}`],
               ['Source sheet', lead.sourceSheet ? `${lead.sourceSheet} row ${lead.sourceRow}` : '—'],
               // Record metadata. Travel date is the enquiry's operative date and

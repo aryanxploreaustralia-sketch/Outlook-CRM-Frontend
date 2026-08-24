@@ -22,7 +22,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, Check, Info, Save } from 'lucide-react'
 
-import { createLead, fetchNextReference } from '@/api/services/lead.service'
+import { createLead, fetchLeadAssignees, fetchNextReference } from '@/api/services/lead.service'
 import { Button } from '@/components/ui/Button'
 import { LEAD_STAGES } from '@/constants/lead.constants'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -52,6 +52,13 @@ const EMPTY_FORM = Object.freeze({
   stage: 'active',
   /** "From" — where the enquiry came from. */
   source: '',
+  /*
+   * The manager who will hold the enquiry. An id, not a name.
+   *
+   * Empty means "keep it myself", which is what this form did before and what
+   * a manager creating their own enquiry still wants.
+   */
+  assignTo: '',
   notes: '',
 })
 
@@ -86,6 +93,26 @@ export function LeadCreatePage() {
   const [error, setError] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
   const [suggested, setSuggested] = useState('')
+
+  /**
+   * The managers this enquiry may be assigned to.
+   *
+   * Loaded once. An empty list is not an error: a deployment with no active
+   * manager simply cannot assign, and the control says so rather than offering
+   * a dropdown with nothing in it.
+   */
+  const [managers, setManagers] = useState([])
+  useEffect(() => {
+    const controller = new AbortController()
+
+    fetchLeadAssignees({ signal: controller.signal })
+      .then((data) => setManagers(data?.items ?? []))
+      // A failed lookup costs the assignment, not the form: the field falls
+      // back to "keep it myself", which is what it did before this existed.
+      .catch(() => setManagers([]))
+
+    return () => controller.abort()
+  }, [])
 
   const set = useCallback((key) => (event) => {
     const { value } = event.target
@@ -132,14 +159,29 @@ export function LeadCreatePage() {
       try {
         const result = await createLead({ ...form, sendMail })
 
-        navigate(ROUTE_PATHS.LEAD_DETAIL.replace(':id', result.lead.id), {
-          state: {
-            notice: result.mail?.sent
-              ? `Lead ${result.lead.reference} created. The introduction has been sent.`
-              : `Lead ${result.lead.reference} created.`,
-            warnings: result.warnings ?? [],
+        const assignedElsewhere = Boolean(form.assignTo)
+        const manager = managers.find((option) => option.id === form.assignTo)
+        const sent = result.mail?.sent ? ' The introduction has been sent.' : ''
+
+        /*
+         * An assigned enquiry belongs to the manager from the moment it is
+         * saved, and `GET /leads/:id` is owner-scoped — so sending its creator
+         * to the detail page would hand them a 404 for the record they just
+         * made. They go back to the register instead, told where it went.
+         */
+        navigate(
+          assignedElsewhere
+            ? ROUTE_PATHS.LEADS
+            : ROUTE_PATHS.LEAD_DETAIL.replace(':id', result.lead.id),
+          {
+            state: {
+              notice: assignedElsewhere
+                ? `Lead ${result.lead.reference} created and assigned to ${manager?.name ?? 'the selected manager'}.${sent}`
+                : `Lead ${result.lead.reference} created.${sent}`,
+              warnings: result.warnings ?? [],
+            },
           },
-        })
+        )
       } catch (caught) {
         setError(caught)
 
@@ -155,7 +197,7 @@ export function LeadCreatePage() {
         setIsSaving(false)
       }
     },
-    [form, sendMail, navigate],
+    [form, sendMail, navigate, managers],
   )
 
   return (
@@ -256,7 +298,18 @@ export function LeadCreatePage() {
           <Field
             id="lead-reference"
             label="Reference"
-            hint={suggested ? `Leave empty to use ${suggested}` : 'Leave empty to allocate the next one'}
+            hint={
+              /*
+               * The suggestion is drawn from *this* user's series, and an
+               * assigned enquiry is numbered from the manager's — so once one is
+               * chosen the number is not promised, only that one is allocated.
+               */
+              form.assignTo
+                ? "Allocated from the assigned manager's series"
+                : suggested
+                  ? `Leave empty to use ${suggested}`
+                  : 'Leave empty to allocate the next one'
+            }
             error={fieldErrors.reference}
           >
             <input
@@ -272,6 +325,38 @@ export function LeadCreatePage() {
           {/* 11 */}
           <Field id="lead-handled-by" label="Handled By" hint="Sales executive initials" error={fieldErrors.handledBy}>
             <input id="lead-handled-by" value={form.handledBy} onChange={set('handledBy')} className={INPUT_CLASS} />
+          </Field>
+
+          {/*
+            11b — assignment, next to Handled By because both answer "whose is
+            this". They are different fields and deliberately so: `handledBy` is
+            the sheet's free-text initials column, while this sets `owner`, the
+            reference the whole CRM scopes on.
+          */}
+          <Field
+            id="lead-assign-to"
+            label="Assign To"
+            hint={
+              managers.length > 0
+                ? 'Managers only. Leave empty to keep it yourself.'
+                : 'No active manager to assign to — it stays with you.'
+            }
+            error={fieldErrors.assignTo}
+          >
+            <select
+              id="lead-assign-to"
+              value={form.assignTo}
+              onChange={set('assignTo')}
+              disabled={managers.length === 0}
+              className={INPUT_CLASS}
+            >
+              <option value="">Keep it myself</option>
+              {managers.map((manager) => (
+                <option key={manager.id} value={manager.id}>
+                  {manager.name}
+                </option>
+              ))}
+            </select>
           </Field>
 
           {/* 12 */}

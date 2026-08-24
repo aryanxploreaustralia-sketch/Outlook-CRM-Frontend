@@ -111,6 +111,17 @@ export async function exportLeads(params = {}, { signal } = {}) {
 }
 
 /**
+ * The managers an enquiry may be assigned to.
+ *
+ * The server decides who is eligible; this only renders the answer. Returns
+ * `{ id, name }` rows.
+ */
+export async function fetchLeadAssignees({ signal } = {}) {
+  const response = await httpClient.get(ENDPOINTS.leads.assignees, { signal })
+  return response.data?.data ?? response.data
+}
+
+/**
  * Updates the enquiry, its contact and its company in one request.
  *
  * `payload` is `{ lead?, contact?, company? }`; omit a section and it is not

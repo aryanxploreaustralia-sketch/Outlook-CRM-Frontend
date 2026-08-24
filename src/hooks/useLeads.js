@@ -158,6 +158,8 @@ export function useLead(id, { enabled = true } = {}) {
      * the server will refuse.
      */
     canEdit: resource.data?.canEdit === true,
+    /** Who holds the enquiry, named by the server. `{ id, name }` or null. */
+    holder: resource.data?.owner ?? null,
     isInitialLoading: resource.isInitialLoading,
     isError: resource.isError,
     error: resource.error,
