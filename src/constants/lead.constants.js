@@ -60,11 +60,17 @@ export const CAMPAIGN_ELIGIBLE_STAGES = Object.freeze(
   LEAD_STAGES.filter((stage) => stage.eligible).map((stage) => stage.value),
 )
 
+/**
+ * The destinations this DMC sells. Mirrors the backend's `MARKET` exactly.
+ *
+ * The leading blank is the "no filter" row every select here expects; callers
+ * that need a required choice strip it (`MARKETS.filter((m) => m.value)`).
+ */
 export const MARKETS = Object.freeze([
-  { value: '', label: 'All markets' },
+  { value: '', label: 'All destinations' },
   { value: 'AU', label: 'Australia' },
   { value: 'NZ', label: 'New Zealand' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'FJ', label: 'Fiji' },
 ])
 
 export const COMPANY_STATUS_STYLES = Object.freeze({

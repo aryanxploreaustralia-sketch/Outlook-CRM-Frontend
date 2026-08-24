@@ -24,16 +24,18 @@ import { AlertTriangle, ArrowLeft, Check, Info, Save } from 'lucide-react'
 
 import { createLead, fetchLeadAssignees, fetchNextReference } from '@/api/services/lead.service'
 import { Button } from '@/components/ui/Button'
-import { LEAD_STAGES } from '@/constants/lead.constants'
+import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { isCancelledError } from '@/utils/apiError'
 
-/** Markets a lead can be filed under. Mirrors `MARKET` on the server. */
-const MARKET_OPTIONS = Object.freeze([
-  { value: 'AU', label: 'Australia' },
-  { value: 'NZ', label: 'New Zealand' },
-  { value: 'OTHER', label: 'Other' },
-])
+/*
+ * Destinations a lead can be filed under.
+ *
+ * Derived from the shared list rather than restated. It was a second copy, and
+ * a second copy is how "Other" survived here after it was removed elsewhere.
+ * The blank "all" row is dropped: this is a required choice, not a filter.
+ */
+const MARKET_OPTIONS = MARKETS.filter((market) => market.value)
 
 const EMPTY_FORM = Object.freeze({
   reference: '',
