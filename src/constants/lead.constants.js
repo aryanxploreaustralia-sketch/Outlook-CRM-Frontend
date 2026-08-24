@@ -108,6 +108,7 @@ export const LEAD_FIELDS = Object.freeze([
   { value: 'pax', label: 'Pax' },
   { value: 'handledBy', label: 'Handled By' },
   { value: 'stage', label: 'Status' },
+  { value: 'source', label: 'From' },
   { value: 'notes', label: 'Remark' },
   { value: '__ignore__', label: '— Do not import —' },
 ])

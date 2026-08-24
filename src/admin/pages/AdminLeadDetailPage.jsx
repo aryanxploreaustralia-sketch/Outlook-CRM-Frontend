@@ -170,6 +170,7 @@ export function AdminLeadDetailPage() {
             <Fact label="City" value={lead.city} />
             <Fact label="Market" value={lead.market} />
             <Fact label="Handled by" value={lead.handledBy} />
+            <Fact label="From" value={lead.source} />
             {/*
               The automatic introduction email. The monitor no longer carries an
               "Introduction" column — its outer table was trimmed to the fields a

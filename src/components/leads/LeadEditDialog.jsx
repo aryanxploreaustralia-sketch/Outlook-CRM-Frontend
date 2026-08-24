@@ -53,6 +53,7 @@ const LEAD_FIELDS = [
   { field: 'adultCount', label: 'Adults', type: 'number', min: 0 },
   { field: 'childCount', label: 'Children', type: 'number', min: 0 },
   { field: 'handledBy', label: 'Handled by' },
+  { field: 'source', label: 'From', hint: 'Website, referral, email, walk-in…' },
 ]
 
 /** Contact fields, from the contacts module's own validator. */

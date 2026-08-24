@@ -39,6 +39,8 @@ const EMPTY_FORM = Object.freeze({
   reference: '',
   market: 'AU',
   companyName: '',
+  /** The agent's own city. Stored on the company, not on the enquiry. */
+  agentCity: '',
   contactPerson: '',
   email: '',
   phone: '',
@@ -48,6 +50,8 @@ const EMPTY_FORM = Object.freeze({
   pax: '',
   handledBy: '',
   stage: 'active',
+  /** "From" — where the enquiry came from. */
+  source: '',
   notes: '',
 })
 
@@ -174,15 +178,81 @@ export function LeadCreatePage() {
         </p>
       )}
 
-      {/* --- Identity ------------------------------------------------------ */}
+      {/*
+        The register's fields, in the order the sales team reads them — the
+        order of the workbook this CRM was built around, which is why an
+        enquiry typed here and one imported from a sheet describe the same
+        thing in the same sequence.
+      */}
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="text-sm font-semibold text-slate-900">Enquiry</h2>
         <p className="mt-0.5 text-xs text-slate-500">
-          The reference is the business key. Leave it empty and the next one in the series is
-          allocated automatically.
+          The travel agent and the contact are matched against the register and created only if
+          they are genuinely new — the same matching an upload performs.
         </p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* 1 */}
+          <Field id="lead-quote-date" label="Q Date" hint="dd/mm/yyyy" error={fieldErrors.quoteDate}>
+            <input id="lead-quote-date" type="date" value={form.quoteDate} onChange={set('quoteDate')} className={INPUT_CLASS} />
+          </Field>
+
+          {/* 2 — a free date, because the sheet often gives a period instead. */}
+          <Field
+            id="lead-travel-date"
+            label="Travel Date"
+            hint="A date, or a period such as “August”"
+            error={fieldErrors.travelDate}
+          >
+            <input id="lead-travel-date" value={form.travelDate} onChange={set('travelDate')} className={INPUT_CLASS} />
+          </Field>
+
+          {/* 3 */}
+          <Field id="lead-city" label="City" hint="Departure city of the travellers" error={fieldErrors.city}>
+            <input id="lead-city" value={form.city} onChange={set('city')} className={INPUT_CLASS} />
+          </Field>
+
+          {/* 4 */}
+          <Field
+            id="lead-company-name"
+            label="Travel Agent"
+            hint="Matched against the company register"
+            error={fieldErrors.companyName}
+          >
+            <input id="lead-company-name" value={form.companyName} onChange={set('companyName')} className={INPUT_CLASS} />
+          </Field>
+
+          {/* 5 — the agent's city, kept apart from the travellers' city above. */}
+          <Field id="lead-agent-city" label="Agent City" hint="Saved on the agent's company record">
+            <input id="lead-agent-city" value={form.agentCity} onChange={set('agentCity')} className={INPUT_CLASS} />
+          </Field>
+
+          {/* 6 */}
+          <Field
+            id="lead-contact-person"
+            label="Contact Person"
+            required
+            error={fieldErrors.contactPerson}
+          >
+            <input id="lead-contact-person" value={form.contactPerson} onChange={set('contactPerson')} className={INPUT_CLASS} />
+          </Field>
+
+          {/* 7 */}
+          <Field id="lead-email" label="Email ID" hint="Where the introduction is sent" error={fieldErrors.email}>
+            <input id="lead-email" type="email" value={form.email} onChange={set('email')} autoComplete="off" className={INPUT_CLASS} />
+          </Field>
+
+          {/* 8 */}
+          <Field id="lead-phone" label="Contact No" error={fieldErrors.phone}>
+            <input id="lead-phone" value={form.phone} onChange={set('phone')} autoComplete="off" className={INPUT_CLASS} />
+          </Field>
+
+          {/* 9 */}
+          <Field id="lead-pax" label="Pax" hint="“2A + 2C”, “100 Pax”, “15-35 Pax”" error={fieldErrors.pax}>
+            <input id="lead-pax" value={form.pax} onChange={set('pax')} className={INPUT_CLASS} />
+          </Field>
+
+          {/* 10 — blank allocates the next in the series; see `suggested`. */}
           <Field
             id="lead-reference"
             label="Reference"
@@ -199,6 +269,33 @@ export function LeadCreatePage() {
             />
           </Field>
 
+          {/* 11 */}
+          <Field id="lead-handled-by" label="Handled By" hint="Sales executive initials" error={fieldErrors.handledBy}>
+            <input id="lead-handled-by" value={form.handledBy} onChange={set('handledBy')} className={INPUT_CLASS} />
+          </Field>
+
+          {/* 12 */}
+          <Field id="lead-stage" label="Status" hint="Where the enquiry sits in the pipeline">
+            <select id="lead-stage" value={form.stage} onChange={set('stage')} className={INPUT_CLASS}>
+              {LEAD_STAGES.map((stage) => (
+                <option key={stage.value} value={stage.value}>
+                  {stage.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          {/* 13 */}
+          <Field id="lead-source" label="From" hint="Website, referral, email, walk-in…">
+            <input id="lead-source" value={form.source} onChange={set('source')} className={INPUT_CLASS} />
+          </Field>
+
+          {/*
+            Not one of the fourteen, and not removable: the destination decides
+            which reference series the enquiry is allocated from, so leaving it
+            out would break reference numbering. It sits beside Reference for
+            that reason.
+          */}
           <Field id="lead-market" label="Destination" hint="Sets the reference series">
             <select id="lead-market" value={form.market} onChange={set('market')} className={INPUT_CLASS}>
               {MARKET_OPTIONS.map((option) => (
@@ -208,168 +305,12 @@ export function LeadCreatePage() {
               ))}
             </select>
           </Field>
-
-          <Field id="lead-stage" label="Status / Stage" hint="Where the enquiry sits in the pipeline">
-            <select id="lead-stage" value={form.stage} onChange={set('stage')} className={INPUT_CLASS}>
-              {LEAD_STAGES.map((stage) => (
-                <option key={stage.value} value={stage.value}>
-                  {stage.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-      </section>
-
-      {/* --- Customer ------------------------------------------------------ */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-sm font-semibold text-slate-900">Customer</h2>
-        <p className="mt-0.5 text-xs text-slate-500">
-          The company and the contact are matched against the register and created only if they
-          are genuinely new — the same matching an upload performs.
-        </p>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field
-            id="lead-contact-person"
-            label="Contact Person"
-            required
-            hint="A title is stripped — “Mr. Ramesh Iyer” files as Ramesh Iyer"
-            error={fieldErrors.contactPerson}
-          >
-            <input
-              id="lead-contact-person"
-              value={form.contactPerson}
-              onChange={set('contactPerson')}
-              placeholder="Ramesh Iyer"
-              className={INPUT_CLASS}
-            />
-          </Field>
-
-          <Field
-            id="lead-company"
-            label="Company / Source"
-            hint="The agency or firm the enquiry came through"
-            error={fieldErrors.companyName}
-          >
-            <input
-              id="lead-company"
-              value={form.companyName}
-              onChange={set('companyName')}
-              placeholder="Tirupati Holidays"
-              className={INPUT_CLASS}
-            />
-          </Field>
-
-          <Field
-            id="lead-email"
-            label="Email"
-            required
-            hint="Two addresses in one field are both kept — separate with a comma"
-            error={fieldErrors.email}
-          >
-            <input
-              id="lead-email"
-              type="text"
-              value={form.email}
-              onChange={set('email')}
-              placeholder="ramesh@tirupatiholidays.com"
-              className={INPUT_CLASS}
-            />
-          </Field>
-
-          <Field
-            id="lead-phone"
-            label="Phone"
-            hint="Several numbers are fine: “+91 98765 43210 ; 040 39555671”"
-            error={fieldErrors.phone}
-          >
-            <input
-              id="lead-phone"
-              value={form.phone}
-              onChange={set('phone')}
-              placeholder="+91 98765 43210"
-              className={INPUT_CLASS}
-            />
-          </Field>
-        </div>
-      </section>
-
-      {/* --- Trip ---------------------------------------------------------- */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-sm font-semibold text-slate-900">Trip</h2>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Field id="lead-quote-date" label="Query Date" hint="dd/mm/yyyy" error={fieldErrors.quoteDate}>
-            <input
-              id="lead-quote-date"
-              value={form.quoteDate}
-              onChange={set('quoteDate')}
-              placeholder="04/08/2026"
-              className={INPUT_CLASS}
-            />
-          </Field>
-
-          <Field
-            id="lead-travel-date"
-            label="Travel Date"
-            hint="A date, or prose like “Low Season” — both are kept"
-            error={fieldErrors.travelDate}
-          >
-            <input
-              id="lead-travel-date"
-              value={form.travelDate}
-              onChange={set('travelDate')}
-              placeholder="15/11/2026"
-              className={INPUT_CLASS}
-            />
-          </Field>
-
-          <Field id="lead-pax" label="Pax" hint="“2A + 2C”, “100 Pax”, “15-35 Pax”" error={fieldErrors.pax}>
-            <input
-              id="lead-pax"
-              value={form.pax}
-              onChange={set('pax')}
-              placeholder="2A + 2C"
-              className={INPUT_CLASS}
-            />
-          </Field>
-
-          <Field id="lead-city" label="City" hint="Departure city" error={fieldErrors.city}>
-            <input
-              id="lead-city"
-              value={form.city}
-              onChange={set('city')}
-              placeholder="Chennai"
-              className={INPUT_CLASS}
-            />
-          </Field>
-
-          <Field
-            id="lead-handled-by"
-            label="Handled By"
-            hint="Initials or a name — a bare number is ignored"
-            error={fieldErrors.handledBy}
-          >
-            <input
-              id="lead-handled-by"
-              value={form.handledBy}
-              onChange={set('handledBy')}
-              placeholder="RI"
-              className={INPUT_CLASS}
-            />
-          </Field>
         </div>
 
+        {/* 14 — full width: remarks run long. */}
         <div className="mt-4">
-          <Field id="lead-notes" label="Notes" hint="Internal only — never sent to the customer">
-            <textarea
-              id="lead-notes"
-              rows={3}
-              value={form.notes}
-              onChange={set('notes')}
-              className={INPUT_CLASS}
-            />
+          <Field id="lead-notes" label="Remark" hint="Internal only — never sent to the customer">
+            <textarea id="lead-notes" rows={3} value={form.notes} onChange={set('notes')} className={INPUT_CLASS} />
           </Field>
         </div>
       </section>

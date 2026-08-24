@@ -189,6 +189,7 @@ export function LeadDetailPage() {
                   : `${lead.adultCount ?? '?'} / ${lead.childCount ?? 0}`,
               ],
               ['Handled by', lead.handledBy ?? '—'],
+              ['From', lead.source ?? '—'],
               ['Days open', lead.ageInDays === null ? '—' : `${lead.ageInDays}`],
               ['Source sheet', lead.sourceSheet ? `${lead.sourceSheet} row ${lead.sourceRow}` : '—'],
               // Record metadata. Travel date is the enquiry's operative date and
