@@ -36,7 +36,6 @@ import {
   Mail,
   Megaphone,
   MessageSquare,
-  RefreshCw,
   Target,
   Trophy,
   UserCheck,
@@ -52,7 +51,7 @@ import {
   AdminStatCard,
   AdminStatsLoading,
 } from '@/admin/components'
-import { ADMIN_SCOPE_NOTICE, ADMIN_TONE } from '@/admin/constants/admin.constants'
+import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import { AdminGreeting } from '@/admin/components/AdminGreeting'
 import { AdminLeadsOverview } from '@/admin/components/AdminLeadsOverview'
 import { useAuth } from '@/hooks/useAuth'
@@ -61,7 +60,6 @@ import { useDateRange } from '@/admin/hooks/useDateRange'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { fetchAdminDashboard } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatRelative } from '@/admin/utils/format'
-import { Button } from '@/components/ui/Button'
 
 /** A block the server could not read renders as a dash, never as zero. */
 const count = (value) => (value === null || value === undefined ? EMPTY : formatCount(value))
@@ -85,26 +83,14 @@ export function AdminDashboardPage() {
 
   const loader = useCallback((options) => fetchAdminDashboard({ ...query, ...options }), [query])
 
-  const { data, error, isLoading, isRefreshing, refresh } = useAdminResource(loader, {
+  const { data, error, isLoading, refresh } = useAdminResource(loader, {
     deps: [query],
   })
 
 
-  const actions = (
-    <Button variant="secondary" size="sm" onClick={refresh} isLoading={isRefreshing}>
-      <RefreshCw className="size-3.5" aria-hidden="true" />
-      Refresh
-    </Button>
-  )
-
   if (error) {
     return (
-      <AdminPageContainer
-        title="Dashboard"
-        subtitle="Workspace activity, delivery and platform health"
-        breadcrumb={breadcrumb}
-        actions={actions}
-      >
+      <AdminPageContainer title="Dashboard" breadcrumb={breadcrumb}>
         <AdminErrorState error={error} onRetry={refresh} />
       </AdminPageContainer>
     )
@@ -121,11 +107,7 @@ export function AdminDashboardPage() {
        * "Dashboard" and "Good afternoon, Aryan" — would be the exact
        * same-weight competition this phase exists to remove.
        */
-      subtitle="Workspace activity, delivery and platform health"
       breadcrumb={breadcrumb}
-      notice={ADMIN_SCOPE_NOTICE}
-      isRefreshing={isRefreshing}
-      actions={actions}
     >
       {/*
         Phase 16.1A: the dashboard opens with a greeting and a health verdict.
