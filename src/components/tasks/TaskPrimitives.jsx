@@ -56,7 +56,7 @@ export function TaskProgress({ value = 0, className = '' }) {
         aria-label={`${width}% complete`}
       >
         <div
-          className={`h-full rounded-full transition-[width] duration-[--duration-slow] ${
+          className={`h-full rounded-full transition-[width] duration-(--duration-slow) ${
             width === 100 ? 'bg-emerald-500' : 'bg-brand-600'
           }`}
           style={{ width: `${width}%` }}
@@ -86,7 +86,7 @@ export function TaskRow({ task, onOpen, showAssignee = false, compact = false })
       <button
         type="button"
         onClick={() => onOpen?.(task)}
-        className="flex w-full items-start gap-3 rounded-[--radius-control] px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
+        className="flex w-full items-start gap-3 rounded-(--radius-control) px-3 py-2.5 text-left transition-colors hover:bg-slate-50"
       >
         <span className="mt-0.5 shrink-0">
           <TaskStatusPill status={task.status} />
@@ -166,7 +166,7 @@ export function GoalBar({ goal }) {
 
       <div className="relative mt-1.5 h-2 overflow-hidden rounded-full bg-slate-200">
         <div
-          className={`h-full rounded-full transition-[width] duration-[--duration-slow] ${
+          className={`h-full rounded-full transition-[width] duration-(--duration-slow) ${
             goal.isAchieved ? 'bg-emerald-500' : goal.isBehind ? 'bg-amber-500' : 'bg-brand-600'
           }`}
           style={{ width: `${width}%` }}

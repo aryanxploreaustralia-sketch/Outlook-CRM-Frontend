@@ -81,7 +81,7 @@ export function ProfileCompletion({ completion, isLoading = false }) {
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={CIRCUMFERENCE * (1 - percentage / 100)}
-            className={`transition-[stroke-dashoffset] duration-[--duration-slow] ${
+            className={`transition-[stroke-dashoffset] duration-(--duration-slow) ${
               isComplete ? 'stroke-emerald-500' : 'stroke-brand-600'
             }`}
             style={{ transitionTimingFunction: 'var(--ease-out-quint)' }}

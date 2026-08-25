@@ -37,7 +37,7 @@ export function AdminSidebarNavItem({ item, isCollapsed, onNavigate }) {
    */
   const base = [
     'group relative flex items-center rounded-lg text-sm font-medium',
-    'transition-colors duration-[--duration-fast]',
+    'transition-colors duration-(--duration-fast)',
     isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
   ].join(' ')
 
@@ -75,7 +75,7 @@ export function AdminSidebarNavItem({ item, isCollapsed, onNavigate }) {
               indicator *moving* between items as you navigate.
             */}
             <span
-              className={`absolute left-0 top-1/2 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-500 transition-all duration-[--duration-base] ${
+              className={`absolute left-0 top-1/2 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-500 transition-all duration-(--duration-base) ${
                 isActive ? 'h-5 opacity-100' : 'h-0 opacity-0'
               }`}
               aria-hidden="true"
@@ -85,7 +85,7 @@ export function AdminSidebarNavItem({ item, isCollapsed, onNavigate }) {
               acknowledge the pointer without becoming a thing that moves.
             */}
             <Icon
-              className={`size-5 shrink-0 transition-[color,transform] duration-[--duration-fast] group-hover:translate-x-0.5 ${
+              className={`size-5 shrink-0 transition-[color,transform] duration-(--duration-fast) group-hover:translate-x-0.5 ${
                 isActive ? 'text-brand-400' : ''
               }`}
               aria-hidden="true"

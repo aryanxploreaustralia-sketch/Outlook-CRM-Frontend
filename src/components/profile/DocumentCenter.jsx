@@ -188,7 +188,7 @@ export function DocumentCenter({
               <li key={document.id} className="surface-card p-4">
                 <div className="flex items-start gap-3">
                   <span
-                    className="grid size-9 shrink-0 place-items-center rounded-[--radius-control] bg-slate-100 text-slate-500"
+                    className="grid size-9 shrink-0 place-items-center rounded-(--radius-control) bg-slate-100 text-slate-500"
                     aria-hidden="true"
                   >
                     <Icon className="size-4" />
@@ -210,7 +210,7 @@ export function DocumentCenter({
                 {/* The reviewer's note. Shown to both sides — an employee whose
                     document was rejected needs to read why. */}
                 {document.remarks && (
-                  <p className="mt-2.5 rounded-[--radius-control] bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  <p className="mt-2.5 rounded-(--radius-control) bg-slate-50 px-3 py-2 text-xs text-slate-600">
                     {document.remarks}
                     {document.verifiedByEmail && (
                       <span className="mt-0.5 block text-slate-400">
@@ -314,7 +314,7 @@ export function DocumentCenter({
       />
 
       {error && !isUploadOpen && !decision && (
-        <p role="alert" className="rounded-[--radius-control] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p role="alert" className="rounded-(--radius-control) border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {error}
         </p>
       )}
@@ -382,7 +382,7 @@ export function DocumentCenter({
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="mt-1.5 flex w-full items-center gap-3 rounded-[--radius-control] border border-dashed border-slate-300 px-4 py-5 text-left transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+              className="mt-1.5 flex w-full items-center gap-3 rounded-(--radius-control) border border-dashed border-slate-300 px-4 py-5 text-left transition-colors hover:border-brand-400 hover:bg-brand-50/30"
             >
               <Upload className="size-5 shrink-0 text-slate-400" aria-hidden="true" />
               <span className="min-w-0">
@@ -418,7 +418,7 @@ export function DocumentCenter({
           </div>
 
           {error && (
-            <p role="alert" className="rounded-[--radius-control] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <p role="alert" className="rounded-(--radius-control) border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {error}
             </p>
           )}
@@ -470,7 +470,7 @@ export function DocumentCenter({
           />
 
           {error && (
-            <p role="alert" className="rounded-[--radius-control] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <p role="alert" className="rounded-(--radius-control) border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {error}
             </p>
           )}

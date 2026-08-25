@@ -155,7 +155,7 @@ export function AdminTable({
                    * and badges showing through the gap above the header — the
                    * "content bleeding into the header" this once caused.
                    */
-                  className={`sticky top-0 z-10 whitespace-nowrap bg-slate-50/95 px-6 py-3 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 backdrop-blur ${
+                  className={`sticky top-0 z-10 whitespace-nowrap bg-slate-50/95 px-5 py-2.5 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 backdrop-blur ${
                     ALIGN[column.align] ?? ALIGN.left
                   } ${column.width ?? ''} ${column.headerClassName ?? ''} ${
                     dragProps
@@ -202,14 +202,14 @@ export function AdminTable({
                * the accent, an inert one only greys — so the hover itself says
                * whether the row does anything.
                */
-              className={`transition-colors duration-[--duration-fast] ${
+              className={`transition-colors duration-(--duration-fast) ${
                 onRowClick ? 'cursor-pointer hover:bg-brand-50/40' : 'hover:bg-slate-50/70'
               }`}
             >
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className={`px-6 py-3.5 align-middle text-slate-700 ${ALIGN[column.align] ?? ALIGN.left} ${
+                  className={`px-5 py-2.5 align-middle text-slate-700 ${ALIGN[column.align] ?? ALIGN.left} ${
                     column.cellClassName ?? ''
                   }`}
                 >

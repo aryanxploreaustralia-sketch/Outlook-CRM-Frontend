@@ -119,13 +119,13 @@ export function AdminSidebar({
           <Link
             to={ADMIN_PATHS.DASHBOARD}
             onClick={handleNavigate}
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-[--radius-control]"
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-(--radius-control)"
           >
             <img
               src="/xplore-logo-mark.svg"
               alt=""
               aria-hidden="true"
-              className="size-9 shrink-0 rounded-[--radius-control] bg-white object-contain p-0.5 shadow-card"
+              className="size-9 shrink-0 rounded-(--radius-control) bg-white object-contain p-0.5 shadow-card"
             />
             {!isCollapsed && (
               <span className="min-w-0 flex-1">
@@ -200,7 +200,7 @@ export function AdminSidebar({
         <div className="shrink-0 border-t border-sidebar-border p-3">
           {user && (
             <div
-              className={`mb-1.5 flex items-center rounded-[--radius-control] bg-sidebar-bg-elevated py-2.5 ${
+              className={`mb-1.5 flex items-center rounded-(--radius-control) bg-sidebar-bg-elevated py-2.5 ${
                 isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
               }`}
             >
@@ -239,7 +239,7 @@ export function AdminSidebar({
             to={ROUTE_PATHS.DASHBOARD}
             onClick={handleNavigate}
             title={isCollapsed ? 'Back to CRM' : undefined}
-            className={`flex w-full items-center rounded-[--radius-control] text-[0.8125rem] font-medium text-sidebar-text ring-1 ring-inset ring-sidebar-border transition-colors duration-[--duration-fast] hover:bg-sidebar-hover hover:text-sidebar-text-strong hover:ring-sidebar-hover ${
+            className={`flex w-full items-center rounded-(--radius-control) text-[0.8125rem] font-medium text-sidebar-text ring-1 ring-inset ring-sidebar-border transition-colors duration-(--duration-fast) hover:bg-sidebar-hover hover:text-sidebar-text-strong hover:ring-sidebar-hover ${
               isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2.5'
             }`}
           >

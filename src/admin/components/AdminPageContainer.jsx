@@ -71,7 +71,7 @@ export function AdminPageContainer({
          * that sets its own spacing is the reason two screens in the same
          * product stop feeling related.
          */
-        className={`mt-7 space-y-6 transition-opacity duration-[--duration-base] ${
+        className={`mt-7 space-y-6 transition-opacity duration-(--duration-base) ${
           isRefreshing ? 'opacity-60' : 'opacity-100'
         }`}
         aria-busy={isRefreshing || undefined}

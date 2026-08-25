@@ -100,7 +100,7 @@ export function AdminTopbar({
         <button
           type="button"
           onClick={() => setIsSearchOpen(true)}
-          className="hidden items-center gap-2 rounded-[--radius-control] border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-sm text-slate-400 transition-colors duration-[--duration-fast] hover:border-slate-300 hover:bg-white md:flex lg:w-64"
+          className="hidden items-center gap-2 rounded-(--radius-control) border border-slate-200 bg-slate-50/80 px-2.5 py-1.5 text-sm text-slate-400 transition-colors duration-(--duration-fast) hover:border-slate-300 hover:bg-white md:flex lg:w-64"
           aria-label="Search"
           aria-keyshortcuts="Control+K"
         >

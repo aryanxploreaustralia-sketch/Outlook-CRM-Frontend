@@ -196,7 +196,7 @@ export function TaskDetailDrawer({ task, isOpen, onClose, onChanged, canManage =
               {task.attachments.map((attachment) => (
                 <li
                   key={attachment.id}
-                  className="flex items-center justify-between gap-3 rounded-[--radius-control] bg-slate-50 px-3 py-2"
+                  className="flex items-center justify-between gap-3 rounded-(--radius-control) bg-slate-50 px-3 py-2"
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-sm text-slate-700">{attachment.fileName}</span>
@@ -282,7 +282,7 @@ export function TaskDetailDrawer({ task, isOpen, onClose, onChanged, canManage =
                 onChange={(event) => setComment(event.target.value)}
                 placeholder="Add a comment"
                 maxLength={2000}
-                className="min-w-0 flex-1 rounded-[--radius-control] border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="min-w-0 flex-1 rounded-(--radius-control) border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
               <Button type="submit" size="sm" disabled={isBusy || !comment.trim()}>
                 {isBusy ? (
@@ -297,7 +297,7 @@ export function TaskDetailDrawer({ task, isOpen, onClose, onChanged, canManage =
         </div>
 
         {error && (
-          <p role="alert" className="rounded-[--radius-control] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <p role="alert" className="rounded-(--radius-control) border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
             {error}
           </p>
         )}

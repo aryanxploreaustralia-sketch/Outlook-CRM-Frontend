@@ -81,8 +81,8 @@ export function Button({
          * physical — a press that moves is a press the hand believes. One pixel
          * is enough; more reads as a toy.
          */
-        'inline-flex items-center justify-center rounded-[--radius-control] font-medium',
-        'transition-[background-color,box-shadow,transform,color] duration-[--duration-fast]',
+        'inline-flex items-center justify-center rounded-(--radius-control) font-medium',
+        'transition-[background-color,box-shadow,transform,color] duration-(--duration-fast)',
         'active:translate-y-px disabled:active:translate-y-0',
         'disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60',
         VARIANTS[variant] ?? VARIANTS.primary,

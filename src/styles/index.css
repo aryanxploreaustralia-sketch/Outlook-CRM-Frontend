@@ -53,9 +53,18 @@
    * Deliberately soft. Enterprise UI reads as cheap when shadows are heavy;
    * a 1px ring plus a faint shadow separates surfaces without shouting.
    */
-  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
-  --shadow-card-hover: 0 2px 4px -1px rgb(15 23 42 / 0.06), 0 4px 12px -2px rgb(15 23 42 / 0.08);
-  --shadow-dropdown: 0 4px 6px -2px rgb(15 23 42 / 0.06), 0 12px 24px -4px rgb(15 23 42 / 0.12);
+  /*
+    * Restrained deliberately (Phase 21).
+    *
+    * Every surface that carries these also carries a `slate-200` border, so the
+    * border is what separates it from the page and the shadow only has to say
+    * "this sits above". Two stacked shadows were doing the border's job again,
+    * and a screen of twelve cards each with its own halo reads as noise rather
+    * than depth. One hairline each, tightened.
+    */
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+  --shadow-card-hover: 0 1px 3px 0 rgb(15 23 42 / 0.07), 0 2px 6px -2px rgb(15 23 42 / 0.06);
+  --shadow-dropdown: 0 2px 4px -2px rgb(15 23 42 / 0.06), 0 8px 16px -4px rgb(15 23 42 / 0.10);
 
   /* --- Motion (Phase 16.1) ----------------------------------------------
    * One vocabulary for every transition in the product.
@@ -79,16 +88,25 @@
    * most common reason an admin console reads as assembled rather than
    * designed.
    */
-  --radius-control: 0.5rem;
-  --radius-card: 0.75rem;
-  --radius-panel: 1rem;
+  /*
+    * Tightened one step each (Phase 21).
+    *
+    * A control at 8px and a card at 12px read as consumer-soft next to a dense
+    * register of six-figure enquiry counts. Crisper corners are what make a
+    * data table look like a tool rather than a settings screen — and because
+    * these are tokens, the whole product moves together rather than page by
+    * page. Nothing structural: same elements, same sizes.
+    */
+  --radius-control: 0.375rem;
+  --radius-card: 0.5rem;
+  --radius-panel: 0.75rem;
 
   /* --- Elevation, refined ------------------------------------------------
    * A raised surface is one that has *lifted*, so the shadow spreads and
    * softens rather than darkening. Paired with a border that stays constant,
    * which keeps the card's edge from appearing to move on hover.
    */
-  --shadow-raised: 0 4px 6px -2px rgb(15 23 42 / 0.05), 0 12px 20px -6px rgb(15 23 42 / 0.10);
+  --shadow-raised: 0 2px 4px -2px rgb(15 23 42 / 0.06), 0 6px 12px -4px rgb(15 23 42 / 0.09);
 
   /* --- Layout metrics ---------------------------------------------------
    * Shared by the sidebar, the content offset and the page measure, so none of
@@ -185,7 +203,7 @@
    * makes a console feel like one product rather than several.
    */
   .surface-card {
-    @apply rounded-[--radius-card] border border-slate-200 bg-white;
+    @apply rounded-(--radius-card) border border-slate-200 bg-white;
     box-shadow: var(--shadow-card);
   }
 
@@ -206,7 +224,12 @@
   .surface-interactive:hover {
     box-shadow: var(--shadow-raised);
     border-color: var(--color-slate-300);
-    transform: translateY(-1px);
+    /*
+      * Halved. A 1px lift on every card in a grid made the page feel loose as
+      * the pointer crossed it; at half a pixel the surface still answers the
+      * pointer without the whole layout appearing to breathe.
+      */
+    transform: translateY(-0.5px);
   }
 
   /*
@@ -229,7 +252,7 @@
    * a page look like it is loading rather than glitching.
    */
   .skeleton {
-    @apply rounded-[--radius-control] bg-slate-100;
+    @apply rounded-(--radius-control) bg-slate-100;
     animation: skeleton-pulse 1.6s var(--ease-out-quint) infinite;
   }
 

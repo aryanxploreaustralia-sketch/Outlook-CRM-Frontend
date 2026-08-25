@@ -101,7 +101,7 @@ function EditableCard({ title, description, canEdit = true, onSave, children, fo
       {isEditing ? form : children}
 
       {error && (
-        <p role="alert" className="mt-3 rounded-[--radius-control] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p role="alert" className="mt-3 rounded-(--radius-control) border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {error}
         </p>
       )}

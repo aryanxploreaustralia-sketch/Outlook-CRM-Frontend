@@ -96,7 +96,7 @@ export function PerformanceComparison({ people = [], range = {} }) {
           return (
             <span
               key={id}
-              className="inline-flex items-center gap-2 rounded-[--radius-control] border border-slate-200 bg-slate-50 py-1 pl-1.5 pr-1 text-sm"
+              className="inline-flex items-center gap-2 rounded-(--radius-control) border border-slate-200 bg-slate-50 py-1 pl-1.5 pr-1 text-sm"
             >
               <UserAvatar name={person?.displayName} email={person?.email} size="xs" />
               <span className="max-w-[10rem] truncate text-slate-700">

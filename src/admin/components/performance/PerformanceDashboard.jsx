@@ -162,7 +162,7 @@ function Summary({ data, audience }) {
       >
         <AdminScoreMeter score={summary.score} components={data.components} />
 
-        <p className="mt-4 flex items-start gap-2 rounded-[--radius-control] bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        <p className="mt-4 flex items-start gap-2 rounded-(--radius-control) bg-slate-50 px-3 py-2 text-xs text-slate-500">
           <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
           {data.scoring?.caveat}
         </p>
