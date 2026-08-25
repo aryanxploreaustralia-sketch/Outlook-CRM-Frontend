@@ -44,11 +44,9 @@ import {
 } from 'lucide-react'
 
 import {
-  AdminBadge,
   AdminCard,
   AdminDateRange,
   AdminErrorState,
-  AdminListLoading,
   AdminPageContainer,
   AdminSection,
   AdminStatCard,
@@ -61,9 +59,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAdminBreadcrumbs, useAdminResource } from '@/admin/hooks'
 import { useDateRange } from '@/admin/hooks/useDateRange'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
-import { PerformanceWidgets } from '@/admin/components/performance/PerformanceDashboard'
-import { fetchAdminDashboard, fetchPerformanceHighlights } from '@/admin/services/admin.service'
-import { EMPTY, formatCount, formatMinutes, formatRelative } from '@/admin/utils/format'
+import { fetchAdminDashboard } from '@/admin/services/admin.service'
+import { EMPTY, formatCount, formatRelative } from '@/admin/utils/format'
 import { Button } from '@/components/ui/Button'
 
 /** A block the server could not read renders as a dash, never as zero. */
@@ -91,18 +88,6 @@ export function AdminDashboardPage() {
   const { data, error, isLoading, isRefreshing, refresh } = useAdminResource(loader, {
     deps: [query],
   })
-
-  const highlightsLoader = useCallback(
-    (options) => fetchPerformanceHighlights({ range: query, ...options }),
-    [query],
-  )
-
-  const {
-    data: highlights,
-    error: highlightsError,
-    isLoading: highlightsLoading,
-    refresh: refreshHighlights,
-  } = useAdminResource(highlightsLoader, { deps: [query] })
 
 
   const actions = (
@@ -204,133 +189,6 @@ export function AdminDashboardPage() {
         operator waits on. Loading it separately means the page paints without
         it and fills in.
       */}
-      <AdminSection
-        title="People"
-        description="Performance across the team for the selected period. Every figure is derived live; nobody is scored on anything the CRM does not record."
-      >
-        {highlightsError ? (
-          <AdminErrorState error={highlightsError} onRetry={refreshHighlights} compact />
-        ) : (
-          <PerformanceWidgets widgets={highlights?.widgets} isLoading={highlightsLoading} />
-        )}
-      </AdminSection>
-
-
-      {/* --- Headline counts --------------------------------------------- */}
-      <AdminSection
-        title="Right now"
-        description="Standing totals. These do not change with the selected period."
-      >
-        {isLoading ? (
-          <AdminStatsLoading count={8} />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <AdminStatCard
-              label="Total users"
-              value={count(data.users?.total)}
-              icon={Users}
-              tone={ADMIN_TONE.BRAND}
-              hint={
-                data.users
-                  ? `${data.users.active} active in ${data.users.activeWindowDays} days`
-                  : undefined
-              }
-            />
-            <AdminStatCard
-              label="Connected mailboxes"
-              value={
-                data.mailboxes ? `${data.mailboxes.connected} / ${data.mailboxes.total}` : EMPTY
-              }
-              icon={Inbox}
-              tone={
-                data.mailboxes?.connected === 0 ? ADMIN_TONE.DANGER : ADMIN_TONE.SUCCESS
-              }
-              hint={
-                data.mailboxes
-                  ? `${data.mailboxes.disconnected} disconnected · ${data.mailboxes.error} errored`
-                  : undefined
-              }
-            />
-            <AdminStatCard
-              label="Total leads"
-              value={count(data.leads?.total)}
-              icon={Target}
-              tone={ADMIN_TONE.NEUTRAL}
-              hint={data.leads ? `${data.leads.stale} untouched for 30+ days` : undefined}
-            />
-            <AdminStatCard
-              label="Leads today"
-              value={count(data.leads?.today)}
-              icon={Target}
-              tone={ADMIN_TONE.BRAND}
-              hint={
-                data.companies !== null && data.contacts !== null
-                  ? `${formatCount(data.companies)} companies · ${formatCount(data.contacts)} contacts`
-                  : undefined
-              }
-            />
-            <AdminStatCard
-              label="Emails sent"
-              value={count(data.mail?.sent)}
-              icon={Mail}
-              tone={ADMIN_TONE.SUCCESS}
-              hint={
-                data.mail
-                  ? `${data.mail.sentToday} today · ${data.mail.pending} pending · ${data.mail.failed} failed`
-                  : undefined
-              }
-            />
-            <AdminStatCard
-              label="Replies received"
-              value={count(data.conversations?.replies)}
-              icon={MessageSquare}
-              tone={ADMIN_TONE.NEUTRAL}
-              hint={
-                data.conversations
-                  ? `${data.conversations.unread} unread · ${data.conversations.openThreads} open threads`
-                  : undefined
-              }
-            />
-            <AdminStatCard
-              label="Campaigns running"
-              value={count(data.campaigns?.running)}
-              icon={Megaphone}
-              tone={data.campaigns?.running > 0 ? ADMIN_TONE.WARNING : ADMIN_TONE.NEUTRAL}
-              hint={
-                data.campaigns
-                  ? `${data.campaigns.draft} draft · ${data.campaigns.completed} completed`
-                  : undefined
-              }
-            />
-            <AdminStatCard
-              label="Workbook imports"
-              value={count(data.imports?.total)}
-              icon={FileSpreadsheet}
-              tone={data.imports?.failed > 0 ? ADMIN_TONE.DANGER : ADMIN_TONE.NEUTRAL}
-              hint={
-                data.imports
-                  ? `${data.imports.failed} failed · ${data.imports.queued} queued`
-                  : undefined
-              }
-            />
-            {/* Observed, not estimated: a session's `lastUsedAt` is written on
-                every authenticated request, so this counts people who actually
-                made one — not people who left a tab open. */}
-            <AdminStatCard
-              label="Online now"
-              value={count(data.online?.count)}
-              icon={UserCheck}
-              tone={ADMIN_TONE.BRAND}
-              hint={
-                data.online
-                  ? `Active in the last ${data.online.withinMinutes} minutes`
-                  : undefined
-              }
-            />
-          </div>
-        )}
-      </AdminSection>
-
       {/*
         The register, previewed.
 
@@ -340,147 +198,35 @@ export function AdminDashboardPage() {
       */}
       <AdminLeadsOverview />
 
-      {/* --- Automation + shortcuts --------------------------------------- */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <AdminCard
-          className="lg:col-span-2"
-          title="Automation"
-          description="The morning run, the reply sync and the workbook queue"
-        >
-          {isLoading ? (
-            <AdminListLoading rows={4} />
-          ) : !data.scheduler?.configured ? (
-            <p className="text-sm text-slate-500">
-              {data.scheduler?.message ?? 'No scheduling workspace has been elected yet.'}
-            </p>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <AdminBadge tone={data.scheduler.enabled ? 'success' : 'warning'} dot>
-                  {data.scheduler.enabled ? 'Scheduler enabled' : 'Scheduler off'}
-                </AdminBadge>
-                {data.scheduler.lastStatusLabel && (
-                  <AdminBadge tone={data.scheduler.lastStatus === 'failed' ? 'danger' : 'neutral'}>
-                    Last run: {data.scheduler.lastStatusLabel}
-                  </AdminBadge>
-                )}
-                {workersBusy.length > 0 && (
-                  <AdminBadge tone="info" dot>
-                    {workersBusy.join(', ')} running
-                  </AdminBadge>
-                )}
-              </div>
-
-              <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-                {[
-                  {
-                    label: 'Scheduled run',
-                    value: `${data.scheduler.runTime} · ${data.scheduler.timezone}`,
-                    icon: CalendarClock,
-                  },
-                  { label: 'Next run', value: formatRelative(data.scheduler.nextRunAt) },
-                  { label: 'Last run', value: formatRelative(data.scheduler.lastRunAt) },
-                  {
-                    label: 'Reply sync',
-                    value: data.scheduler.replySync?.enabled
-                      ? `Every ${data.scheduler.replySync.intervalMinutes} min · last ${formatRelative(data.scheduler.replySync.lastRunAt)}`
-                      : 'Disabled',
-                  },
-                  {
-                    label: 'Workbook queue',
-                    value: data.imports
-                      ? `${data.imports.queued} queued · ${data.imports.running ?? 0} running`
-                      : EMPTY,
-                  },
-                  {
-                    label: 'Unread notifications',
-                    value: count(data.notifications?.unread),
-                  },
-                ].map((row) => (
-                  <div key={row.label} className="flex items-baseline justify-between gap-3">
-                    <dt className="flex items-center gap-1.5 text-xs text-slate-500">
-                      {row.icon && <row.icon className="size-3.5" aria-hidden="true" />}
-                      {row.label}
-                    </dt>
-                    <dd className="text-sm font-medium text-slate-800">{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              {data.lastImport && (
-                <div className="rounded-lg bg-slate-50 px-4 py-3">
-                  <p className="text-xs text-slate-500">Most recent workbook</p>
-                  <p className="mt-0.5 truncate text-sm font-medium text-slate-800">
-                    {data.lastImport.filename}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {data.lastImport.status} · {formatRelative(data.lastImport.at)}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </AdminCard>
-
-        <div className="space-y-6">
-          <AdminCard
-            title="Delivery"
-            description="How outbound mail is performing"
-          >
-            {isLoading ? (
-              <AdminListLoading rows={3} />
-            ) : (
-              <dl className="space-y-3">
-                {[
-                  { label: 'Success rate', value: data.mail?.successRate === null || data.mail?.successRate === undefined ? EMPTY : `${data.mail.successRate}%` },
-                  { label: 'Drafts', value: count(data.mail?.drafts) },
-                  { label: 'Replied to', value: count(data.mail?.replied) },
-                  {
-                    label: 'Median first response',
-                    value: data.conversations?.averageFirstResponseMs
-                      ? formatMinutes(Math.round(data.conversations.averageFirstResponseMs / 60_000))
-                      : EMPTY,
-                  },
-                ].map((row) => (
-                  <div key={row.label} className="flex items-baseline justify-between gap-3">
-                    <dt className="text-xs text-slate-500">{row.label}</dt>
-                    <dd className="text-sm font-medium text-slate-800">{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </AdminCard>
-
-          <AdminCard title="Go to">
-            <ul className="space-y-1.5">
-              {QUICK_LINKS.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    to={link.to}
-                    className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-slate-50"
-                  >
-                    <span
-                      className="grid size-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600"
-                      aria-hidden="true"
-                    >
-                      <link.icon className="size-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-slate-800">
-                        {link.label}
-                      </span>
-                      <span className="block truncate text-xs text-slate-500">
-                        {link.description}
-                      </span>
-                    </span>
-                    <ArrowRight className="size-4 shrink-0 text-slate-300" aria-hidden="true" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </AdminCard>
-        </div>
-      </div>
+      {/* --- Shortcuts ------------------------------------------------------ */}
+      <AdminCard title="Go to">
+        <ul className="space-y-1.5">
+          {QUICK_LINKS.map((link) => (
+            <li key={link.label}>
+              <Link
+                to={link.to}
+                className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-slate-50"
+              >
+                <span
+                  className="grid size-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600"
+                  aria-hidden="true"
+                >
+                  <link.icon className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-slate-800">
+                    {link.label}
+                  </span>
+                  <span className="block truncate text-xs text-slate-500">
+                    {link.description}
+                  </span>
+                </span>
+                <ArrowRight className="size-4 shrink-0 text-slate-300" aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </AdminCard>
 
       {!isLoading && data?.meta && (
         <p className="text-xs text-slate-400">

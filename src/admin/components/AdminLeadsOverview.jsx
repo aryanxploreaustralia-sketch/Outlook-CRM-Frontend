@@ -25,7 +25,7 @@
 
 import { useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, CalendarClock, Plane } from 'lucide-react'
+import { ArrowRight, CalendarClock, Plane, Sunrise } from 'lucide-react'
 
 import { AdminCard } from '@/admin/components/AdminCard'
 import { AdminEmptyState } from '@/admin/components/AdminEmptyState'
@@ -65,6 +65,21 @@ export function AdminLeadsOverview() {
   )
   const { data: upcoming, isLoading: isUpcomingLoading } = useAdminResource(upcomingLoader, { deps: [] })
 
+  /*
+   * Today's intake.
+   *
+   * It used to sit in the dashboard's "Right now" strip. That strip is gone, and
+   * "how many came in today" is the first thing anybody asks of a register — so
+   * it moved here rather than being lost with the section that happened to hold
+   * it. Same endpoint, the `createdAt` field over the `today` preset, and only
+   * the total is read.
+   */
+  const todayLoader = useCallback(
+    (options) => fetchAdminLeads({ dateField: 'createdAt', preset: 'today', limit: 1, ...options }),
+    [],
+  )
+  const { data: today, isLoading: isTodayLoading } = useAdminResource(todayLoader, { deps: [] })
+
   const rows = recent?.items ?? []
 
   return (
@@ -79,31 +94,38 @@ export function AdminLeadsOverview() {
       }
       padded={false}
     >
-      {/* --- The two figures ------------------------------------------------ */}
-      <dl className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
-        <div className="px-5 py-3">
-          <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">
-            <CalendarClock className="size-3.5 text-slate-400" aria-hidden="true" />
-            In view
-          </dt>
-          <dd className="metric-figure mt-0.5 text-xl font-semibold text-slate-900">
-            {isLoading ? <span className="skeleton block h-6 w-14" /> : formatCount(recent?.summary?.total)}
-          </dd>
-        </div>
-
-        <div className="px-5 py-3">
-          <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">
-            <Plane className="size-3.5 text-slate-400" aria-hidden="true" />
-            Travelling in {UPCOMING_DAYS} days
-          </dt>
-          <dd className="metric-figure mt-0.5 text-xl font-semibold text-slate-900">
-            {isUpcomingLoading ? (
-              <span className="skeleton block h-6 w-14" />
-            ) : (
-              formatCount(upcoming?.pagination?.total)
-            )}
-          </dd>
-        </div>
+      {/* --- The figures ----------------------------------------------------- */}
+      <dl className="grid grid-cols-1 divide-y divide-slate-100 border-b border-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {[
+          {
+            label: 'Total leads',
+            icon: CalendarClock,
+            value: recent?.summary?.total,
+            busy: isLoading,
+          },
+          {
+            label: 'Came in today',
+            icon: Sunrise,
+            value: today?.pagination?.total,
+            busy: isTodayLoading,
+          },
+          {
+            label: `Travelling in ${UPCOMING_DAYS} days`,
+            icon: Plane,
+            value: upcoming?.pagination?.total,
+            busy: isUpcomingLoading,
+          },
+        ].map((figure) => (
+          <div key={figure.label} className="px-5 py-3">
+            <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">
+              <figure.icon className="size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+              <span className="truncate">{figure.label}</span>
+            </dt>
+            <dd className="metric-figure mt-0.5 text-xl font-semibold text-slate-900">
+              {figure.busy ? <span className="skeleton block h-6 w-14" /> : formatCount(figure.value)}
+            </dd>
+          </div>
+        ))}
       </dl>
 
       {/* --- The newest enquiries ------------------------------------------- */}
