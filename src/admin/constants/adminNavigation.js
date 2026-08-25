@@ -179,8 +179,14 @@ export const ADMIN_NAV_PLATFORM = Object.freeze([
 export const ADMIN_NAV_SECTIONS = Object.freeze(
   [
     { id: 'overview', label: null, items: ADMIN_NAV_OVERVIEW },
-    { id: 'access', label: 'Access control', items: ADMIN_NAV_ACCESS },
+    /*
+     * Monitoring sits above access control: the console's daily work is the
+     * lead register, and access control is administration somebody visits when
+     * a person joins or leaves. Order of the sections only — every item, route,
+     * icon and permission is untouched.
+     */
     { id: 'monitoring', label: 'Monitoring', items: ADMIN_NAV_MONITORING },
+    { id: 'access', label: 'Access control', items: ADMIN_NAV_ACCESS },
     { id: 'platform', label: 'Platform', items: ADMIN_NAV_PLATFORM },
   ].filter((section) => section.items.length > 0),
 )
