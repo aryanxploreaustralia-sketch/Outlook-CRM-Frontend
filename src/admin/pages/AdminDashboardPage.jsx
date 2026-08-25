@@ -118,18 +118,27 @@ export function AdminDashboardPage() {
       */}
       <AdminGreeting user={auth.user} data={data} isLoading={isLoading} />
 
-      <AdminDateRange
-        value={range}
-        onChange={setRange}
-        resolved={data?.period}
-      />
-
       {/* --- Period-scoped ------------------------------------------------
           These four move with the date filter. Everything below "Right now"
           does not, which is why they are not in the same grid. */}
       <AdminSection
         title="Selected period"
         description="Activity recorded inside the dates chosen above."
+        /*
+          The period control, in the heading's action slot rather than in a band
+          of its own above it. Same component, same `range` state, same
+          `setRange` — only the layout differs, so every preset resolves exactly
+          as it did and the server still receives a name rather than a computed
+          pair.
+        */
+        action={
+          <AdminDateRange
+            variant="compact"
+            value={range}
+            onChange={setRange}
+            resolved={data?.period}
+          />
+        }
       >
         {isLoading ? (
           <AdminStatsLoading count={4} />

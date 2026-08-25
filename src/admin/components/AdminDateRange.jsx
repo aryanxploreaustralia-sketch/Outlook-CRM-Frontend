@@ -34,15 +34,51 @@ const formatBound = (value) =>
   // The house format, so the chip and the rows it filters read alike.
   value ? formatDate(value, { empty: null }) : null
 
+/** The date inputs, shared by both layouts so the rule lives in one place. */
+function CustomBounds({ value, onChange, className = '' }) {
+  return (
+    <div className={`flex flex-wrap items-end gap-3 ${className}`}>
+      {[
+        { key: 'from', label: 'From' },
+        { key: 'to', label: 'To' },
+      ].map((field) => (
+        <label key={field.key} className="block">
+          <span className="block text-xs font-medium text-slate-600">{field.label}</span>
+          <input
+            type="date"
+            value={value[field.key] ?? ''}
+            onChange={(event) => onChange({ ...value, preset: '', [field.key]: event.target.value })}
+            className="mt-1 rounded-(--radius-control) border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          />
+        </label>
+      ))}
+
+      {value.from && value.to && new Date(value.from) > new Date(value.to) && (
+        <p role="alert" className="pb-2 text-xs text-red-600">
+          The start date must not be after the end date.
+        </p>
+      )}
+    </div>
+  )
+}
+
 /**
  * @param {{
  *   value: { preset?: string, from?: string, to?: string },
  *   onChange: (next: { preset?: string, from?: string, to?: string }) => void,
  *   resolved?: { preset?: string, from?: ?string, to?: ?string },
  *   trailing?: import('react').ReactNode,
+ *   variant?: 'bar' | 'compact',
  * }} props
+ *   `bar` — the default — is the full-width row of buttons, where every period
+ *   is one click and the choice is visible without opening anything. `compact`
+ *   is the same ten options as a select, for a page that wants the control
+ *   beside a heading rather than occupying a band of its own.
+ *
+ *   Both share `choose`, `activePreset` and the bounds below them, so the two
+ *   layouts cannot come to different conclusions about what is selected.
  */
-export function AdminDateRange({ value, onChange, resolved, trailing }) {
+export function AdminDateRange({ value, onChange, resolved, trailing, variant = 'bar' }) {
   const [showCustom, setShowCustom] = useState(Boolean(value.from || value.to))
 
   const activePreset = value.from || value.to ? 'custom' : (value.preset ?? 'last30')
@@ -52,6 +88,54 @@ export function AdminDateRange({ value, onChange, resolved, trailing }) {
     // Explicit bounds are cleared, or they would override the preset the reader
     // just chose — the server prefers a pair over a name.
     onChange({ preset, from: '', to: '' })
+  }
+
+  if (variant === 'compact') {
+    return (
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <label htmlFor="admin-period" className="sr-only">
+            Reporting period
+          </label>
+          <select
+            id="admin-period"
+            value={activePreset}
+            onChange={(event) => {
+              const next = event.target.value
+              /*
+               * "Custom" only reveals the inputs. It deliberately does not emit
+               * a change: the range is not custom until a bound is typed, and
+               * emitting here would clear the current period and reload the page
+               * against nothing.
+               */
+              if (next === 'custom') setShowCustom(true)
+              else choose(next)
+            }}
+            className="rounded-(--radius-control) border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            {PRESETS.map((preset) => (
+              <option key={preset.value} value={preset.value}>
+                {preset.label}
+              </option>
+            ))}
+            <option value="custom">Custom</option>
+          </select>
+
+          {trailing}
+        </div>
+
+        {showCustom && <CustomBounds value={value} onChange={onChange} className="justify-end" />}
+
+        {resolved && (
+          <p className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Check className="size-3" aria-hidden="true" />
+            {resolved.from
+              ? `${formatBound(resolved.from)} – ${formatBound(resolved.to)}`
+              : 'All recorded data'}
+          </p>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -102,30 +186,11 @@ export function AdminDateRange({ value, onChange, resolved, trailing }) {
       </div>
 
       {showCustom && (
-        <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3">
-          {[
-            { key: 'from', label: 'From' },
-            { key: 'to', label: 'To' },
-          ].map((field) => (
-            <label key={field.key} className="block">
-              <span className="block text-xs font-medium text-slate-600">{field.label}</span>
-              <input
-                type="date"
-                value={value[field.key] ?? ''}
-                onChange={(event) =>
-                  onChange({ ...value, preset: '', [field.key]: event.target.value })
-                }
-                className="mt-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              />
-            </label>
-          ))}
-
-          {value.from && value.to && new Date(value.from) > new Date(value.to) && (
-            <p role="alert" className="pb-2 text-xs text-red-600">
-              The start date must not be after the end date.
-            </p>
-          )}
-        </div>
+        <CustomBounds
+          value={value}
+          onChange={onChange}
+          className="mt-3 border-t border-slate-100 pt-3"
+        />
       )}
 
       {/* What the server actually resolved. Shown because a preset is a name and
