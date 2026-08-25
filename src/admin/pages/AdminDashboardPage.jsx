@@ -108,13 +108,6 @@ export function AdminDashboardPage() {
        * same-weight competition this phase exists to remove.
        */
       breadcrumb={breadcrumb}
-      /*
-       * The period belongs to the page header even here, where the header
-       * carries no title — it is the one place a reader looks for it on
-       * every other screen, and a control that moves between screens is a
-       * control they have to hunt for.
-       */
-      actions={<AdminDateRange value={range} onChange={setRange} resolved={data?.period} />}
     >
       {/*
         Phase 16.1A: the dashboard opens with a greeting and a health verdict.
@@ -123,7 +116,18 @@ export function AdminDashboardPage() {
         and its job is to tell an operator whether they need to do anything at
         all before they start reading figures.
       */}
-      <AdminGreeting user={auth.user} data={data} isLoading={isLoading} />
+      <AdminGreeting
+        user={auth.user}
+        data={data}
+        isLoading={isLoading}
+        /*
+         * The greeting is this page's heading, so this row is its header:
+         * heading left, period right, exactly as on every other screen.
+         * The `AdminHeader` above carries only a breadcrumb, and a control
+         * alone on that line looked detached from the page it scopes.
+         */
+        action={<AdminDateRange value={range} onChange={setRange} resolved={data?.period} />}
+      />
 
       {/* --- Period-scoped ------------------------------------------------
           These four move with the date filter. Everything below "Right now"

@@ -48,7 +48,7 @@ function CustomBounds({ value, onChange }) {
             type="date"
             value={value[field.key] ?? ''}
             onChange={(event) => onChange({ ...value, preset: '', [field.key]: event.target.value })}
-            className="mt-1 rounded-(--radius-control) border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            className="mt-1 rounded-(--radius-control) border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </label>
       ))}
@@ -101,69 +101,78 @@ export function AdminDateRange({ value, onChange, resolved, trailing, label = 'P
 
   return (
     /*
-     * End-aligned, because this hangs off the right edge of a header whose
-     * title sits on the left. `relative` anchors the custom-bounds popover.
+     * One row, exactly the height of the select.
+     *
+     * This used to be a two-row column with the resolved window beneath the
+     * control. In a header action group that made it the tallest item in the
+     * row, so `items-center` centred every button against it and no two
+     * controls shared a centre line. Everything that is not the select itself
+     * now hangs off `relative` below, where it cannot influence the row.
      */
-    <div className="relative flex flex-col items-end gap-1">
-      <div className="flex items-center gap-2">
-        <label
-          htmlFor={selectId}
-          className={label ? 'whitespace-nowrap text-sm text-slate-500' : 'sr-only'}
-        >
-          {label ? `${label}:` : 'Reporting period'}
-        </label>
-        <select
-          id={selectId}
-          value={activePreset}
-          onChange={(event) => {
-            const next = event.target.value
-            /*
-             * "Custom" only reveals the inputs. It deliberately does not emit
-             * a change: the range is not custom until a bound is typed, and
-             * emitting here would clear the current period and reload the page
-             * against nothing.
-             */
-            if (next === 'custom') setShowCustom(true)
-            else choose(next)
-          }}
-          className="rounded-(--radius-control) border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-        >
-          {PRESETS.map((preset) => (
-            <option key={preset.value} value={preset.value}>
-              {preset.label}
-            </option>
-          ))}
-          <option value="custom">Custom</option>
-        </select>
+    <div className="relative flex items-center gap-2">
+      <label
+        htmlFor={selectId}
+        className={label ? 'whitespace-nowrap text-xs text-slate-500' : 'sr-only'}
+      >
+        {label ? `${label}:` : 'Reporting period'}
+      </label>
+      <select
+        id={selectId}
+        value={activePreset}
+        onChange={(event) => {
+          const next = event.target.value
+          /*
+           * "Custom" only reveals the inputs. It deliberately does not emit
+           * a change: the range is not custom until a bound is typed, and
+           * emitting here would clear the current period and reload the page
+           * against nothing.
+           */
+          if (next === 'custom') setShowCustom(true)
+          else choose(next)
+        }}
+        /* Matched to `Button size="sm"` exactly — same radius token, same 1px
+           slate-300 edge, same padding, same type size — so the period sits on
+           the action row's centre line instead of 4px proud of it. */
+        className="rounded-(--radius-control) border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+      >
+        {PRESETS.map((preset) => (
+          <option key={preset.value} value={preset.value}>
+            {preset.label}
+          </option>
+        ))}
+        <option value="custom">Custom</option>
+      </select>
 
-        {trailing}
-      </div>
-
-      {/*
-        The resolved window stays in flow: it is one line of micro-text, and the
-        title block opposite it is taller than the two rows together, so it
-        costs the header no height at all. Floating it would have let it land on
-        top of the page actions the moment they wrapped on a narrow screen.
-      */}
-      {resolved && (
-        <p className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-400">
-          <Check className="size-3" aria-hidden="true" />
-          {resolved.from
-            ? `${formatBound(resolved.from)} – ${formatBound(resolved.to)}`
-            : 'All recorded data'}
-        </p>
-      )}
+      {trailing}
 
       {/*
-        A popover, not a row.
+        Everything below the control, right-aligned to its edge.
 
-        In the header, letting the two date inputs push into the flow would
-        shove the whole page down the instant somebody picked "Custom" — the
-        full-width band this phase removed, returning through the back door.
+        Out of flow on purpose: the resolved window belongs to the period and
+        must not push the action row taller, and the custom inputs must not
+        shove the page down the moment somebody picks "Custom" — that would be
+        the full-width band this phase removed, returning through the back door.
+
+        Transparent to the pointer, or this strip would sit over the content
+        beneath the header and swallow clicks meant for it. The popover, which
+        is a real control, takes its own events back.
       */}
-      {showCustom && (
-        <div className="absolute right-0 top-full z-20 mt-1.5 rounded-(--radius-card) border border-slate-200 bg-white p-3 shadow-dropdown">
-          <CustomBounds value={value} onChange={onChange} />
+      {(showCustom || resolved) && (
+        <div className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 flex flex-col items-end gap-1.5">
+          {showCustom && (
+            <div className="pointer-events-auto rounded-(--radius-card) border border-slate-200 bg-white p-3 shadow-dropdown">
+              <CustomBounds value={value} onChange={onChange} />
+            </div>
+          )}
+
+          {resolved && (
+            <p className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-400">
+              <Check className="size-3" aria-hidden="true" />
+              {resolved.from
+                ? `${formatBound(resolved.from)} – ${formatBound(resolved.to)}`
+                : 'All recorded data'}
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -228,12 +228,6 @@ export function AdminAuditPage() {
 
   const actions = (
     <>
-      {/* The reporting period leads the action row, so every screen puts it in
-          the same place: page title left, period and page actions top-right.
-          Same component, same `range` state, same `setRange` — the request is
-          byte-for-byte what it was when this sat in a bar below the title. */}
-      <AdminDateRange value={range} onChange={setRange} resolved={data?.range} />
-
       <div role="group" aria-label="View" className="inline-flex rounded-lg bg-slate-100 p-0.5">
         {[
           { value: 'table', label: 'Table', icon: Rows3 },
@@ -276,6 +270,12 @@ export function AdminAuditPage() {
         <RefreshCw className="size-3.5" aria-hidden="true" />
         Refresh
       </Button>
+
+      {/* The reporting period closes the action row, so every screen puts it in
+          the same place: page title left, page actions then period top-right.
+          Same component, same `range` state, same `setRange` — the request is
+          byte-for-byte what it was when this sat in a bar below the title. */}
+      <AdminDateRange value={range} onChange={setRange} resolved={data?.range} />
     </>
   )
 

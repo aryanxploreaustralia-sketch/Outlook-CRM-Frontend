@@ -36,9 +36,18 @@ function greetingFor(date = new Date()) {
 }
 
 /**
- * @param {{ user?: ?object, data?: ?object, isLoading?: boolean }} props
+ * @param {{
+ *   user?: ?object,
+ *   data?: ?object,
+ *   isLoading?: boolean,
+ *   action?: import('react').ReactNode,
+ * }} props
+ *   `action` is this page's header action slot. The dashboard's heading is
+ *   the greeting rather than an `AdminHeader` title, so its controls belong
+ *   on this row — put in the empty header above, they read as floating over
+ *   the page instead of belonging to the heading beside them.
  */
-export function AdminGreeting({ user, data, isLoading = false }) {
+export function AdminGreeting({ user, data, isLoading = false, action = null }) {
   const status = deriveStatus(data)
 
   /** First name only. "Good afternoon, Aryan" reads as a greeting; the full
@@ -46,7 +55,7 @@ export function AdminGreeting({ user, data, isLoading = false }) {
   const firstName = user?.displayName?.trim().split(/\s+/)[0] ?? null
 
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
         <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.02em] text-slate-900">
           {greetingFor()}
@@ -72,6 +81,8 @@ export function AdminGreeting({ user, data, isLoading = false }) {
           <p className="mt-2 text-sm text-slate-400">Workspace status is unavailable.</p>
         )}
       </div>
+
+      {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
     </div>
   )
 }

@@ -251,16 +251,16 @@ export function AdminAnalyticsPage() {
 
   const actions = (
     <>
-      {/* The reporting period leads the action row, so every screen puts it in
-          the same place: page title left, period and page actions top-right.
-          Same component, same `range` state, same `setRange` — the request is
-          byte-for-byte what it was when this sat in a bar below the title. */}
-      <AdminDateRange value={range} onChange={setRange} resolved={data?.period} />
-
       <Button variant="secondary" size="sm" onClick={refresh} isLoading={isRefreshing}>
         <RefreshCw className="size-3.5" aria-hidden="true" />
         Refresh
       </Button>
+
+      {/* The reporting period closes the action row, so every screen puts it in
+          the same place: page title left, page actions then period top-right.
+          Same component, same `range` state, same `setRange` — the request is
+          byte-for-byte what it was when this sat in a bar below the title. */}
+      <AdminDateRange value={range} onChange={setRange} resolved={data?.period} />
     </>
   )
 
