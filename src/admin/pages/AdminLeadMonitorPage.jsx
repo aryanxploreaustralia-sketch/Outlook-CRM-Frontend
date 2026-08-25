@@ -37,7 +37,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { RefreshCw, RotateCcw, SlidersHorizontal, UserCheck } from 'lucide-react'
+import { RefreshCw, RotateCcw, SlidersHorizontal, UserCheck, X } from 'lucide-react'
 
 import {
   AdminBadge,
@@ -427,6 +427,15 @@ export function AdminLeadMonitorPage() {
      live in the URL, exactly as before. */
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
 
+  /*
+   * How many of the filters behind "More filters" are set.
+   *
+   * Counted separately from `activeFilterCount` so the button reports what is
+   * hidden behind it rather than what is already visible on the bar — a badge
+   * that counted the owner filter sitting in plain sight would be noise.
+   */
+  const secondaryFilterCount = [stage, introduction, attention, activity].filter(Boolean).length
+
   const actions = (
     <>
       {/* Opens the filter drawer. Hidden from `lg` up, where the rail is
@@ -482,200 +491,234 @@ export function AdminLeadMonitorPage() {
       isRefreshing={isRefreshing}
       actions={actions}
     >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <AdminStatCard label="Enquiries in view" value={formatCount(summary?.total)} isLoading={isLoading} />
-        <AdminStatCard
-          label="Unassigned"
-          value={formatCount(summary?.unassigned)}
-          tone={summary?.unassigned > 0 ? ADMIN_TONE.WARNING : ADMIN_TONE.NEUTRAL}
-          hint="Nobody is working these"
-          isLoading={isLoading}
-        />
-        <AdminStatCard
-          label={`Stale (${staleAfterDays}d+)`}
-          value={formatCount(summary?.stale)}
-          tone={summary?.stale > 0 ? ADMIN_TONE.DANGER : ADMIN_TONE.NEUTRAL}
-          hint="No modification recorded"
-          isLoading={isLoading}
-        />
-        <AdminStatCard
-          label="Booked or completed"
-          value={formatCount(summary?.won)}
-          tone={ADMIN_TONE.SUCCESS}
-          isLoading={isLoading}
-        />
+      {/*
+        The workspace order: counts, then the controls worth reaching for
+        daily, then the register — which is what the page is for and so gets
+        the room. Everything secondary is one click away rather than on screen.
+      */}
+
+      {/* --- Counts, as a strip rather than four cards ---------------------- */}
+      <dl className="grid grid-cols-2 divide-slate-200 overflow-hidden rounded-(--radius-card) border border-slate-200 bg-white sm:grid-cols-4 sm:divide-x">
+        {[
+          { label: 'Enquiries in view', value: summary?.total, tone: 'text-slate-900' },
+          {
+            label: 'Unassigned',
+            value: summary?.unassigned,
+            tone: summary?.unassigned > 0 ? 'text-amber-700' : 'text-slate-900',
+            hint: 'Nobody is working these',
+          },
+          {
+            label: `Stale (${staleAfterDays}d+)`,
+            value: summary?.stale,
+            tone: summary?.stale > 0 ? 'text-rose-700' : 'text-slate-900',
+            hint: 'No modification recorded',
+          },
+          { label: 'Booked or completed', value: summary?.won, tone: 'text-emerald-700' },
+        ].map((stat) => (
+          <div key={stat.label} className="px-4 py-3">
+            <dt className="truncate text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">
+              {stat.label}
+            </dt>
+            <dd className={`metric-figure mt-0.5 text-xl font-semibold ${stat.tone}`}>
+              {isLoading ? <span className="skeleton block h-6 w-14" /> : formatCount(stat.value)}
+            </dd>
+            {stat.hint && <p className="mt-0.5 truncate text-[11px] text-slate-400">{stat.hint}</p>}
+          </div>
+        ))}
+      </dl>
+
+      {/* --- The controls used daily ---------------------------------------- */}
+      <div className="rounded-(--radius-card) border border-slate-200 bg-white">
+        <div className="flex flex-wrap items-end gap-2.5 p-3">
+          <div className="min-w-56 flex-1">
+            <AdminSearch
+              value={searchInput}
+              onChange={setSearchInput}
+              placeholder="Search reference, customer, company, email…"
+              label="Search enquiries"
+            />
+          </div>
+
+          <AdminFilterSelect
+            label="Owner"
+            value={owner}
+            onChange={(next) => setFilters({ owner: next })}
+            options={ownerOptions}
+            allLabel="All owners"
+            className="w-40"
+          />
+
+          <AdminFilterSelect
+            label="Destination"
+            value={market}
+            onChange={(next) => setFilters({ market: next })}
+            options={MARKET_OPTIONS}
+            allLabel="All destinations"
+            className="w-40"
+          />
+
+          {/*
+            The date filter is one control pair, not two.
+
+            This register filters a *chosen* date field over a chosen period —
+            `dateField` picks query date, travel date, created or last activity,
+            and the period bounds it. Splitting it into separate "Query date"
+            and "Travel date" controls would mean two independent date filters,
+            which is a change to how filtering works rather than to how it
+            looks. Both are reachable here, and which one is applied is stated
+            beneath the pair.
+          */}
+          <AdminFilterSelect
+            label="Period"
+            value={preset}
+            onChange={(next) =>
+              setFilters(
+                next === 'custom'
+                  ? { preset: 'custom', from: '', to: '' }
+                  : { preset: next, from: '', to: '' },
+              )
+            }
+            options={DATE_PRESETS}
+            allLabel="Any date"
+            className="w-36"
+          />
+
+          {preset && (
+            <AdminFilterSelect
+              label="Date field"
+              value={dateField}
+              onChange={(next) => setFilters({ dateField: next })}
+              options={DATE_FIELDS}
+              includeAll={false}
+              className="w-36"
+            />
+          )}
+
+          <Button variant="secondary" size="sm" onClick={() => setIsFilterDrawerOpen(true)}>
+            <SlidersHorizontal className="size-3.5" aria-hidden="true" />
+            More filters
+            {secondaryFilterCount > 0 ? ` (${secondaryFilterCount})` : ''}
+          </Button>
+
+          {activeFilterCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={resetFilters}>
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* The custom pair, on its own row so two date inputs are not squeezed
+            into a track sized for a dropdown. */}
+        {preset === 'custom' && (
+          <div className="flex flex-wrap items-end gap-3 border-t border-slate-100 px-3 pb-3 pt-2.5">
+            {[
+              { key: 'from', label: 'From' },
+              { key: 'to', label: 'To' },
+            ].map((bound) => (
+              <label key={bound.key} className="text-[11px] font-medium text-slate-600">
+                {bound.label}
+                <input
+                  type="date"
+                  value={bound.key === 'from' ? from : to}
+                  onChange={(event) => setFilters({ [bound.key]: event.target.value })}
+                  className="mt-1 block rounded-(--radius-control) border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </label>
+            ))}
+            <p className="py-1.5 text-[11px] text-slate-500">
+              Applied to {labelOf(DATE_FIELDS, dateField).toLowerCase()}. Either bound may be left open.
+            </p>
+          </div>
+        )}
+
+        {/* Active filters take vertical space only while some are set. */}
+        {chips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 px-3 py-2.5">
+            <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">
+              Active
+            </span>
+            {chips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => setFilters(chip.clear)}
+                className="inline-flex max-w-full items-center gap-1 rounded-(--radius-control) bg-slate-100 py-1 pl-2 pr-1.5 text-xs text-slate-700 transition-colors hover:bg-slate-200"
+              >
+                <span className="truncate">{chip.label}</span>
+                <X className="size-3 shrink-0 text-slate-500" aria-hidden="true" />
+                <span className="sr-only">Remove this filter</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="ml-auto rounded-(--radius-control) px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
       {/*
-        Rail beside table (Phase 21), the same arrangement the CRM's register
-        uses. Every control below is the one that was in the bar: same `value`,
-        same `setFilters` call, same URL sync. Only the container moved.
-
-        `min-w-0` on the table column because a flex child defaults to
-        `min-width:auto`, and without it the table's own horizontal scroll never
-        engages — a wide register would push the page sideways instead.
+        The secondary filters, in the drawer the "More filters" button opens.
+        Same controls, same `setFilters` writer — only their default visibility
+        changed. Nothing was removed from the page.
       */}
-      <div className="flex items-start gap-5">
-        <FilterPanel
-          isOpen={isFilterDrawerOpen}
-          onClose={() => setIsFilterDrawerOpen(false)}
-          activeCount={activeFilterCount}
-          onClearAll={activeFilterCount > 0 ? resetFilters : undefined}
-          chips={chips.map((chip) => ({
-            key: chip.key,
-            label: chip.label,
-            // The chip's own clear, unchanged — one writer for the filters.
-            onClear: () => setFilters(chip.clear),
-          }))}
-          groups={[
-            {
-              id: 'search',
-              title: 'Search',
-              content: (
-                <AdminSearch
-                  value={searchInput}
-                  onChange={setSearchInput}
-                  placeholder="Reference, customer, company, email…"
-                  label="Search enquiries"
-                />
-              ),
-            },
-            {
-              id: 'status',
-              title: 'Lead status',
-              content: (
-                <>
-                  <AdminFilterSelect
-                    label="Stage"
-                    value={stage}
-                    onChange={(next) => setFilters({ stage: next })}
-                    options={STAGE_OPTIONS}
-                    allLabel="All stages"
-                  />
-                  <AdminFilterSelect
-                    label="Introduction"
-                    value={introduction}
-                    onChange={(next) => setFilters({ introduction: next })}
-                    options={introductionOptions}
-                    allLabel="Any introduction"
-                  />
-                </>
-              ),
-            },
-            {
-              id: 'ownership',
-              title: 'Ownership',
-              content: (
+      <FilterPanel
+        variant="drawer"
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        activeCount={secondaryFilterCount}
+        groups={[
+          {
+            id: 'status',
+            title: 'Lead status',
+            content: (
+              <>
                 <AdminFilterSelect
-                  label="Owner"
-                  value={owner}
-                  onChange={(next) => setFilters({ owner: next })}
-                  options={ownerOptions}
-                  allLabel="All owners"
+                  label="Stage"
+                  value={stage}
+                  onChange={(next) => setFilters({ stage: next })}
+                  options={STAGE_OPTIONS}
+                  allLabel="All stages"
                 />
-              ),
-            },
-            {
-              id: 'destination',
-              title: 'Destination',
-              content: (
                 <AdminFilterSelect
-                  label="Destination"
-                  value={market}
-                  onChange={(next) => setFilters({ market: next })}
-                  options={MARKET_OPTIONS}
-                  allLabel="All destinations"
+                  label="Introduction"
+                  value={introduction}
+                  onChange={(next) => setFilters({ introduction: next })}
+                  options={introductionOptions}
+                  allLabel="Any introduction"
                 />
-              ),
-            },
-            {
-              id: 'activity',
-              title: 'Activity',
-              content: (
-                <>
-                  <AdminFilterSelect
-                    label="Attention"
-                    value={attention}
-                    onChange={(next) => setFilters({ attention: next })}
-                    options={attentionOptions}
-                    allLabel="No attention filter"
-                  />
-                  <AdminFilterSelect
-                    label="Activity"
-                    value={activity}
-                    onChange={(next) => setFilters({ activity: next })}
-                    options={activityOptions}
-                    allLabel="Any activity"
-                  />
-                </>
-              ),
-            },
-            {
-              id: 'dates',
-              title: 'Dates',
-              content: (
-                <>
-                  <AdminFilterSelect
-                    label="Period"
-                    value={preset}
-                    onChange={(next) =>
-                      // Leaving custom clears the explicit pair, or it would keep
-                      // overriding the named period the reader just chose.
-                      setFilters(
-                        next === 'custom'
-                          ? { preset: 'custom', from: '', to: '' }
-                          : { preset: next, from: '', to: '' },
-                      )
-                    }
-                    options={DATE_PRESETS}
-                    allLabel="Any date"
-                  />
+              </>
+            ),
+          },
+          {
+            id: 'activity',
+            title: 'Activity',
+            content: (
+              <>
+                <AdminFilterSelect
+                  label="Attention"
+                  value={attention}
+                  onChange={(next) => setFilters({ attention: next })}
+                  options={attentionOptions}
+                  allLabel="No attention filter"
+                />
+                <AdminFilterSelect
+                  label="Activity"
+                  value={activity}
+                  onChange={(next) => setFilters({ activity: next })}
+                  options={activityOptions}
+                  allLabel="Any activity"
+                />
+              </>
+            ),
+          },
+        ]}
+      />
 
-                  {/*
-                    The date field only appears once a period is chosen. On its
-                    own it selects nothing, and a permanently visible control
-                    that does nothing is how a filter list stops being read.
-                  */}
-                  {preset && (
-                    <AdminFilterSelect
-                      label="Date field"
-                      value={dateField}
-                      onChange={(next) => setFilters({ dateField: next })}
-                      options={DATE_FIELDS}
-                      includeAll={false}
-                    />
-                  )}
-
-                  {preset === 'custom' && (
-                    <>
-                      {[
-                        { key: 'from', label: 'From' },
-                        { key: 'to', label: 'To' },
-                      ].map((bound) => (
-                        <label key={bound.key} className="block text-xs font-medium text-slate-600">
-                          {bound.label}
-                          <input
-                            type="date"
-                            value={bound.key === 'from' ? from : to}
-                            onChange={(event) => setFilters({ [bound.key]: event.target.value })}
-                            className="mt-1 block w-full rounded-(--radius-control) border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                          />
-                        </label>
-                      ))}
-                      <p className="text-xs text-slate-500">
-                        Applied to {labelOf(DATE_FIELDS, dateField).toLowerCase()}. Either bound may
-                        be left open.
-                      </p>
-                    </>
-                  )}
-                </>
-              ),
-            },
-          ]}
-        />
-
-        <div className="min-w-0 flex-1">
-          <AdminCard padded={false}>
+      <AdminCard padded={false}>
         <AdminTable
           columns={columnOrder.columns}
           reorder={columnOrder}
@@ -719,9 +762,7 @@ export function AdminLeadMonitorPage() {
             />
           </div>
         )}
-          </AdminCard>
-        </div>
-      </div>
+      </AdminCard>
     </AdminPageContainer>
   )
 }

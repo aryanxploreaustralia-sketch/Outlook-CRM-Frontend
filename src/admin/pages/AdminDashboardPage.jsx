@@ -56,6 +56,7 @@ import {
 } from '@/admin/components'
 import { ADMIN_SCOPE_NOTICE, ADMIN_TONE } from '@/admin/constants/admin.constants'
 import { AdminGreeting } from '@/admin/components/AdminGreeting'
+import { AdminLeadsOverview } from '@/admin/components/AdminLeadsOverview'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminBreadcrumbs, useAdminResource } from '@/admin/hooks'
 import { useDateRange } from '@/admin/hooks/useDateRange'
@@ -329,6 +330,15 @@ export function AdminDashboardPage() {
           </div>
         )}
       </AdminSection>
+
+      {/*
+        The register, previewed.
+
+        Placed straight after the headline counts because those counts are what
+        prompt the question this answers — which enquiries, and travelling when.
+        The Lead monitor is the next click for anything beyond a glance.
+      */}
+      <AdminLeadsOverview />
 
       {/* --- Automation + shortcuts --------------------------------------- */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

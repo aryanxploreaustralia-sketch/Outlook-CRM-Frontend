@@ -64,11 +64,14 @@ function FilterGroup({ title, isOpen, onToggle, children }) {
  *   chips?: Array<{ key: string, label: string, onClear: () => void }>,
  *   activeCount?: number,
  *   onClearAll?: () => void,
+ *   variant?: 'rail' | 'drawer',
  *   className?: string,
  * }} props
- *   `isOpen` drives the drawer below `lg`; above it the rail is always present,
- *   because a filter list that hides itself on a wide screen is a list nobody
- *   remembers exists.
+ *   `rail` — the default — is a permanent column from `lg` up that becomes a
+ *   drawer below it, for a screen whose filters are its main tool. `drawer`
+ *   never shows the column: it is for a page that keeps its everyday filters on
+ *   a bar and holds only the secondary ones back, where a permanent second
+ *   column of them would be the clutter it was meant to remove.
  */
 export function FilterPanel({
   isOpen,
@@ -77,6 +80,7 @@ export function FilterPanel({
   chips = [],
   activeCount = 0,
   onClearAll,
+  variant = 'rail',
   className = '',
 }) {
   // Every group starts open. Collapsing is an escape hatch, not the default:
@@ -110,7 +114,7 @@ export function FilterPanel({
           type="button"
           onClick={onClose}
           aria-label="Close filters"
-          className="rounded-(--radius-control) p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:hidden"
+          className={`rounded-(--radius-control) p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 ${variant === 'rail' ? 'lg:hidden' : ''}`}
         >
           <X className="size-4" aria-hidden="true" />
         </button>
@@ -159,21 +163,29 @@ export function FilterPanel({
   return (
     <>
       {/* --- The rail, from `lg` up ---------------------------------------- */}
-      <aside
-        className={`hidden w-64 shrink-0 flex-col self-start rounded-(--radius-card) border border-slate-200 bg-white lg:flex ${className}`}
-      >
-        {body}
-      </aside>
+      {variant === 'rail' && (
+        <aside
+          className={`hidden w-64 shrink-0 flex-col self-start rounded-(--radius-card) border border-slate-200 bg-white lg:flex ${className}`}
+        >
+          {body}
+        </aside>
+      )}
 
-      {/* --- The drawer, below `lg` ---------------------------------------- */}
+      {/*
+        The drawer.
+
+        For a rail it is the narrow-screen form of the same column, so it hides
+        itself once the rail appears. For `drawer` it is the only form there is,
+        and must open at every width.
+      */}
       {isOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className={`fixed inset-0 z-40 ${variant === 'rail' ? 'lg:hidden' : ''}`}>
           <div
             className="absolute inset-0 bg-slate-900/40"
             onClick={onClose}
             aria-hidden="true"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[min(20rem,88vw)] flex-col bg-white shadow-dropdown">
+          <div className="absolute inset-y-0 right-0 flex w-[min(22rem,90vw)] flex-col bg-white shadow-dropdown">
             {body}
           </div>
         </div>
