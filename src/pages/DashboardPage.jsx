@@ -27,56 +27,19 @@ import { IdCard, KeyRound, Mail } from 'lucide-react'
 
 import { ConnectionBadge } from '@/components/common/ConnectionBadge'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
-import { MicrosoftIcon } from '@/components/common/MicrosoftIcon'
-import { StatusBadge } from '@/components/common/StatusBadge'
 import { ContactsCard } from '@/components/dashboard/ContactsCard'
 import { CrmOverviewCard } from '@/components/dashboard/CrmOverviewCard'
 import { QuickActionsCard } from '@/components/dashboard/QuickActionsCard'
 import { RecentLeadsCard } from '@/components/dashboard/RecentLeadsCard'
 import { MailStatsCard } from '@/components/dashboard/MailStatsCard'
-import { ProfileCard } from '@/components/dashboard/ProfileCard'
-import { ProviderStatusCard } from '@/components/dashboard/ProviderStatusCard'
 import { RecentEmailsCard } from '@/components/dashboard/RecentEmailsCard'
-import { SchedulerCard } from '@/components/dashboard/SchedulerCard'
-import { StatusCard, CardRow } from '@/components/dashboard/StatusCard'
-import { SystemStatusCard } from '@/components/dashboard/SystemStatusCard'
 import { SkeletonCard, SkeletonProfile } from '@/components/ui/Skeleton'
-import { useAccountStatus } from '@/hooks/useAccountStatus'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useRecentLeads } from '@/hooks/useRecentLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
-import { formatDateTime } from '@/utils/datetime'
 
-/** Absent renders as nothing here; the callers supply their own wording. */
-const displayDateTimeOrNull = (value) => formatDateTime(value, { empty: null })
-
-/** Formats an ISO timestamp, tolerating null and invalid input. */
-/**
- * Describes a token expiry in human terms.
- *
- * Absolute timestamps alone ("14:32:07") make the reader do arithmetic to answer
- * the only question they have — is it about to expire? — so the remaining time is
- * shown alongside it.
- */
-function formatTokenExpiry(tokenExpiry) {
-  if (!tokenExpiry?.expiresAt) return null
-
-  const absolute = displayDateTimeOrNull(tokenExpiry.expiresAt)
-  if (tokenExpiry.isExpired) return `${absolute} · expired, renewing`
-
-  const seconds = tokenExpiry.expiresInSeconds
-  if (typeof seconds !== 'number') return absolute
-
-  const minutes = Math.floor(seconds / 60)
-  if (minutes >= 60) {
-    const hours = Math.floor(minutes / 60)
-    return `${absolute} · in ${hours}h ${minutes % 60}m`
-  }
-
-  return `${absolute} · in ${minutes}m`
-}
 
 export function DashboardPage() {
   const auth = useAuth()
@@ -87,7 +50,6 @@ export function DashboardPage() {
 
   // Deferred until the dashboard payload lands, so the two requests do not
   // compete for the connection on first paint.
-  const accountStatus = useAccountStatus({ enabled: Boolean(dashboard) })
 
   /**
    * The six newest enquiries, fetched separately and deliberately.
@@ -151,20 +113,17 @@ export function DashboardPage() {
   }
 
   const user = dashboard?.user
+
+  /*
+   * Kept when the account and platform cards moved to Account and Provider.
+   *
+   * A one-line badge is not the "Connected Outlook account" panel that went
+   * with them — it is the single operational fact this page cannot omit: a
+   * disconnected mailbox means nothing sends, and somebody who never opens the
+   * Provider page would otherwise have no way of learning that from their home
+   * screen. The detail lives on Provider; the warning stays here.
+   */
   const connection = dashboard?.connection
-  const outlook = dashboard?.outlookAccount
-  const authentication = dashboard?.authentication
-
-  // Prefer the live status payload; fall back to what /dashboard already knew so
-  // the card is never empty.
-  const systemStatus = accountStatus.status ?? {
-    backend: dashboard?.server?.backend,
-    database: dashboard?.server?.database,
-    graph: dashboard?.server?.graph,
-    timestamp: dashboard?.meta?.generatedAt,
-  }
-
-  const tokenExpiry = accountStatus.status?.tokenExpiry ?? connection?.tokenExpiry
 
   return (
     <div className="space-y-6">
@@ -175,16 +134,16 @@ export function DashboardPage() {
             Welcome back{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Your enquiries, your mailbox and the platform, at a glance.
+            Your enquiries and today's work, at a glance.
           </p>
         </div>
         <ConnectionBadge connection={connection} />
       </div>
 
       {/* --- The register --------------------------------------------------
-          Placed first because it is why the CRM exists; the Microsoft
-          connection and platform health follow below. Both read from the one
-          `/dashboard` payload already fetched, so this costs no extra request.
+          The whole page now: the enquiries, the work queued against them and
+          the mail that serves them. Account detail moved to Account and
+          platform health to Provider, which is where each is asked about.
 
           `sales` is null when the server's aggregation failed — each card
           renders its own unavailable state rather than fabricating zeroes. */}
@@ -206,93 +165,6 @@ export function DashboardPage() {
 
       <QuickActionsCard />
 
-      {/* --- Content grid --------------------------------------------------
-          One column on mobile, two on small screens, three on large — with the
-          profile occupying its own column so the cards keep a readable width. */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-1">
-          <ProfileCard
-            user={user}
-            connection={connection}
-            onSignOut={handleSignOut}
-            isSigningOut={isSigningOut}
-          />
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2 lg:col-span-2">
-          {/* Card 1 — Connected Outlook Account */}
-          <StatusCard
-            title="Connected Outlook account"
-            description="Mailbox this CRM can access"
-            icon={Mail}
-            iconTone="bg-blue-50 text-blue-600 ring-blue-600/10"
-            badge={<ConnectionBadge connection={connection} size="sm" />}
-            footer={
-              <span className="flex items-center gap-2">
-                <MicrosoftIcon className="size-3.5" />
-                Secured by Microsoft identity platform
-              </span>
-            }
-          >
-            <CardRow label="Email" value={outlook?.email ?? connection?.email} />
-            <CardRow
-              label="Status"
-              value={<ConnectionBadge connection={connection} size="sm" />}
-            />
-            <CardRow label="Connected" value={displayDateTimeOrNull(outlook?.connectedAt)} />
-          </StatusCard>
-
-          {/* Card 2 — Authentication */}
-          <StatusCard
-            title="Authentication"
-            description="Session and token lifecycle"
-            icon={KeyRound}
-            iconTone="bg-teal-50 text-teal-600 ring-teal-600/10"
-            badge={<StatusBadge state={authentication?.status ?? 'unknown'} size="sm" />}
-          >
-            <CardRow label="Last login" value={displayDateTimeOrNull(user?.lastLoginAt)} />
-            <CardRow
-              label="Last authentication"
-              value={displayDateTimeOrNull(authentication?.lastAuthenticatedAt)}
-            />
-            <CardRow label="Token expiry" value={formatTokenExpiry(tokenExpiry)} />
-            <CardRow
-              label="Session expires"
-              value={displayDateTimeOrNull(authentication?.sessionExpiresAt)}
-            />
-          </StatusCard>
-
-          {/* Card 3 — Account Information */}
-          <StatusCard
-            title="Account information"
-            description="Identity details from Microsoft"
-            icon={IdCard}
-            iconTone="bg-violet-50 text-violet-600 ring-violet-600/10"
-          >
-            <CardRow label="Name" value={user?.displayName} />
-            <CardRow label="Email" value={user?.email} />
-            <CardRow label="Account type" value={user?.accountTypeLabel} />
-            <CardRow label="Provider" value={user?.providerLabel} />
-            <CardRow label="Role" value={user?.roleLabel} />
-          </StatusCard>
-
-          {/* Card 4 — System Status */}
-          <SystemStatusCard
-            status={systemStatus}
-            isRefreshing={accountStatus.isLoading}
-            onRefresh={accountStatus.refresh}
-          />
-        </div>
-      </div>
-
-      {/* --- The morning run -------------------------------------------------
-          Placed above the mail counters because it is what produces them: the
-          scheduler queues the workbook, the workbook creates the leads, and the
-          leads are what get emailed. Reads the dashboard payload rather than
-          fetching, so it paints with the cards above it. Renders nothing when
-          the workspace has no scheduler settings yet. */}
-      <SchedulerCard scheduler={dashboard?.scheduler} />
-
       {/* --- Email engine ---------------------------------------------------
           A full-width row below the status grid: these two cards are the
           operational view, and pairing them keeps the counters next to the
@@ -302,10 +174,6 @@ export function DashboardPage() {
         <RecentEmailsCard items={dashboard?.mail?.recent ?? []} />
       </div>
 
-      {/* --- Provider integration -------------------------------------------
-          Loads its own data rather than reading the dashboard payload, so a
-          slow provider cannot delay the cards above. */}
-      <ProviderStatusCard />
 
       {/* --- Address book ---------------------------------------------------
           Loads its own statistics, so a large address book cannot delay the

@@ -54,6 +54,7 @@ import { GoogleIcon } from '@/components/common/GoogleIcon'
 import { MicrosoftIcon } from '@/components/common/MicrosoftIcon'
 import { Button } from '@/components/ui/Button'
 import { useApiResource } from '@/hooks/useApiResource'
+import { useAccountStatus } from '@/hooks/useAccountStatus'
 import { useAuth } from '@/hooks/useAuth'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { formatDateTime } from '@/utils/datetime'
@@ -203,6 +204,17 @@ function MailboxRow({ mailbox, isBusy, onSetDefault, onDisconnect }) {
 
 export function AccountPage() {
   const auth = useAuth()
+
+  /*
+   * Sign-in and session detail, moved here from the dashboard.
+   *
+   * `/account/status` already carried `authentication` and `tokenExpiry`; the
+   * dashboard was simply the page rendering them. This is the account page, so
+   * this is where they belong — and the hook is the one that endpoint already
+   * has, not a new request.
+   */
+  const accountStatus = useAccountStatus()
+  const authentication = accountStatus.status?.authentication
   const [searchParams, setSearchParams] = useSearchParams()
 
   /**
@@ -552,6 +564,30 @@ export function AccountPage() {
         ) : (
           <p className="text-sm text-slate-500">You are not signed in.</p>
         )}
+      </Card>
+
+      {/*
+        Sign-in activity.
+
+        Relocated from the dashboard, which showed it to every user on every
+        visit although it answers a question people ask rarely — "when did I
+        last sign in, and when does this session end?" — and answers it about
+        the account, which is this page's subject.
+      */}
+      <Card title="Sign-in activity" description="When you signed in, and how long this session lasts.">
+        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          {[
+            ['Last login', formatDateOrNull(auth.user?.lastLoginAt)],
+            ['Last authentication', formatDateOrNull(authentication?.lastAuthenticatedAt)],
+            ['Session expires', formatDateOrNull(authentication?.sessionExpiresAt)],
+            ['Account type', auth.user?.accountTypeLabel ?? auth.user?.accountType],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+              <dd className="mt-0.5 text-sm text-slate-900">{value ?? '\u2014'}</dd>
+            </div>
+          ))}
+        </dl>
       </Card>
 
       {/* --- Section 2 — Connected mailboxes ----------------------------- */}

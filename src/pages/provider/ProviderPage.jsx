@@ -34,6 +34,8 @@ import { CardRow, StatusCard } from '@/components/dashboard/StatusCard'
 import { Button } from '@/components/ui/Button'
 import { SkeletonCard } from '@/components/ui/Skeleton'
 import { formatDateTime, formatRelative } from '@/constants/provider.constants'
+import { SystemStatusCard } from '@/components/dashboard/SystemStatusCard'
+import { useAccountStatus } from '@/hooks/useAccountStatus'
 import { useProvider } from '@/hooks/useProvider'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
@@ -59,6 +61,16 @@ export function ProviderPage() {
    * database id — never a token, never an address.
    */
   const selectedId = searchParams.get('mailbox')
+
+  /*
+   * Platform reachability, moved here from the dashboard.
+   *
+   * `/account/status` already returned `backend`, `database` and `graph`; the
+   * dashboard was the page rendering them. This is the integration page, and
+   * "is Graph answering" is the question it exists to answer — so the card
+   * lives here now. Existing hook, existing endpoint, no new request shape.
+   */
+  const accountStatus = useAccountStatus()
 
   const {
     status,
@@ -367,6 +379,13 @@ export function ProviderPage() {
           </div>
         </div>
       )}
+
+      {/* --- Platform status ------------------------------------------------ */}
+      <SystemStatusCard
+        status={accountStatus.status}
+        isRefreshing={accountStatus.isLoading}
+        onRefresh={accountStatus.refresh}
+      />
 
       {/* --- Cards ---------------------------------------------------------- */}
       <div className="grid gap-5 lg:grid-cols-2">
