@@ -62,7 +62,6 @@ import { useDateRange } from '@/admin/hooks/useDateRange'
 import {
   fetchAdminActivity,
   fetchAdminAnalytics,
-  fetchAdminLeadAnalytics,
   fetchAdminMailboxAnalytics,
 } from '@/admin/services/admin.service'
 import { downloadCsv, exportFilename, toCsv } from '@/admin/utils/exportData'
@@ -240,12 +239,6 @@ export function AdminAnalyticsPage() {
     [rangeQuery],
   )
   const mailboxes = useAdminResource(mailboxLoader, { deps: [rangeQuery] })
-
-  const funnelLoader = useCallback(
-    (options) => fetchAdminLeadAnalytics({ ...rangeQuery, ...options }),
-    [rangeQuery],
-  )
-  const funnel = useAdminResource(funnelLoader, { deps: [rangeQuery] })
 
   const activityLoader = useCallback(
     (options) => fetchAdminActivity({ ...rangeQuery, limit: 40, ...options }),
@@ -443,82 +436,6 @@ export function AdminAnalyticsPage() {
             }
           />
         </AdminCard>
-      </AdminSection>
-
-      {/* --- Enquiry funnel ------------------------------------------------
-          Drawn as ranked bars, not a tapering funnel shape. A funnel encodes
-          quantity as trapezoid area, which is read far less accurately than
-          length and exaggerates the drop between adjacent stages. */}
-      <AdminSection
-        title="Enquiry funnel"
-        description="Every enquiry created in this period, grouped by how far it progressed"
-      >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <AdminCard className="lg:col-span-2" title="Stages">
-            {funnel.isLoading ? (
-              <AdminChartLoading height="h-52" />
-            ) : funnel.error ? (
-              <AdminErrorState error={funnel.error} onRetry={funnel.refresh} compact />
-            ) : (funnel.data?.total ?? 0) === 0 ? (
-              <AdminEmptyState
-                title="No enquiries created in this period"
-                description="Widen the date range, or import a workbook."
-                compact
-              />
-            ) : (
-              <>
-                <AdminRankChart
-                  data={(funnel.data?.bands ?? []).map((band) => ({
-                    label: band.label,
-                    value: band.value,
-                  }))}
-                  color={ADMIN_CHART_COLORS[0]}
-                  ariaLabel="Enquiries by funnel band"
-                />
-                {/* Which real pipeline stages each band groups. Without this the
-                    bands are the console's invention rather than the data's. */}
-                <dl className="mt-4 space-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                  {(funnel.data?.bands ?? []).map((band) => (
-                    <div key={band.key} className="flex gap-2">
-                      <dt className="shrink-0 font-medium text-slate-600">{band.label}:</dt>
-                      <dd className="min-w-0">{band.stages.join(', ')}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </>
-            )}
-          </AdminCard>
-
-          <AdminCard title="Conversion">
-            {funnel.isLoading ? (
-              <AdminChartLoading height="h-24" />
-            ) : (
-              <div className="space-y-4">
-                <AdminStatCard
-                  label="Enquiries in period"
-                  value={formatCount(funnel.data?.total ?? 0)}
-                  icon={Target}
-                />
-                <AdminStatCard
-                  label="Conversion rate"
-                  // Null when there is nothing to divide by. Shown as a dash
-                  // with a reason, never as 0% — which would read as failure
-                  // rather than as absence.
-                  value={
-                    funnel.data?.conversionRate === null || funnel.data?.conversionRate === undefined
-                      ? EMPTY
-                      : `${funnel.data.conversionRate}%`
-                  }
-                  hint={
-                    funnel.data?.conversionRate === null
-                      ? 'Needs at least one enquiry to compute'
-                      : 'Converted as a share of all enquiries created'
-                  }
-                />
-              </div>
-            )}
-          </AdminCard>
-        </div>
       </AdminSection>
 
       {/* --- Mailboxes ----------------------------------------------------- */}
