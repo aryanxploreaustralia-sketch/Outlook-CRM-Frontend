@@ -7,23 +7,28 @@
  * sending side depends on.
  *
  * Composes cards from shared components and deliberately contains no API calls:
- * `useDashboard` and `useAccountStatus` own data, so this file is layout and
- * formatting only.
+ * `useDashboard` owns the data, so this file is layout and formatting only.
  *
  * Every figure shown is one the server returned. Where a block of the payload
  * is `null` — which is how the server reports a widget whose aggregation failed
  * — the card for it says so rather than rendering a zero, because "none" and
  * "could not count" look identical to a reader and mean opposite things.
  *
- * Loading strategy is progressive rather than all-or-nothing. `/dashboard` paints
- * the cards immediately, then `/account/status` fills in the live Microsoft Graph
- * result a moment later. Blocking the whole page on a third-party round trip
- * would make a healthy app feel slow.
+ * ## What this page is not
+ *
+ * It was also a system-status page and a mail monitor: connected account, session
+ * lifecycle, backend and database health, the Graph probe, the morning run, mail
+ * counters and recent messages. Each of those is somebody's occasional question
+ * and had a page of its own already — Provider, Account, Settings, Mail history —
+ * so the dashboard was answering them daily for a reader who had not asked. What
+ * is left is the register and the work against it.
+ *
+ * Nothing was deleted. Every one of those cards still exists and still works
+ * where it belongs; this page simply stopped being all of them at once.
  */
 
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IdCard, KeyRound, Mail } from 'lucide-react'
 
 import { ConnectionBadge } from '@/components/common/ConnectionBadge'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
@@ -31,8 +36,6 @@ import { ContactsCard } from '@/components/dashboard/ContactsCard'
 import { CrmOverviewCard } from '@/components/dashboard/CrmOverviewCard'
 import { QuickActionsCard } from '@/components/dashboard/QuickActionsCard'
 import { RecentLeadsCard } from '@/components/dashboard/RecentLeadsCard'
-import { MailStatsCard } from '@/components/dashboard/MailStatsCard'
-import { RecentEmailsCard } from '@/components/dashboard/RecentEmailsCard'
 import { SkeletonCard, SkeletonProfile } from '@/components/ui/Skeleton'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboard } from '@/hooks/useDashboard'
@@ -164,16 +167,6 @@ export function DashboardPage() {
       </div>
 
       <QuickActionsCard />
-
-      {/* --- Email engine ---------------------------------------------------
-          A full-width row below the status grid: these two cards are the
-          operational view, and pairing them keeps the counters next to the
-          messages they describe. */}
-      <div className="grid gap-5 lg:grid-cols-2">
-        <MailStatsCard mail={dashboard?.mail} />
-        <RecentEmailsCard items={dashboard?.mail?.recent ?? []} />
-      </div>
-
 
       {/* --- Address book ---------------------------------------------------
           Loads its own statistics, so a large address book cannot delay the
