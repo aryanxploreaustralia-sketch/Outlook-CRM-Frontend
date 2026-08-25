@@ -14,8 +14,8 @@
  * so the reader can see exactly what they are looking at.
  */
 
-import { useState } from 'react'
-import { CalendarRange, Check } from 'lucide-react'
+import { useId, useState } from 'react'
+import { Check } from 'lucide-react'
 import { formatDate } from '@/utils/datetime'
 
 const PRESETS = [
@@ -68,18 +68,27 @@ function CustomBounds({ value, onChange, className = '' }) {
  *   onChange: (next: { preset?: string, from?: string, to?: string }) => void,
  *   resolved?: { preset?: string, from?: ?string, to?: ?string },
  *   trailing?: import('react').ReactNode,
- *   variant?: 'bar' | 'compact',
+ *   label?: ?string,
  * }} props
- *   `bar` — the default — is the full-width row of buttons, where every period
- *   is one click and the choice is visible without opening anything. `compact`
- *   is the same ten options as a select, for a page that wants the control
- *   beside a heading rather than occupying a band of its own.
+ *   One layout, everywhere. This replaced a full-width row of ten buttons that
+ *   claimed a band of every reporting screen for a choice made once a session.
  *
- *   Both share `choose`, `activePreset` and the bounds below them, so the two
- *   layouts cannot come to different conclusions about what is selected.
+ *   `label` is for a control standing on its own in the page body, where it
+ *   needs to say what it selects. A caller placing it in a section's action
+ *   slot passes none — the heading beside it is already the label, and a second
+ *   one would only repeat it.
  */
-export function AdminDateRange({ value, onChange, resolved, trailing, variant = 'bar' }) {
+export function AdminDateRange({ value, onChange, resolved, trailing, label = null }) {
   const [showCustom, setShowCustom] = useState(Boolean(value.from || value.to))
+
+  /*
+   * Generated, not hardcoded.
+   *
+   * Two of these can share a screen — a page-level period and one inside a
+   * user's performance section — and a fixed id would give both the same one,
+   * which points every label at whichever select the browser found first.
+   */
+  const selectId = useId()
 
   const activePreset = value.from || value.to ? 'custom' : (value.preset ?? 'last30')
 
@@ -90,113 +99,46 @@ export function AdminDateRange({ value, onChange, resolved, trailing, variant = 
     onChange({ preset, from: '', to: '' })
   }
 
-  if (variant === 'compact') {
-    return (
-      <div className="flex flex-col items-end gap-2">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <label htmlFor="admin-period" className="sr-only">
-            Reporting period
-          </label>
-          <select
-            id="admin-period"
-            value={activePreset}
-            onChange={(event) => {
-              const next = event.target.value
-              /*
-               * "Custom" only reveals the inputs. It deliberately does not emit
-               * a change: the range is not custom until a bound is typed, and
-               * emitting here would clear the current period and reload the page
-               * against nothing.
-               */
-              if (next === 'custom') setShowCustom(true)
-              else choose(next)
-            }}
-            className="rounded-(--radius-control) border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-          >
-            {PRESETS.map((preset) => (
-              <option key={preset.value} value={preset.value}>
-                {preset.label}
-              </option>
-            ))}
-            <option value="custom">Custom</option>
-          </select>
-
-          {trailing}
-        </div>
-
-        {showCustom && <CustomBounds value={value} onChange={onChange} className="justify-end" />}
-
-        {resolved && (
-          <p className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Check className="size-3" aria-hidden="true" />
-            {resolved.from
-              ? `${formatBound(resolved.from)} – ${formatBound(resolved.to)}`
-              : 'All recorded data'}
-          </p>
-        )}
-      </div>
-    )
-  }
-
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-card">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-          <CalendarRange className="size-3.5" aria-hidden="true" />
-          Period
-        </span>
+    <div className={`flex flex-col gap-2 ${label ? 'items-start' : 'items-end'}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <label
+          htmlFor={selectId}
+          className={label ? 'text-sm font-medium text-slate-700' : 'sr-only'}
+        >
+          {label ?? 'Reporting period'}
+        </label>
+        <select
+          id={selectId}
+          value={activePreset}
+          onChange={(event) => {
+            const next = event.target.value
+            /*
+             * "Custom" only reveals the inputs. It deliberately does not emit
+             * a change: the range is not custom until a bound is typed, and
+             * emitting here would clear the current period and reload the page
+             * against nothing.
+             */
+            if (next === 'custom') setShowCustom(true)
+            else choose(next)
+          }}
+          className="rounded-(--radius-control) border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+        >
+          {PRESETS.map((preset) => (
+            <option key={preset.value} value={preset.value}>
+              {preset.label}
+            </option>
+          ))}
+          <option value="custom">Custom</option>
+        </select>
 
-        <div role="group" aria-label="Reporting period" className="flex flex-wrap gap-1">
-          {PRESETS.map((preset) => {
-            const isActive = activePreset === preset.value
-
-            return (
-              <button
-                key={preset.value}
-                type="button"
-                onClick={() => choose(preset.value)}
-                aria-pressed={isActive}
-                className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'bg-brand-600 text-white shadow-card'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                {preset.label}
-              </button>
-            )
-          })}
-
-          <button
-            type="button"
-            onClick={() => setShowCustom((previous) => !previous)}
-            aria-pressed={activePreset === 'custom'}
-            aria-expanded={showCustom}
-            className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              activePreset === 'custom'
-                ? 'bg-brand-600 text-white shadow-card'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            Custom
-          </button>
-        </div>
-
-        {trailing && <div className="ml-auto flex items-center gap-2">{trailing}</div>}
+        {trailing}
       </div>
 
-      {showCustom && (
-        <CustomBounds
-          value={value}
-          onChange={onChange}
-          className="mt-3 border-t border-slate-100 pt-3"
-        />
-      )}
+      {showCustom && <CustomBounds value={value} onChange={onChange} />}
 
-      {/* What the server actually resolved. Shown because a preset is a name and
-          the reader is entitled to know which days it covered. */}
       {resolved && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+        <p className="flex items-center gap-1.5 text-xs text-slate-400">
           <Check className="size-3" aria-hidden="true" />
           {resolved.from
             ? `${formatBound(resolved.from)} – ${formatBound(resolved.to)}`

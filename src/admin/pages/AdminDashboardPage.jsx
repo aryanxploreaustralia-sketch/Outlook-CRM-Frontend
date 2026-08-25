@@ -133,7 +133,6 @@ export function AdminDashboardPage() {
         */
         action={
           <AdminDateRange
-            variant="compact"
             value={range}
             onChange={setRange}
             resolved={data?.period}

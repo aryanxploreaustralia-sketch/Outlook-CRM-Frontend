@@ -278,7 +278,7 @@ export function AdminAnalyticsPage() {
       actions={actions}
     >
       {/* The one filter row. Everything below re-requests against the same slice. */}
-      <AdminDateRange value={range} onChange={setRange} resolved={data?.period} />
+      <AdminDateRange label="Period" value={range} onChange={setRange} resolved={data?.period} />
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-card">
         <span className="text-xs font-medium text-slate-500">Group by</span>

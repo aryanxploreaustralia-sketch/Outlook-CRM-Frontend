@@ -281,7 +281,7 @@ export function AdminAuditPage() {
       isRefreshing={isRefreshing}
       actions={actions}
     >
-      <AdminDateRange value={range} onChange={setRange} resolved={data?.range} />
+      <AdminDateRange label="Period" value={range} onChange={setRange} resolved={data?.range} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <AdminStatCard

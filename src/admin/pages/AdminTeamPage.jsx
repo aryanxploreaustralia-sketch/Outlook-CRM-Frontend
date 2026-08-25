@@ -300,7 +300,7 @@ export function AdminTeamPage() {
       isRefreshing={isRefreshing}
       actions={actions}
     >
-      <AdminDateRange value={range} onChange={setRange} resolved={data?.range} />
+      <AdminDateRange label="Period" value={range} onChange={setRange} resolved={data?.range} />
 
       {/* Totals for everybody matched, not just this page — the figure a reader
           expects from a header above a paginated list. */}

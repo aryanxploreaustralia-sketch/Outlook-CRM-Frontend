@@ -52,7 +52,7 @@ export function UserPerformanceDashboardSection({ user, registerRef, enabled = t
       description="Derived live from this person's mail, campaigns, enquiries and recorded actions. Nothing here is stored or estimated."
     >
       <div className="space-y-4">
-        <AdminDateRange value={range} onChange={setRange} resolved={data?.range} />
+        <AdminDateRange label="Period" value={range} onChange={setRange} resolved={data?.range} />
 
         {error ? (
           <AdminErrorState error={error} onRetry={refresh} compact />
