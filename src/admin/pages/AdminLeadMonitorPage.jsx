@@ -37,14 +37,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { RefreshCw, RotateCcw, UserCheck, X } from 'lucide-react'
+import { RefreshCw, RotateCcw, SlidersHorizontal, UserCheck } from 'lucide-react'
 
 import {
   AdminBadge,
   AdminCard,
   AdminEmptyState,
   AdminErrorState,
-  AdminFilterBar,
   AdminFilterSelect,
   AdminPageContainer,
   AdminPagination,
@@ -58,6 +57,7 @@ import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
 import { fetchAdminLeads } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatDate } from '@/admin/utils/format'
+import { FilterPanel } from '@/components/filters/FilterPanel'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { STORAGE_KEYS } from '@/constants/app.constants'
 import { useColumnOrder } from '@/hooks/useColumnOrder'
@@ -423,8 +423,24 @@ export function AdminLeadMonitorPage() {
    */
   const columnOrder = useColumnOrder(STORAGE_KEYS.LEAD_COLUMNS_ADMIN_MONITOR, columnDefs)
 
+  /* Drawer visibility below `lg`. Presentation only — the filters themselves
+     live in the URL, exactly as before. */
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+
   const actions = (
     <>
+      {/* Opens the filter drawer. Hidden from `lg` up, where the rail is
+          already on screen and a button to reveal it would do nothing. */}
+      <Button
+        variant={activeFilterCount > 0 ? 'primary' : 'secondary'}
+        size="sm"
+        className="lg:hidden"
+        onClick={() => setIsFilterDrawerOpen(true)}
+      >
+        <SlidersHorizontal className="size-3.5" aria-hidden="true" />
+        Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+      </Button>
+
       {/* Only once the order has actually been changed — a permanent reset
           button on a default table is clutter that explains nothing. */}
       {columnOrder.isCustomised && (
@@ -490,150 +506,176 @@ export function AdminLeadMonitorPage() {
         />
       </div>
 
-      <AdminCard padded={false}>
-        <AdminFilterBar
+      {/*
+        Rail beside table (Phase 21), the same arrangement the CRM's register
+        uses. Every control below is the one that was in the bar: same `value`,
+        same `setFilters` call, same URL sync. Only the container moved.
+
+        `min-w-0` on the table column because a flex child defaults to
+        `min-width:auto`, and without it the table's own horizontal scroll never
+        engages — a wide register would push the page sideways instead.
+      */}
+      <div className="flex items-start gap-5">
+        <FilterPanel
+          isOpen={isFilterDrawerOpen}
+          onClose={() => setIsFilterDrawerOpen(false)}
           activeCount={activeFilterCount}
-          onReset={resetFilters}
-          search={
-            <AdminSearch
-              value={searchInput}
-              onChange={setSearchInput}
-              placeholder="Search reference, customer, company, email, phone…"
-              label="Search enquiries"
-            />
-          }
-        >
-          <AdminFilterSelect
-            label="Stage"
-            value={stage}
-            onChange={(next) => setFilters({ stage: next })}
-            options={STAGE_OPTIONS}
-            allLabel="All stages"
-          />
-          <AdminFilterSelect
-            label="Owner"
-            value={owner}
-            onChange={(next) => setFilters({ owner: next })}
-            options={ownerOptions}
-            allLabel="All owners"
-          />
-          <AdminFilterSelect
-            label="Market"
-            value={market}
-            onChange={(next) => setFilters({ market: next })}
-            options={MARKET_OPTIONS}
-            allLabel="All markets"
-          />
-          <AdminFilterSelect
-            label="Introduction"
-            value={introduction}
-            onChange={(next) => setFilters({ introduction: next })}
-            options={introductionOptions}
-            allLabel="Any introduction"
-          />
-          <AdminFilterSelect
-            label="Attention"
-            value={attention}
-            onChange={(next) => setFilters({ attention: next })}
-            options={attentionOptions}
-            allLabel="No attention filter"
-          />
-          <AdminFilterSelect
-            label="Activity"
-            value={activity}
-            onChange={(next) => setFilters({ activity: next })}
-            options={activityOptions}
-            allLabel="Any activity"
-          />
-          <AdminFilterSelect
-            label="Period"
-            value={preset}
-            onChange={(next) =>
-              // Leaving custom clears the explicit pair, or it would keep
-              // overriding the named period the reader just chose.
-              setFilters(
-                next === 'custom'
-                  ? { preset: 'custom', from: '', to: '' }
-                  : { preset: next, from: '', to: '' },
-              )
-            }
-            options={DATE_PRESETS}
-            allLabel="Any date"
-          />
-
-          {/*
-            The date field only appears once a period is chosen. On its own it
-            selects nothing, and a permanently visible control that does nothing
-            is how a filter row stops being read.
-          */}
-          {preset && (
-            <AdminFilterSelect
-              label="Date field"
-              value={dateField}
-              onChange={(next) => setFilters({ dateField: next })}
-              options={DATE_FIELDS}
-              /*
-                No "all" row. `dateField` always holds one of DATE_FIELDS —
-                it coalesces to 'travelDate' — so an empty option could never
-                be selected, and labelling it duplicated the first entry.
-              */
-              includeAll={false}
-            />
-          )}
-        </AdminFilterBar>
-
-        {/*
-          The custom pair, on its own row so two date inputs do not have to fit
-          a filter track sized for a dropdown.
-        */}
-        {preset === 'custom' && (
-          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 px-6 py-3">
-            {[
-              { key: 'from', label: 'From' },
-              { key: 'to', label: 'To' },
-            ].map((bound) => (
-              <label key={bound.key} className="min-w-0 text-xs font-medium text-slate-600">
-                {bound.label}
-                <input
-                  type="date"
-                  value={bound.key === 'from' ? from : to}
-                  onChange={(event) => setFilters({ [bound.key]: event.target.value })}
-                  className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          onClearAll={activeFilterCount > 0 ? resetFilters : undefined}
+          chips={chips.map((chip) => ({
+            key: chip.key,
+            label: chip.label,
+            // The chip's own clear, unchanged — one writer for the filters.
+            onClear: () => setFilters(chip.clear),
+          }))}
+          groups={[
+            {
+              id: 'search',
+              title: 'Search',
+              content: (
+                <AdminSearch
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  placeholder="Reference, customer, company, email…"
+                  label="Search enquiries"
                 />
-              </label>
-            ))}
-            <p className="py-2 text-xs text-slate-500">
-              Applied to {labelOf(DATE_FIELDS, dateField).toLowerCase()}. Either bound may be left open.
-            </p>
-          </div>
-        )}
+              ),
+            },
+            {
+              id: 'status',
+              title: 'Lead status',
+              content: (
+                <>
+                  <AdminFilterSelect
+                    label="Stage"
+                    value={stage}
+                    onChange={(next) => setFilters({ stage: next })}
+                    options={STAGE_OPTIONS}
+                    allLabel="All stages"
+                  />
+                  <AdminFilterSelect
+                    label="Introduction"
+                    value={introduction}
+                    onChange={(next) => setFilters({ introduction: next })}
+                    options={introductionOptions}
+                    allLabel="Any introduction"
+                  />
+                </>
+              ),
+            },
+            {
+              id: 'ownership',
+              title: 'Ownership',
+              content: (
+                <AdminFilterSelect
+                  label="Owner"
+                  value={owner}
+                  onChange={(next) => setFilters({ owner: next })}
+                  options={ownerOptions}
+                  allLabel="All owners"
+                />
+              ),
+            },
+            {
+              id: 'destination',
+              title: 'Destination',
+              content: (
+                <AdminFilterSelect
+                  label="Destination"
+                  value={market}
+                  onChange={(next) => setFilters({ market: next })}
+                  options={MARKET_OPTIONS}
+                  allLabel="All destinations"
+                />
+              ),
+            },
+            {
+              id: 'activity',
+              title: 'Activity',
+              content: (
+                <>
+                  <AdminFilterSelect
+                    label="Attention"
+                    value={attention}
+                    onChange={(next) => setFilters({ attention: next })}
+                    options={attentionOptions}
+                    allLabel="No attention filter"
+                  />
+                  <AdminFilterSelect
+                    label="Activity"
+                    value={activity}
+                    onChange={(next) => setFilters({ activity: next })}
+                    options={activityOptions}
+                    allLabel="Any activity"
+                  />
+                </>
+              ),
+            },
+            {
+              id: 'dates',
+              title: 'Dates',
+              content: (
+                <>
+                  <AdminFilterSelect
+                    label="Period"
+                    value={preset}
+                    onChange={(next) =>
+                      // Leaving custom clears the explicit pair, or it would keep
+                      // overriding the named period the reader just chose.
+                      setFilters(
+                        next === 'custom'
+                          ? { preset: 'custom', from: '', to: '' }
+                          : { preset: next, from: '', to: '' },
+                      )
+                    }
+                    options={DATE_PRESETS}
+                    allLabel="Any date"
+                  />
 
-        {/* Active filters, each removable on its own. */}
-        {chips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-6 py-3">
-            <span className="text-xs font-medium text-slate-500">Active filters</span>
-            {chips.map((chip) => (
-              <button
-                key={chip.key}
-                type="button"
-                onClick={() => setFilters(chip.clear)}
-                className="inline-flex max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 py-1 pl-2.5 pr-2 text-xs text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30"
-              >
-                <span className="truncate">{chip.label}</span>
-                <X className="size-3 shrink-0 text-slate-400" aria-hidden="true" />
-                <span className="sr-only">Remove this filter</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="ml-auto rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-            >
-              Clear all
-            </button>
-          </div>
-        )}
+                  {/*
+                    The date field only appears once a period is chosen. On its
+                    own it selects nothing, and a permanently visible control
+                    that does nothing is how a filter list stops being read.
+                  */}
+                  {preset && (
+                    <AdminFilterSelect
+                      label="Date field"
+                      value={dateField}
+                      onChange={(next) => setFilters({ dateField: next })}
+                      options={DATE_FIELDS}
+                      includeAll={false}
+                    />
+                  )}
 
+                  {preset === 'custom' && (
+                    <>
+                      {[
+                        { key: 'from', label: 'From' },
+                        { key: 'to', label: 'To' },
+                      ].map((bound) => (
+                        <label key={bound.key} className="block text-xs font-medium text-slate-600">
+                          {bound.label}
+                          <input
+                            type="date"
+                            value={bound.key === 'from' ? from : to}
+                            onChange={(event) => setFilters({ [bound.key]: event.target.value })}
+                            className="mt-1 block w-full rounded-(--radius-control) border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                          />
+                        </label>
+                      ))}
+                      <p className="text-xs text-slate-500">
+                        Applied to {labelOf(DATE_FIELDS, dateField).toLowerCase()}. Either bound may
+                        be left open.
+                      </p>
+                    </>
+                  )}
+                </>
+              ),
+            },
+          ]}
+        />
+
+        <div className="min-w-0 flex-1">
+          <AdminCard padded={false}>
         <AdminTable
           columns={columnOrder.columns}
           reorder={columnOrder}
@@ -677,7 +719,9 @@ export function AdminLeadMonitorPage() {
             />
           </div>
         )}
-      </AdminCard>
+          </AdminCard>
+        </div>
+      </div>
     </AdminPageContainer>
   )
 }

@@ -26,6 +26,7 @@ import {
 
 import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
+import { FilterPanel } from '@/components/filters/FilterPanel'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
@@ -267,6 +268,143 @@ export function LeadsPage() {
 
   const columnOrder = useColumnOrder(STORAGE_KEYS.LEAD_COLUMNS_CRM, columnDefs)
 
+  /*
+   * The rail's control class. One height, one radius, one focus ring for every
+   * select in the panel — which is most of what makes a filter list read as a
+   * list rather than as six unrelated controls.
+   */
+  const FIELD =
+    'mt-1 w-full rounded-(--radius-control) border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20'
+
+  const label = (text) => (
+    <span className="block text-[11px] font-medium text-slate-500">{text}</span>
+  )
+
+  /*
+   * Every control below is the one that was in the toolbar, unchanged: same
+   * state, same `onChange`, same `setPage(1)`. Only the container is new.
+   */
+  const filterGroups = [
+    {
+      id: 'status',
+      title: 'Lead status',
+      content: (
+        <>
+          <label className="block">
+            {label('Stage')}
+            <select
+              value={stage}
+              onChange={(event) => { setStage(event.target.value); setPage(1) }}
+              className={FIELD}
+            >
+              <option value="">All stages</option>
+              {LEAD_STAGES.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            {label('Campaign')}
+            <select
+              value={campaignEligible}
+              onChange={(event) => { setCampaignEligible(event.target.value); setPage(1) }}
+              className={FIELD}
+            >
+              <option value="">All leads</option>
+              <option value="true">Campaign-ready only</option>
+            </select>
+          </label>
+        </>
+      ),
+    },
+    {
+      id: 'ownership',
+      title: 'Ownership',
+      content: (
+        <label className="block">
+          {label('Handled by')}
+          <select
+            value={handledBy}
+            onChange={(event) => { setHandledBy(event.target.value); setPage(1) }}
+            className={FIELD}
+          >
+            <option value="">Anyone</option>
+            {facets.handledBy.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </label>
+      ),
+    },
+    {
+      id: 'destination',
+      title: 'Destination',
+      content: (
+        <>
+          <label className="block">
+            {label('Destination')}
+            <select
+              value={market}
+              onChange={(event) => { setMarket(event.target.value); setPage(1) }}
+              className={FIELD}
+            >
+              {MARKETS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            {label('Departure city')}
+            <select
+              value={city}
+              onChange={(event) => { setCity(event.target.value); setPage(1) }}
+              className={FIELD}
+            >
+              <option value="">All cities</option>
+              {facets.cities.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+        </>
+      ),
+    },
+    {
+      id: 'dates',
+      title: 'Dates',
+      content: (
+        <label className="block">
+          {label('Travel month')}
+          <select
+            value={travelMonth}
+            onChange={(event) => { setTravelMonth(event.target.value); setPage(1) }}
+            className={FIELD}
+          >
+            <option value="">Any month</option>
+            {facets.travelMonths.map((option) => (
+              <option key={option.month} value={option.month}>{option.month} ({option.count})</option>
+            ))}
+          </select>
+        </label>
+      ),
+    },
+  ]
+
+  /*
+   * One chip per set filter. Clearing a chip calls the same setter the control
+   * does, so the two can never disagree about what is applied.
+   */
+  const filterChips = [
+    stage && { key: 'stage', label: `Stage: ${LEAD_STAGES.find((o) => o.value === stage)?.label ?? stage}`, onClear: () => { setStage(''); setPage(1) } },
+    campaignEligible && { key: 'campaign', label: 'Campaign-ready only', onClear: () => { setCampaignEligible(''); setPage(1) } },
+    handledBy && { key: 'handledBy', label: `Handled by: ${handledBy}`, onClear: () => { setHandledBy(''); setPage(1) } },
+    market && { key: 'market', label: `Destination: ${MARKETS.find((o) => o.value === market)?.label ?? market}`, onClear: () => { setMarket(''); setPage(1) } },
+    city && { key: 'city', label: `City: ${city}`, onClear: () => { setCity(''); setPage(1) } },
+    travelMonth && { key: 'travelMonth', label: `Travel: ${travelMonth}`, onClear: () => { setTravelMonth(''); setPage(1) } },
+  ].filter(Boolean)
+
   const clearFilters = () => {
     setStage('')
     setCity('')
@@ -368,98 +506,6 @@ export function LeadsPage() {
       </div>
 
       {/* --- Filters ------------------------------------------------------ */}
-      {showFilters && (
-        <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <label className="block text-xs font-medium text-slate-600">
-            Stage
-            <select
-              value={stage}
-              onChange={(event) => { setStage(event.target.value); setPage(1) }}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-            >
-              <option value="">All stages</option>
-              {LEAD_STAGES.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-xs font-medium text-slate-600">
-            City
-            <select
-              value={city}
-              onChange={(event) => { setCity(event.target.value); setPage(1) }}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-            >
-              <option value="">All cities</option>
-              {facets.cities.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-xs font-medium text-slate-600">
-            Market
-            <select
-              value={market}
-              onChange={(event) => { setMarket(event.target.value); setPage(1) }}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-            >
-              {MARKETS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-xs font-medium text-slate-600">
-            Handled by
-            <select
-              value={handledBy}
-              onChange={(event) => { setHandledBy(event.target.value); setPage(1) }}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-            >
-              <option value="">Anyone</option>
-              {facets.handledBy.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-xs font-medium text-slate-600">
-            Travel month
-            <select
-              value={travelMonth}
-              onChange={(event) => { setTravelMonth(event.target.value); setPage(1) }}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-            >
-              <option value="">Any month</option>
-              {facets.travelMonths.map((option) => (
-                <option key={option.month} value={option.month}>{option.month} ({option.count})</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block text-xs font-medium text-slate-600">
-            Campaign
-            <select
-              value={campaignEligible}
-              onChange={(event) => { setCampaignEligible(event.target.value); setPage(1) }}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-            >
-              <option value="">All leads</option>
-              <option value="true">Campaign-ready only</option>
-            </select>
-          </label>
-
-          {activeFilters > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="self-end">
-              <X className="size-4" aria-hidden="true" />
-              Clear filters
-            </Button>
-          )}
-        </div>
-      )}
-
       {deleteNotice && (
         <p
           role="status"
@@ -483,142 +529,164 @@ export function LeadsPage() {
         </p>
       )}
 
-      {/* --- Bulk actions -------------------------------------------------- */}
-      {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-brand-50 px-4 py-2.5 ring-1 ring-inset ring-brand-200">
-          <span className="text-sm font-medium text-brand-900">{selected.size} selected</span>
-          <select
-            defaultValue=""
-            disabled={isBusy}
-            onChange={async (event) => {
-              const next = event.target.value
-              if (!next) return
-              await moveStage([...selected], next, 'Bulk update from the register')
-              setSelected(new Set())
-              event.target.value = ''
-            }}
-            className="rounded-lg border border-brand-200 bg-white px-2 py-1.5 text-sm outline-none"
-            aria-label="Move selected leads to a stage"
-          >
-            <option value="">Move to stage…</option>
-            {LEAD_STAGES.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
-        </div>
-      )}
+      {/*
+        Rail beside table (Phase 21).
 
-      {/* --- Table --------------------------------------------------------- */}
-      {isInitialLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-12 w-full rounded-lg" />)}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
-          <Megaphone className="mx-auto size-8 text-slate-300" aria-hidden="true" />
-          <h2 className="mt-3 text-base font-semibold text-slate-900">No enquiries yet</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-            Upload the sales workbook and every row becomes a lead, with its company and contact
-            resolved automatically.
-          </p>
-          <Button as={Link} to={ROUTE_PATHS.LEAD_IMPORT} className="mt-5">
-            <Upload className="size-4" aria-hidden="true" />
-            Import the workbook
-          </Button>
-        </div>
-      ) : (
-        <div className="scroll-x overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                {/* Selection is pinned to the leading edge. It is a control, not
-                    a field, and a checkbox adrift in the middle of the register
-                    would read as data. */}
-                <th scope="col" className="w-10 px-3 py-2">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all on this page"
-                    checked={items.length > 0 && items.every((item) => selected.has(item.id))}
-                    onChange={(event) =>
-                      setSelected(event.target.checked ? new Set(items.map((item) => item.id)) : new Set())
-                    }
-                    className="size-4 rounded border-slate-300"
-                  />
-                </th>
-                {columnOrder.columns.map((column) => (
-                  <th
-                    key={column.key}
-                    scope="col"
-                    {...columnOrder.headerProps(column.key)}
-                    title="Drag to reorder · Ctrl+← / Ctrl+→"
-                    className="cursor-grab select-none px-3 py-2 font-medium outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
-                  >
-                    {column.header}
-                  </th>
+        `items-start` so the rail keeps its own height instead of stretching to
+        the register's, and `min-w-0` on the table column because a flex child
+        defaults to `min-width:auto` — without it the table's own
+        `overflow-x-auto` never engages and a wide register pushes the page
+        sideways instead of scrolling inside its own frame.
+      */}
+      <div className="flex items-start gap-5">
+        <FilterPanel
+          isOpen={showFilters}
+          onClose={() => setShowFilters(false)}
+          groups={filterGroups}
+          chips={filterChips}
+          activeCount={activeFilters}
+          onClearAll={activeFilters > 0 ? clearFilters : undefined}
+        />
+
+        <div className="min-w-0 flex-1 space-y-4">
+          {/* --- Bulk actions -------------------------------------------------- */}
+          {selected.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg bg-brand-50 px-4 py-2.5 ring-1 ring-inset ring-brand-200">
+              <span className="text-sm font-medium text-brand-900">{selected.size} selected</span>
+              <select
+                defaultValue=""
+                disabled={isBusy}
+                onChange={async (event) => {
+                  const next = event.target.value
+                  if (!next) return
+                  await moveStage([...selected], next, 'Bulk update from the register')
+                  setSelected(new Set())
+                  event.target.value = ''
+                }}
+                className="rounded-lg border border-brand-200 bg-white px-2 py-1.5 text-sm outline-none"
+                aria-label="Move selected leads to a stage"
+              >
+                <option value="">Move to stage…</option>
+                {LEAD_STAGES.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.map((lead) => (
-                <tr key={lead.id} className="hover:bg-slate-50">
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${lead.reference}`}
-                      checked={selected.has(lead.id)}
-                      onChange={(event) =>
-                        setSelected((current) => {
-                          const next = new Set(current)
-                          if (event.target.checked) next.add(lead.id)
-                          else next.delete(lead.id)
-                          return next
-                        })
-                      }
-                      className="size-4 rounded border-slate-300"
-                    />
-                  </td>
-                  {/* The same array as the header row above, so a header can
-                      never sit over another column's data. */}
-                  {columnOrder.columns.map((column) => (
-                    <td key={column.key} className={column.cellClassName}>
-                      {column.render(lead)}
-                    </td>
+              </select>
+              <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
+            </div>
+          )}
+
+          {/* --- Table --------------------------------------------------------- */}
+          {isInitialLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-12 w-full rounded-lg" />)}
+            </div>
+          ) : items.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+              <Megaphone className="mx-auto size-8 text-slate-300" aria-hidden="true" />
+              <h2 className="mt-3 text-base font-semibold text-slate-900">No enquiries yet</h2>
+              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+                Upload the sales workbook and every row becomes a lead, with its company and contact
+                resolved automatically.
+              </p>
+              <Button as={Link} to={ROUTE_PATHS.LEAD_IMPORT} className="mt-5">
+                <Upload className="size-4" aria-hidden="true" />
+                Import the workbook
+              </Button>
+            </div>
+          ) : (
+            <div className="scroll-x overflow-x-auto rounded-xl border border-slate-200 bg-white">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    {/* Selection is pinned to the leading edge. It is a control, not
+                        a field, and a checkbox adrift in the middle of the register
+                        would read as data. */}
+                    <th scope="col" className="w-10 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all on this page"
+                        checked={items.length > 0 && items.every((item) => selected.has(item.id))}
+                        onChange={(event) =>
+                          setSelected(event.target.checked ? new Set(items.map((item) => item.id)) : new Set())
+                        }
+                        className="size-4 rounded border-slate-300"
+                      />
+                    </th>
+                    {columnOrder.columns.map((column) => (
+                      <th
+                        key={column.key}
+                        scope="col"
+                        {...columnOrder.headerProps(column.key)}
+                        title="Drag to reorder · Ctrl+← / Ctrl+→"
+                        className="cursor-grab select-none px-3 py-2 font-medium outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
+                      >
+                        {column.header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {items.map((lead) => (
+                    <tr key={lead.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${lead.reference}`}
+                          checked={selected.has(lead.id)}
+                          onChange={(event) =>
+                            setSelected((current) => {
+                              const next = new Set(current)
+                              if (event.target.checked) next.add(lead.id)
+                              else next.delete(lead.id)
+                              return next
+                            })
+                          }
+                          className="size-4 rounded border-slate-300"
+                        />
+                      </td>
+                      {/* The same array as the header row above, so a header can
+                          never sit over another column's data. */}
+                      {columnOrder.columns.map((column) => (
+                        <td key={column.key} className={column.cellClassName}>
+                          {column.render(lead)}
+                        </td>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-      <DeleteAllLeadsDialog
-        isOpen={isDeleteOpen}
-        counts={purgeCounts}
-        isDeleting={isDeleting}
-        error={deleteError}
-        onCancel={() => setIsDeleteOpen(false)}
-        onConfirm={confirmDelete}
-      />
+          <DeleteAllLeadsDialog
+            isOpen={isDeleteOpen}
+            counts={purgeCounts}
+            isDeleting={isDeleting}
+            error={deleteError}
+            onCancel={() => setIsDeleteOpen(false)}
+            onConfirm={confirmDelete}
+          />
 
-      {/* --- Pagination ---------------------------------------------------- */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-          <p className="text-sm text-slate-500">
-            Page {page} of {totalPages} — {pagination?.total?.toLocaleString()} enquiries
-          </p>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              <ChevronLeft className="size-4" aria-hidden="true" />
-              Previous
-            </Button>
-            <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              Next
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
+          {/* --- Pagination ---------------------------------------------------- */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+              <p className="text-sm text-slate-500">
+                Page {page} of {totalPages} — {pagination?.total?.toLocaleString()} enquiries
+              </p>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                  <ChevronLeft className="size-4" aria-hidden="true" />
+                  Previous
+                </Button>
+                <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                  Next
+                  <ChevronRight className="size-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
