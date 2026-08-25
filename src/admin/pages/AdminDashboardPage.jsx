@@ -108,6 +108,13 @@ export function AdminDashboardPage() {
        * same-weight competition this phase exists to remove.
        */
       breadcrumb={breadcrumb}
+      /*
+       * The period belongs to the page header even here, where the header
+       * carries no title — it is the one place a reader looks for it on
+       * every other screen, and a control that moves between screens is a
+       * control they have to hunt for.
+       */
+      actions={<AdminDateRange value={range} onChange={setRange} resolved={data?.period} />}
     >
       {/*
         Phase 16.1A: the dashboard opens with a greeting and a health verdict.
@@ -123,21 +130,9 @@ export function AdminDashboardPage() {
           does not, which is why they are not in the same grid. */}
       <AdminSection
         title="Selected period"
+        /* Still accurate: "above" is now the page header, where every other
+           screen keeps its period too. */
         description="Activity recorded inside the dates chosen above."
-        /*
-          The period control, in the heading's action slot rather than in a band
-          of its own above it. Same component, same `range` state, same
-          `setRange` — only the layout differs, so every preset resolves exactly
-          as it did and the server still receives a name rather than a computed
-          pair.
-        */
-        action={
-          <AdminDateRange
-            value={range}
-            onChange={setRange}
-            resolved={data?.period}
-          />
-        }
       >
         {isLoading ? (
           <AdminStatsLoading count={4} />

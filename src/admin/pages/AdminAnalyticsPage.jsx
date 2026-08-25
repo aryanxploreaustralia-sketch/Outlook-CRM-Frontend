@@ -250,10 +250,18 @@ export function AdminAnalyticsPage() {
   const growth = data?.growth
 
   const actions = (
-    <Button variant="secondary" size="sm" onClick={refresh} isLoading={isRefreshing}>
-      <RefreshCw className="size-3.5" aria-hidden="true" />
-      Refresh
-    </Button>
+    <>
+      {/* The reporting period leads the action row, so every screen puts it in
+          the same place: page title left, period and page actions top-right.
+          Same component, same `range` state, same `setRange` — the request is
+          byte-for-byte what it was when this sat in a bar below the title. */}
+      <AdminDateRange value={range} onChange={setRange} resolved={data?.period} />
+
+      <Button variant="secondary" size="sm" onClick={refresh} isLoading={isRefreshing}>
+        <RefreshCw className="size-3.5" aria-hidden="true" />
+        Refresh
+      </Button>
+    </>
   )
 
   if (error) {
@@ -278,8 +286,6 @@ export function AdminAnalyticsPage() {
       actions={actions}
     >
       {/* The one filter row. Everything below re-requests against the same slice. */}
-      <AdminDateRange label="Period" value={range} onChange={setRange} resolved={data?.period} />
-
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-card">
         <span className="text-xs font-medium text-slate-500">Group by</span>
         <div role="group" aria-label="Reporting granularity" className="inline-flex rounded-lg bg-slate-100 p-0.5">

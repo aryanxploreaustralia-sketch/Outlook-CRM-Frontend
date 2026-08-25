@@ -34,10 +34,10 @@ const formatBound = (value) =>
   // The house format, so the chip and the rows it filters read alike.
   value ? formatDate(value, { empty: null }) : null
 
-/** The date inputs, shared by both layouts so the rule lives in one place. */
-function CustomBounds({ value, onChange, className = '' }) {
+/** The two date inputs, and the one rule about which way round they go. */
+function CustomBounds({ value, onChange }) {
   return (
-    <div className={`flex flex-wrap items-end gap-3 ${className}`}>
+    <div className="flex flex-wrap items-end gap-3">
       {[
         { key: 'from', label: 'From' },
         { key: 'to', label: 'To' },
@@ -70,15 +70,15 @@ function CustomBounds({ value, onChange, className = '' }) {
  *   trailing?: import('react').ReactNode,
  *   label?: ?string,
  * }} props
- *   One layout, everywhere. This replaced a full-width row of ten buttons that
- *   claimed a band of every reporting screen for a choice made once a session.
+ *   Built to sit in a page header's action slot, beside Refresh and Export —
+ *   never in a band of its own. It replaced a full-width row of ten buttons
+ *   that claimed a strip of every reporting screen for a choice made once.
  *
- *   `label` is for a control standing on its own in the page body, where it
- *   needs to say what it selects. A caller placing it in a section's action
- *   slot passes none — the heading beside it is already the label, and a second
- *   one would only repeat it.
+ *   `label` defaults to "Period" because a bare dropdown among the page actions
+ *   does not say what it selects. Pass `null` where an adjacent heading already
+ *   names it and a second label would only repeat it.
  */
-export function AdminDateRange({ value, onChange, resolved, trailing, label = null }) {
+export function AdminDateRange({ value, onChange, resolved, trailing, label = 'Period' }) {
   const [showCustom, setShowCustom] = useState(Boolean(value.from || value.to))
 
   /*
@@ -100,13 +100,17 @@ export function AdminDateRange({ value, onChange, resolved, trailing, label = nu
   }
 
   return (
-    <div className={`flex flex-col gap-2 ${label ? 'items-start' : 'items-end'}`}>
-      <div className="flex flex-wrap items-center gap-2">
+    /*
+     * End-aligned, because this hangs off the right edge of a header whose
+     * title sits on the left. `relative` anchors the custom-bounds popover.
+     */
+    <div className="relative flex flex-col items-end gap-1">
+      <div className="flex items-center gap-2">
         <label
           htmlFor={selectId}
-          className={label ? 'text-sm font-medium text-slate-700' : 'sr-only'}
+          className={label ? 'whitespace-nowrap text-sm text-slate-500' : 'sr-only'}
         >
-          {label ?? 'Reporting period'}
+          {label ? `${label}:` : 'Reporting period'}
         </label>
         <select
           id={selectId}
@@ -135,15 +139,32 @@ export function AdminDateRange({ value, onChange, resolved, trailing, label = nu
         {trailing}
       </div>
 
-      {showCustom && <CustomBounds value={value} onChange={onChange} />}
-
+      {/*
+        The resolved window stays in flow: it is one line of micro-text, and the
+        title block opposite it is taller than the two rows together, so it
+        costs the header no height at all. Floating it would have let it land on
+        top of the page actions the moment they wrapped on a narrow screen.
+      */}
       {resolved && (
-        <p className="flex items-center gap-1.5 text-xs text-slate-400">
+        <p className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-400">
           <Check className="size-3" aria-hidden="true" />
           {resolved.from
             ? `${formatBound(resolved.from)} – ${formatBound(resolved.to)}`
             : 'All recorded data'}
         </p>
+      )}
+
+      {/*
+        A popover, not a row.
+
+        In the header, letting the two date inputs push into the flow would
+        shove the whole page down the instant somebody picked "Custom" — the
+        full-width band this phase removed, returning through the back door.
+      */}
+      {showCustom && (
+        <div className="absolute right-0 top-full z-20 mt-1.5 rounded-(--radius-card) border border-slate-200 bg-white p-3 shadow-dropdown">
+          <CustomBounds value={value} onChange={onChange} />
+        </div>
       )}
     </div>
   )

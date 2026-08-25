@@ -228,6 +228,12 @@ export function AdminAuditPage() {
 
   const actions = (
     <>
+      {/* The reporting period leads the action row, so every screen puts it in
+          the same place: page title left, period and page actions top-right.
+          Same component, same `range` state, same `setRange` — the request is
+          byte-for-byte what it was when this sat in a bar below the title. */}
+      <AdminDateRange value={range} onChange={setRange} resolved={data?.range} />
+
       <div role="group" aria-label="View" className="inline-flex rounded-lg bg-slate-100 p-0.5">
         {[
           { value: 'table', label: 'Table', icon: Rows3 },
@@ -281,8 +287,6 @@ export function AdminAuditPage() {
       isRefreshing={isRefreshing}
       actions={actions}
     >
-      <AdminDateRange label="Period" value={range} onChange={setRange} resolved={data?.range} />
-
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <AdminStatCard
           label="Entries recorded"

@@ -50,10 +50,15 @@ export function UserPerformanceDashboardSection({ user, registerRef, enabled = t
       ref={registerRef('performance-dashboard')}
       title="Employee performance"
       description="Derived live from this person's mail, campaigns, enquiries and recorded actions. Nothing here is stored or estimated."
+      /*
+       * The section's action slot, not the page header. This period scopes
+       * this section alone — the detail page above it has a dozen others it
+       * does not touch — so it sits with the heading it governs, following
+       * the same heading-left / period-right rule one level down.
+       */
+      action={<AdminDateRange value={range} onChange={setRange} resolved={data?.range} />}
     >
       <div className="space-y-4">
-        <AdminDateRange label="Period" value={range} onChange={setRange} resolved={data?.range} />
-
         {error ? (
           <AdminErrorState error={error} onRetry={refresh} compact />
         ) : (

@@ -254,6 +254,12 @@ export function AdminTeamPage() {
 
   const actions = (
     <>
+      {/* The reporting period leads the action row, so every screen puts it in
+          the same place: page title left, period and page actions top-right.
+          Same component, same `range` state, same `setRange` — the request is
+          byte-for-byte what it was when this sat in a bar below the title. */}
+      <AdminDateRange value={range} onChange={setRange} resolved={data?.range} />
+
       <Button
         variant="secondary"
         size="sm"
@@ -300,8 +306,6 @@ export function AdminTeamPage() {
       isRefreshing={isRefreshing}
       actions={actions}
     >
-      <AdminDateRange label="Period" value={range} onChange={setRange} resolved={data?.range} />
-
       {/* Totals for everybody matched, not just this page — the figure a reader
           expects from a header above a paginated list. */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
