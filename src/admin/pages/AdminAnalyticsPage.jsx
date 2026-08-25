@@ -51,7 +51,7 @@ import {
   AdminStatsLoading,
   AdminTable,
 } from '@/admin/components'
-import { ADMIN_SCOPE_NOTICE, ADMIN_TONE } from '@/admin/constants/admin.constants'
+import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import {
   MAILBOX_HEALTH_LABELS,
   MAILBOX_HEALTH_TONE,
@@ -274,7 +274,6 @@ export function AdminAnalyticsPage() {
       title="Analytics"
       subtitle="Enquiries, delivery and reply performance"
       breadcrumb={breadcrumb}
-      notice={ADMIN_SCOPE_NOTICE}
       isRefreshing={isRefreshing}
       actions={actions}
     >

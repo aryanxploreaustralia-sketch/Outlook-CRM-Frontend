@@ -36,7 +36,7 @@ import {
   AdminTableIdentity,
 } from '@/admin/components'
 import { MailboxDetailDrawer } from '@/admin/components/mailboxes/MailboxDetailDrawer'
-import { ADMIN_SCOPE_NOTICE, ADMIN_TONE } from '@/admin/constants/admin.constants'
+import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import {
   MAILBOX_HEALTH_LABELS,
   MAILBOX_HEALTH_OPTIONS,
@@ -229,7 +229,7 @@ export function AdminMailboxesPage() {
       title="Mailboxes"
       subtitle="Who may send through each connected mailbox"
       breadcrumb={breadcrumb}
-      notice={`${ADMIN_SCOPE_NOTICE} Health is inferred from recorded sync outcomes, not from a live provider probe.`}
+      notice="Health is inferred from recorded sync outcomes, not from a live provider probe."
       isRefreshing={isRefreshing}
       actions={actions}
     >

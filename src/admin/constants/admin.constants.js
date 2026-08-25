@@ -102,15 +102,4 @@ export const ADMIN_HEALTH_TONE = Object.freeze({
   [ADMIN_HEALTH_STATE.UNKNOWN]: 'neutral',
 })
 
-/**
- * Stated on the screens whose data is real but whose *scope* is not yet the
- * organization.
- *
- * Every figure the admin API returns covers the whole deployment, because there
- * is no organization boundary to scope it to until Phase 14.3. Saying so is
- * cheaper than a reader assuming it means something narrower.
- */
-export const ADMIN_SCOPE_NOTICE =
-  'Figures cover the entire deployment. Per-organization scoping arrives with the workspace model in a later phase.'
-
 export default ADMIN_TONE

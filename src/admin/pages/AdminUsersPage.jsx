@@ -48,7 +48,6 @@ import { ConfirmStatusDialog } from '@/admin/components/users/ConfirmStatusDialo
 import { InviteUserDialog } from '@/admin/components/users/InviteUserDialog'
 import {
   ADMIN_PAGE_SIZE,
-  ADMIN_SCOPE_NOTICE,
   ADMIN_TONE,
   ADMIN_USER_STATUS,
   ADMIN_USER_STATUS_LABELS,
@@ -399,7 +398,6 @@ export function AdminUsersPage() {
       title="Users"
       subtitle="Everyone with access to this deployment"
       breadcrumb={breadcrumb}
-      notice={ADMIN_SCOPE_NOTICE}
       isRefreshing={isRefreshing}
       actions={actions}
     >

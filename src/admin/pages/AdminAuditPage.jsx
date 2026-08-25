@@ -52,7 +52,6 @@ import {
 } from '@/admin/components'
 import { AuditDetailDrawer } from '@/admin/components/audit/AuditDetailDrawer'
 import { AuditResultBadge, AuditSeverityBadge } from '@/admin/components/audit/AuditPrimitives'
-import { ADMIN_SCOPE_NOTICE } from '@/admin/constants/admin.constants'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
 import { useDateRange } from '@/admin/hooks/useDateRange'
 import {
@@ -279,7 +278,6 @@ export function AdminAuditPage() {
       title="Audit log"
       subtitle="Who did what, when, from where"
       breadcrumb={breadcrumb}
-      notice={ADMIN_SCOPE_NOTICE}
       isRefreshing={isRefreshing}
       actions={actions}
     >

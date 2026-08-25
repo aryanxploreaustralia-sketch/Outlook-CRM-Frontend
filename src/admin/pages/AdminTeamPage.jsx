@@ -44,7 +44,7 @@ import {
 } from '@/admin/components'
 import { PerformanceBadges } from '@/admin/components/performance/PerformanceDashboard'
 import { PerformanceComparison } from '@/admin/components/performance/PerformanceComparison'
-import { ADMIN_PAGE_SIZE, ADMIN_SCOPE_NOTICE } from '@/admin/constants/admin.constants'
+import { ADMIN_PAGE_SIZE } from '@/admin/constants/admin.constants'
 import { ADMIN_ROLE_BADGE, ADMIN_ROLES } from '@/admin/constants/adminRoles.constants'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
 import { useDateRange } from '@/admin/hooks/useDateRange'
@@ -297,7 +297,6 @@ export function AdminTeamPage() {
       title="Team performance"
       subtitle="Activity and contribution across the team"
       breadcrumb={breadcrumb}
-      notice={ADMIN_SCOPE_NOTICE}
       isRefreshing={isRefreshing}
       actions={actions}
     >

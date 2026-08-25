@@ -52,7 +52,7 @@ import {
   AdminTable,
   AdminTableIdentity,
 } from '@/admin/components'
-import { ADMIN_SCOPE_NOTICE, ADMIN_TONE } from '@/admin/constants/admin.constants'
+import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
 import { fetchAdminLeads } from '@/admin/services/admin.service'
@@ -487,7 +487,7 @@ export function AdminLeadMonitorPage() {
       title="Lead monitor"
       subtitle="Pipeline health across every consultant — what is unowned and what has gone quiet"
       breadcrumb={breadcrumb}
-      notice={`${ADMIN_SCOPE_NOTICE} Last activity is the record's last modification, not a conversation timestamp.`}
+      notice="Last activity is the record&rsquo;s last modification, not a conversation timestamp."
       isRefreshing={isRefreshing}
       actions={actions}
     >

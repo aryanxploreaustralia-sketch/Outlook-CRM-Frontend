@@ -32,7 +32,7 @@ import {
   AdminTable,
   AdminTableIdentity,
 } from '@/admin/components'
-import { ADMIN_SCOPE_NOTICE, ADMIN_TONE } from '@/admin/constants/admin.constants'
+import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
 import { fetchAdminCampaigns } from '@/admin/services/admin.service'
 import { formatCount, formatRelative } from '@/admin/utils/format'
@@ -215,7 +215,6 @@ export function AdminCampaignMonitorPage() {
       title="Campaign monitor"
       subtitle="Every campaign in the deployment, whoever launched it"
       breadcrumb={breadcrumb}
-      notice={ADMIN_SCOPE_NOTICE}
       isRefreshing={isRefreshing}
       actions={actions}
     >
