@@ -54,6 +54,7 @@ import {
 import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import { AdminGreeting } from '@/admin/components/AdminGreeting'
 import { AdminLeadsOverview } from '@/admin/components/AdminLeadsOverview'
+import { AdminTravelSoon } from '@/admin/components/AdminTravelSoon'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminBreadcrumbs, useAdminResource } from '@/admin/hooks'
 import { useDateRange } from '@/admin/hooks/useDateRange'
@@ -186,6 +187,13 @@ export function AdminDashboardPage() {
         The Lead monitor is the next click for anything beyond a glance.
       */}
       <AdminLeadsOverview />
+
+      {/* --- Travelling soon ------------------------------------------------
+          Directly under the register preview, because it answers the follow-up
+          to it: the overview says what came in, this says what is about to
+          happen. The Lead monitor is deliberately untouched — this card links
+          into it with the window already applied. */}
+      <AdminTravelSoon />
 
       {/* --- Shortcuts ------------------------------------------------------ */}
       <AdminCard title="Go to">
