@@ -166,7 +166,21 @@ export function CrmOverviewCard({ sales }) {
   }
 
   const byStage = sales.byStage ?? {}
-  const total = LEAD_STAGES.reduce((sum, stage) => sum + (byStage[stage.value] ?? 0), 0)
+
+  /*
+   * The server's count, not a second one computed here.
+   *
+   * This card used to sum the six stage counts to get its own total. The audit
+   * confirmed the two agree for every owner — the stages are mutually
+   * exclusive and account for every lead — but two independent answers to one
+   * question is one too many, and a stage added server-side without updating
+   * `LEAD_STAGES` would have made them diverge silently.
+   *
+   * The stage sum survives only as a fallback for a partial payload, so a
+   * missing `totalLeads` renders a share rather than a NaN.
+   */
+  const total =
+    sales.totalLeads ?? LEAD_STAGES.reduce((sum, stage) => sum + (byStage[stage.value] ?? 0), 0)
 
   const activeCount = byStage.active ?? 0
   const activeShare = total === 0 ? null : Math.round((activeCount / total) * 100)

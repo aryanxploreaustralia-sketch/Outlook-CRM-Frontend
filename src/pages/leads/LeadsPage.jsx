@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
@@ -50,7 +50,36 @@ export function LeadsPage() {
   const [market, setMarket] = useState('')
   const [handledBy, setHandledBy] = useState('')
   const [travelMonth, setTravelMonth] = useState('')
-  const [campaignEligible, setCampaignEligible] = useState('')
+  /*
+   * Seeded from the URL, so the dashboard's "Campaign ready" figure can open
+   * the enquiries behind it.
+   *
+   * The initialiser runs once, which is what makes this a deep link rather
+   * than a lock: clearing the filter afterwards works normally and the URL is
+   * not rewritten. `1` and `true` are both accepted — the dashboard sends the
+   * former, the select below uses the latter — and anything else is ignored,
+   * so a stray parameter cannot put the page into a state its own controls
+   * cannot describe.
+   */
+  /*
+   * Seeded from the URL, so the dashboard's "Campaign ready" figure can open
+   * the enquiries behind it.
+   *
+   * Read through the router rather than `window.location`, which keeps this
+   * testable and cannot throw where there is no `window`.
+   *
+   * The initialiser runs once, which is what makes this a deep link rather
+   * than a lock: clearing the filter afterwards works normally and the URL is
+   * not rewritten. `1` and `true` are both accepted — the dashboard sends the
+   * former, the select below uses the latter — and anything else is ignored,
+   * so a stray parameter cannot put the page into a state its own controls
+   * cannot describe.
+   */
+  const [searchParams] = useSearchParams()
+  const [campaignEligible, setCampaignEligible] = useState(() => {
+    const requested = searchParams.get('campaignEligible')
+    return requested === '1' || requested === 'true' ? 'true' : ''
+  })
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(() => new Set())

@@ -110,7 +110,7 @@ export function ContactsCard() {
           />
           <Stat
             icon={Building2}
-            label="Companies"
+            label="Distinct companies"
             value={stats?.companies ?? 0}
             tone="bg-cyan-50 text-cyan-600"
           />

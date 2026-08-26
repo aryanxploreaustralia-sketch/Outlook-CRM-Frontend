@@ -32,10 +32,27 @@ import { ROUTE_PATHS } from '@/routes/paths'
  */
 const FIGURES = Object.freeze([
   { key: 'totalLeads', label: 'Total', to: ROUTE_PATHS.LEADS },
-  { key: 'recentLeads', label: 'New in 30 days', to: ROUTE_PATHS.LEADS },
+  /*
+   * "Added", not "New".
+   *
+   * The count is `createdAt >= now - 30 days`, which is when the record
+   * entered the CRM — not when the enquiry arrived. The whole register was
+   * imported a fortnight ago, so today this equals Total for every owner and
+   * will until thirty days after that import. The arithmetic is right; the old
+   * label promised something it does not measure. The calculation is untouched.
+   */
+  { key: 'recentLeads', label: 'Added in 30 days', to: ROUTE_PATHS.LEADS },
   { key: 'companies', label: 'Companies', to: ROUTE_PATHS.COMPANIES },
   { key: 'contacts', label: 'Contacts', to: ROUTE_PATHS.CONTACTS },
-  { key: 'campaignReady', label: 'Campaign ready', to: ROUTE_PATHS.CAMPAIGNS },
+  /*
+   * Campaign-eligible *enquiries*, so the link goes to the enquiries.
+   *
+   * The figure counts leads that a campaign may target — not campaigns. It
+   * used to lead to `/campaigns`, where a reader clicking "20" met a page
+   * holding one campaign. It now opens the register with the filter the Leads
+   * page already has, which `LeadsPage` reads from this parameter.
+   */
+  { key: 'campaignReady', label: 'Campaign ready', to: `${ROUTE_PATHS.LEADS}?campaignEligible=1` },
 ])
 
 /**
