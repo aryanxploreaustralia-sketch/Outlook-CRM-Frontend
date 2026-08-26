@@ -106,6 +106,19 @@ export function AdminRolesPage() {
   const [pending, setPending] = useState(new Set())
   const [notice, setNotice] = useState(null)
 
+  /*
+   * Which role's permissions are on screen.
+   *
+   * The matrix used to render all six catalogues at once — six cards, thirty
+   * eight rows each, and a page nobody could scan. One at a time costs a click
+   * and removes about two hundred rows; every role is still listed above with
+   * its own count, which is the part people actually compare.
+   *
+   * `null` means "not chosen yet" rather than "none": the roles arrive after
+   * first paint, so the fallback is resolved at render, not seeded here.
+   */
+  const [selectedRole, setSelectedRole] = useState(null)
+
   const permissionsOf = useCallback(
     (entry) => draft?.[entry.role] ?? entry.permissions,
     [draft],
@@ -171,6 +184,30 @@ export function AdminRolesPage() {
     [applyChange, permissionsOf],
   )
 
+  /**
+   * Why a role's checkboxes are or are not offered.
+   *
+   * Each branch mirrors a server rule, and the reason is shown rather than the
+   * control simply being absent — "System" with no explanation is what makes an
+   * administrator think the feature is broken instead of deliberate.
+   *
+   * Unchanged from the card layout; it was moved out of the map so the role
+   * list and the permission panel below it cannot reach different conclusions.
+   */
+  const lockReasonFor = useCallback(
+    (entry) =>
+      !canManageRoles
+        ? 'You need roles.manage'
+        : !entry.editable
+          ? entry.role === 'owner'
+            ? 'Owner is the recovery path and cannot be changed'
+            : 'Protected role'
+          : entry.role === myRole
+            ? 'You cannot edit your own role'
+            : null,
+    [canManageRoles, myRole],
+  )
+
   const actions = (
     <Button variant="secondary" size="sm" onClick={refresh} isLoading={isRefreshing}>
       <RefreshCw className="size-3.5" aria-hidden="true" />
@@ -193,6 +230,27 @@ export function AdminRolesPage() {
 
   const roles = data?.roles ?? []
   const mine = roles.find((entry) => entry.role === myRole)
+
+  // Own role first — it is the one most readers came to check — then whatever
+  // the server listed first. Resolved here, not in state, because the list is
+  // empty on the first render.
+  const activeRole = selectedRole ?? (mine ? myRole : roles[0]?.role) ?? null
+  const active = roles.find((entry) => entry.role === activeRole) ?? null
+  const activeLockReason = active ? lockReasonFor(active) : null
+  const catalogueSize = Object.keys(catalogue ?? {}).length
+
+  /*
+   * The only permissions withheld are ones the actor does not hold themselves —
+   * granting those would be escalation, and an Owner holds everything, so an
+   * Owner sees no padlocks at all.
+   *
+   * Nothing is withheld for being "important". `users.invite` is an ordinary
+   * checkbox on every role now; the escalation it used to carry is blocked at
+   * the invite endpoint instead, against the inviter's own role ceiling.
+   */
+  const activeLocked = new Set(
+    Object.keys(catalogue ?? {}).filter((permission) => !myPermissions.has(permission)),
+  )
 
   return (
     <AdminPageContainer
@@ -262,129 +320,127 @@ export function AdminRolesPage() {
 
       {/* --- The matrix ------------------------------------------------------ */}
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <AdminCard key={index}>
-              <AdminListLoading rows={5} />
-            </AdminCard>
-          ))}
-        </div>
+        <AdminCard>
+          <AdminListLoading rows={6} />
+        </AdminCard>
       ) : (
         <AdminSection
           title="System roles"
-          description="Ordered most privileged first. A tick is granted; a cross is withheld."
+          description="Ordered most privileged first. Choose one to see and edit what it grants."
         >
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {roles.map((entry) => {
-              const held = counts.get(entry.role) ?? 0
-              const isMine = entry.role === myRole
-              const permissions = permissionsOf(entry)
+          {/*
+            One compact row per role: everything that was in each card's header,
+            on a single line. The counts sit in one column so six roles can be
+            compared by running an eye down them, which six separate cards made
+            impossible.
+          */}
+          <AdminCard padded={false}>
+            <ul className="divide-y divide-slate-100">
+              {roles.map((entry) => {
+                const isMine = entry.role === myRole
+                const isActive = entry.role === activeRole
+                const permissions = permissionsOf(entry)
+                const lockReason = lockReasonFor(entry)
+                const heldBy = counts.get(entry.role) ?? 0
 
-              /*
-               * Why this role's checkboxes are or are not offered.
-               *
-               * Each of these mirrors a server rule, and the reason is shown
-               * rather than the control simply being absent — "System" on a card
-               * with no explanation is what makes an administrator think the
-               * feature is broken instead of deliberate.
-               */
-              const lockReason = !canManageRoles
-                ? 'You need roles.manage'
-                : !entry.editable
-                  ? entry.role === 'owner'
-                    ? 'Owner is the recovery path and cannot be changed'
-                    : 'Protected role'
-                  : isMine
-                    ? 'You cannot edit your own role'
-                    : null
-
-              const editable = lockReason === null
-
-              /*
-               * The only permissions withheld here are ones the actor does not
-               * hold themselves — granting those would be escalation, and an
-               * Owner holds everything, so an Owner sees no padlocks at all.
-               *
-               * Nothing is withheld for being "important". `users.invite` is an
-               * ordinary checkbox on every role now; the escalation it used to
-               * carry is blocked at the invite endpoint instead, which applies
-               * the inviter's own role ceiling.
-               */
-              const locked = new Set(
-                Object.keys(catalogue ?? {}).filter(
-                  (permission) => !myPermissions.has(permission),
-                ),
-              )
-
-              return (
-                <AdminCard
-                  key={entry.role}
-                  className={isMine ? 'ring-1 ring-brand-500/40' : ''}
-                  title={
-                    <span className="flex flex-wrap items-center gap-2">
-                      {entry.label}
-                      {isMine && <AdminBadge tone="brand">Your role</AdminBadge>}
-                      {entry.adminAccess ? (
-                        <AdminBadge tone="violet">
-                          <ShieldCheck className="size-3" aria-hidden="true" />
-                          Admin console
-                        </AdminBadge>
-                      ) : (
-                        <AdminBadge tone="neutral">CRM only</AdminBadge>
-                      )}
-                    </span>
-                  }
-                  // Counted from what is on screen, so it moves with each tick.
-                  description={`${permissions.length} of ${Object.keys(catalogue).length} permissions`}
-                  action={
-                    lockReason ? (
-                      <span
-                        className="flex items-center gap-1.5 text-xs text-slate-500"
-                        title={lockReason}
-                      >
-                        <Lock className="size-3.5" aria-hidden="true" />
-                        {lockReason}
-                      </span>
-                    ) : entry.customised ? (
-                      <AdminBadge tone="warning">Customised</AdminBadge>
-                    ) : (
-                      <span className="text-xs text-slate-400">Default</span>
-                    )
-                  }
-                  footer={
-                    canReadUsers ? (
-                      <span className="text-xs text-slate-600">
-                        {held > 0 ? (
-                          <>
-                            <span className="font-medium text-slate-900">{held}</span> account
-                            {held === 1 ? '' : 's'} hold this role
-                          </>
+                return (
+                  <li key={entry.role}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRole(entry.role)}
+                      aria-current={isActive ? 'true' : undefined}
+                      className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40 ${
+                        isActive ? 'bg-brand-50/60' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm font-medium text-slate-900">
+                          {entry.label}
+                        </span>
+                        {isMine && <AdminBadge tone="brand">Your role</AdminBadge>}
+                        {entry.adminAccess ? (
+                          <AdminBadge tone="violet">
+                            <ShieldCheck className="size-3" aria-hidden="true" />
+                            Admin console
+                          </AdminBadge>
                         ) : (
-                          <span className="text-slate-400">Nobody holds this role yet</span>
+                          <AdminBadge tone="neutral">CRM only</AdminBadge>
                         )}
                       </span>
-                    ) : null
-                  }
-                >
-                  {/* `showMissing` renders the full catalogue with the absences
-                      struck through — on this screen the question is as much
-                      "what does this role *not* include?" as what it does. */}
-                  <PermissionList
-                    groups={groups}
-                    catalogue={catalogue}
-                    granted={permissions}
-                    showMissing
-                    editable={editable}
-                    locked={locked}
-                    lockedReason="Reserved to the Owner, or beyond your own permissions — the server refuses it either way."
-                    pending={pending}
-                    onToggle={(permission, granted) => togglePermission(entry, permission, granted)}
-                    onToggleGroup={(list, granted) => toggleGroup(entry, list, granted)}
-                  />
-                </AdminCard>
-              )
-            })}
-          </div>
+
+                      <span className="ml-auto flex shrink-0 items-center gap-3 text-[11px]">
+                        {/* The reason in full on hover; a padlock is enough on
+                            the row itself, and the panel below spells it out
+                            for whichever role is open. */}
+                        {lockReason && (
+                          <Lock
+                            className="size-3 text-slate-400"
+                            aria-label={lockReason}
+                            title={lockReason}
+                          />
+                        )}
+                        {entry.customised ? (
+                          <AdminBadge tone="warning">Customised</AdminBadge>
+                        ) : (
+                          <span className="text-slate-400">Default</span>
+                        )}
+                        {canReadUsers && (
+                          <span className="tabular-nums text-slate-500">
+                            {heldBy > 0 ? `${heldBy} holding` : 'Nobody'}
+                          </span>
+                        )}
+                        <span className="tabular-nums font-medium text-slate-700">
+                          {permissions.length}/{catalogueSize}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </AdminCard>
+
+          {/* --- The selected role ------------------------------------------- */}
+          {active && (
+            <AdminCard padded={false}>
+              {/*
+                The card's own header is `px-6`; this one is `px-4` to line up
+                with the category rows below it, which is why it is written here
+                rather than passed as `title`.
+              */}
+              <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-100 px-4 py-2.5">
+                <h3 className="text-[0.9375rem] font-semibold tracking-[-0.01em] text-slate-900">
+                  {active.label}
+                </h3>
+                {activeLockReason && (
+                  <span className="flex items-center gap-1 text-[11px] text-slate-500">
+                    <Lock className="size-3 shrink-0" aria-hidden="true" />
+                    {activeLockReason}
+                  </span>
+                )}
+                <span className="ml-auto text-[11px] tabular-nums text-slate-400">
+                  {permissionsOf(active).length} of {catalogueSize} permissions
+                </span>
+              </header>
+
+              {/* `showMissing` renders the full catalogue with the absences
+                  struck through — here the question is as much "what does this
+                  role *not* include?" as what it does. */}
+              <PermissionList
+                variant="grouped"
+                groups={groups}
+                catalogue={catalogue}
+                granted={permissionsOf(active)}
+                showMissing
+                editable={activeLockReason === null}
+                locked={activeLocked}
+                lockedReason="Reserved to the Owner, or beyond your own permissions — the server refuses it either way."
+                pending={pending}
+                onToggle={(permission, granted) => togglePermission(active, permission, granted)}
+                onToggleGroup={(list, granted) => toggleGroup(active, list, granted)}
+              />
+            </AdminCard>
+          )}
         </AdminSection>
       )}
     </AdminPageContainer>
