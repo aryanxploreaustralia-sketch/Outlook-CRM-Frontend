@@ -10,6 +10,15 @@
  * own — building two of these would mean two places for the same off-by-one
  * bug to appear.
  *
+ * ## Why a select rather than a popover
+ *
+ * This lives in the filter rail, whose group list scrolls (`overflow-y-auto`).
+ * An absolutely positioned panel inside a scrolling ancestor is clipped by it,
+ * so a popover would have been cut off the moment the rail had more groups
+ * than fit. A native select has no such problem, needs no outside-click
+ * handling, and is the same control every other filter in the rail already
+ * uses. The custom inputs simply appear beneath it when they are relevant.
+ *
  * ## Calendar dates, never instants
  *
  * Every value this emits is a plain `YYYY-MM-DD`. The register stores travel
@@ -24,8 +33,7 @@
  * local calendar fields for the same reason.
  */
 
-import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, ChevronDown } from 'lucide-react'
+import { useId } from 'react'
 
 import { toDateInput } from '@/utils/datetime'
 
@@ -85,6 +93,11 @@ export function windowFor(preset) {
   return { from: toDateInput(from), to: toDateInput(to) }
 }
 
+/** The rail's control metrics, so every filter in it renders one box. */
+const FIELD =
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 ' +
+  'transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20'
+
 /**
  * @param {{
  *   label: string,
@@ -95,137 +108,69 @@ export function windowFor(preset) {
  * }} props
  */
 export function DateRangeFilter({ label, presets, value, onChange, allLabel = 'Any date' }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef(null)
-
-  // Closes on an outside click or Escape, the way every other menu here does.
-  useEffect(() => {
-    if (!isOpen) return undefined
-
-    const onPointerDown = (event) => {
-      if (!containerRef.current?.contains(event.target)) setIsOpen(false)
-    }
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') setIsOpen(false)
-    }
-
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [isOpen])
-
+  const selectId = useId()
   const isCustom = value.preset === 'custom'
-  const active = Boolean(value.preset)
-
-  const summary = !active
-    ? allLabel
-    : isCustom
-      ? value.from && value.to
-        ? `${value.from.split('-').reverse().join('/')} – ${value.to.split('-').reverse().join('/')}`
-        : 'Custom range'
-      : (presets.find((preset) => preset.value === value.preset)?.label ?? allLabel)
 
   const choose = (preset) => {
     if (preset === '') {
       onChange({ preset: '', from: '', to: '' })
-      setIsOpen(false)
       return
     }
 
     if (preset === 'custom') {
-      // Opens the inputs without emitting a window: nothing is filtered until
-      // a bound is typed, and emitting here would clear the current one.
+      // Reveals the inputs without emitting a window: nothing is filtered
+      // until a bound is typed, and emitting here would clear the current one.
       onChange({ preset: 'custom', from: value.from ?? '', to: value.to ?? '' })
       return
     }
 
     onChange({ preset, ...windowFor(preset) })
-    setIsOpen(false)
   }
 
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen((open) => !open)}
-        aria-expanded={isOpen}
-        aria-label={`${label}: ${summary}`}
-        /*
-         * Sized to match the selects beside it, not to its own taste.
-         *
-         * `px-3 py-2 text-sm` with a 1px border is 38px — the same box the
-         * search input and the stage/destination selects render. It used to be
-         * `px-2.5 py-1.5 text-xs`, which is 30px, and that eight-pixel
-         * difference was most of what made the filter row look uneven.
-         *
-         * `rounded-lg` for the same reason: it sits between two selects that
-         * use it, and a control-token radius here would be the odd corner in
-         * the row.
-         */
-        className={`flex h-[38px] items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
-          active
-            ? 'border-brand-300 bg-brand-50 font-medium text-brand-800'
-            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-        } focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40`}
+    <div>
+      <label htmlFor={selectId} className="block text-xs font-medium text-slate-600">
+        {label}
+      </label>
+
+      <select
+        id={selectId}
+        value={value.preset ?? ''}
+        onChange={(event) => choose(event.target.value)}
+        className={`mt-1 ${FIELD}`}
       >
-        <CalendarDays className="size-4 shrink-0 opacity-70" aria-hidden="true" />
-        <span className="whitespace-nowrap">
-          {label}: {summary}
-        </span>
-        <ChevronDown className="size-3.5 shrink-0 opacity-60" aria-hidden="true" />
-      </button>
+        <option value="">{allLabel}</option>
+        {presets.map((preset) => (
+          <option key={preset.value} value={preset.value}>
+            {preset.label}
+          </option>
+        ))}
+        <option value="custom">Custom range</option>
+      </select>
 
-      {isOpen && (
-        <div className="absolute left-0 top-full z-30 mt-1.5 w-60 rounded-(--radius-card) border border-slate-200 bg-white p-1.5 shadow-dropdown">
-          <ul>
-            {[{ value: '', label: allLabel }, ...presets, { value: 'custom', label: 'Custom range' }].map(
-              (preset) => (
-                <li key={preset.value || 'any'}>
-                  <button
-                    type="button"
-                    onClick={() => choose(preset.value)}
-                    aria-current={(value.preset ?? '') === preset.value}
-                    className={`w-full rounded-md px-2.5 py-1.5 text-left text-xs transition-colors ${
-                      (value.preset ?? '') === preset.value
-                        ? 'bg-brand-50 font-medium text-brand-800'
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                </li>
-              ),
-            )}
-          </ul>
+      {isCustom && (
+        <div className="mt-2 space-y-2">
+          {[
+            { key: 'from', label: 'From' },
+            { key: 'to', label: 'To' },
+          ].map((field) => (
+            <label key={field.key} className="block">
+              <span className="block text-[11px] font-medium text-slate-500">{field.label}</span>
+              <input
+                type="date"
+                value={value[field.key] ?? ''}
+                onChange={(event) =>
+                  onChange({ ...value, preset: 'custom', [field.key]: event.target.value })
+                }
+                className={`mt-0.5 ${FIELD}`}
+              />
+            </label>
+          ))}
 
-          {isCustom && (
-            <div className="mt-1.5 space-y-2 border-t border-slate-100 px-1.5 pb-1 pt-2">
-              {[
-                { key: 'from', label: 'From' },
-                { key: 'to', label: 'To' },
-              ].map((field) => (
-                <label key={field.key} className="block">
-                  <span className="block text-[11px] font-medium text-slate-600">{field.label}</span>
-                  <input
-                    type="date"
-                    value={value[field.key] ?? ''}
-                    onChange={(event) =>
-                      onChange({ ...value, preset: 'custom', [field.key]: event.target.value })
-                    }
-                    className="mt-0.5 w-full rounded-(--radius-control) border border-slate-300 px-2 py-1 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  />
-                </label>
-              ))}
-
-              {value.from && value.to && value.from > value.to && (
-                <p role="alert" className="text-[11px] text-red-600">
-                  The start date must not be after the end date.
-                </p>
-              )}
-            </div>
+          {value.from && value.to && value.from > value.to && (
+            <p role="alert" className="text-[11px] text-red-600">
+              The start date must not be after the end date.
+            </p>
           )}
         </div>
       )}

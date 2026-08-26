@@ -21,14 +21,12 @@ import {
   Search,
   Trash2,
   Upload,
-  X,
 } from 'lucide-react'
 
 import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
-import { AdminFilterSelect } from '@/admin/components/AdminFilter'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
-import { FilterPopover } from '@/components/filters/FilterPopover'
+import { FilterPanel } from '@/components/filters/FilterPanel'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
@@ -113,6 +111,9 @@ export function LeadsPage() {
    * cannot describe.
    */
   const [searchParams] = useSearchParams()
+  // Opens the rail as a drawer below `lg`, where it is not shown inline.
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+
   const [travelRange, setTravelRange] = useState(NO_RANGE)
   const [quoteRange, setQuoteRange] = useState(NO_RANGE)
 
@@ -273,17 +274,6 @@ export function LeadsPage() {
       [stage, city, market, handledBy, travelMonth, campaignEligible, travelRange.preset, quoteRange.preset]
         .filter(Boolean).length,
     [stage, city, market, handledBy, travelMonth, campaignEligible, travelRange.preset, quoteRange.preset],
-  )
-
-  /*
-   * How many of the filters live behind "More filters" are set.
-   *
-   * Destination and the period sit on the bar itself, so counting them in the
-   * button's badge would promise filters the drawer does not contain.
-   */
-  const drawerFilterCount = useMemo(
-    () => [city, handledBy, travelMonth, campaignEligible].filter(Boolean).length,
-    [city, handledBy, travelMonth, campaignEligible],
   )
 
   /*
@@ -494,21 +484,89 @@ export function LeadsPage() {
   ].filter(Boolean)
 
   /*
-   * The advanced filters, rendered flat for the popover.
+   * The rail's groups, in the order they are read.
    *
-   * The same group definitions the rail used — each group's heading and its
-   * controls, unchanged and still bound to the page's own state. Flattened
-   * here rather than rewritten so there is one definition of what an advanced
-   * filter is.
+   * The four everyday filters first, each in its own collapsible section, then
+   * everything else folded into "More filters". Every control is the one the
+   * page already used and stays bound to the same state and setters — moving a
+   * filter into the rail changed where it is rendered and nothing about what
+   * it does.
    */
-  const advancedFilters = advancedFilterGroups.map((group) => (
-    <section key={group.id}>
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">
-        {group.title}
-      </h3>
-      <div className="mt-1.5 space-y-2.5">{group.content}</div>
-    </section>
-  ))
+  const filterGroups = [
+    {
+      id: 'travel',
+      title: 'Travel date',
+      content: (
+        <DateRangeFilter
+          label="Travel date"
+          presets={TRAVEL_PRESETS}
+          value={travelRange}
+          onChange={(next) => { setTravelRange(next); setPage(1) }}
+        />
+      ),
+    },
+    {
+      id: 'quote',
+      title: 'Quote date',
+      content: (
+        <DateRangeFilter
+          label="Quote date"
+          presets={QUOTE_PRESETS}
+          value={quoteRange}
+          onChange={(next) => { setQuoteRange(next); setPage(1) }}
+        />
+      ),
+    },
+    {
+      id: 'stage',
+      title: 'Stage',
+      content: (
+        <label className="block">
+          {label('Stage')}
+          <select
+            value={stage}
+            onChange={(event) => { setStage(event.target.value); setPage(1) }}
+            className={FIELD}
+          >
+            <option value="">All stages</option>
+            {LEAD_STAGES.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+      ),
+    },
+    {
+      id: 'destination',
+      title: 'Destination',
+      content: (
+        <label className="block">
+          {label('Destination')}
+          <select
+            value={market}
+            onChange={(event) => { setMarket(event.target.value); setPage(1) }}
+            className={FIELD}
+          >
+            <option value="">All destinations</option>
+            {MARKET_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+      ),
+    },
+    {
+      id: 'more',
+      title: 'More filters',
+      content: (
+        <div className="space-y-3">
+          {advancedFilterGroups.map((group) => (
+            <div key={group.id} className="space-y-2.5">{group.content}</div>
+          ))}
+        </div>
+      ),
+    },
+  ]
 
   const clearFilters = () => {
     setStage('')
@@ -531,113 +589,57 @@ export function LeadsPage() {
   return (
     <div className="space-y-5">
       {/*
-        --- Row 1: find and filter ---------------------------------------
-        One row, one rhythm. Every control here renders a 38px box — the
-        search input, both date triggers, both selects and the More filters
-        button — so `items-center` has nothing to correct and no control sits
-        proud of its neighbours. 8px between controls, which is the gap the
-        rest of the product uses inside a group.
+        Rail beside the register.
+
+        `items-start` so the rail keeps its own height instead of stretching to
+        the table's, and `min-w-0` on the main column because a flex child
+        defaults to `min-width:auto` — without it the table's own
+        `overflow-x-auto` never engages and a wide register pushes the page
+        sideways instead of scrolling inside its own frame.
+
+        `FilterPanel` is the same component the Lead monitor uses: a permanent
+        column from `lg` up, the identical panel as a drawer below it. Nothing
+        about that behaviour is written twice.
       */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-64 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-          <input
-            type="search"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Reference, person, company, email, city"
-            aria-label="Search leads"
-            /* `border-slate-300` and the brand focus ring, matching the
-                selects beside it — this was the one control still on
-                `slate-200` and a blue focus ring of its own. */
-            className="h-[38px] w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-          />
-        </div>
-
-        {/*
-          Destination and the period, on the bar; everything else behind "More
-          filters". The same split the Lead monitor makes, for the same reason:
-          these two are set daily and the rest are not.
-
-          There is deliberately no owner control. This register only ever
-          contains the signed-in person's own enquiries — the server decides
-          that from the session — so a selector offering "all owners" would
-          promise something the API will not honour.
-        */}
-        {/*
-          The four filters a consultant actually reaches for, on the bar; the
-          rest behind "More filters".
-
-          There is deliberately no owner control. This register only ever holds
-          the signed-in person's own enquiries — the server decides that from
-          the session — so a selector offering other owners would promise
-          something the API will not honour.
-        */}
-        <DateRangeFilter
-          label="Travel date"
-          presets={TRAVEL_PRESETS}
-          value={travelRange}
-          onChange={(next) => { setTravelRange(next); setPage(1) }}
+      <div className="flex items-start gap-5">
+        <FilterPanel
+          isOpen={isFilterDrawerOpen}
+          onClose={() => setIsFilterDrawerOpen(false)}
+          groups={filterGroups}
+          chips={filterChips}
+          activeCount={activeFilters}
+          onClearAll={activeFilters > 0 ? clearFilters : undefined}
         />
 
-        <DateRangeFilter
-          label="Quote date"
-          presets={QUOTE_PRESETS}
-          value={quoteRange}
-          onChange={(next) => { setQuoteRange(next); setPage(1) }}
-        />
+        <div className="min-w-0 flex-1 space-y-4">
+          {/* --- Search, and the way into the filters on a narrow screen ---- */}
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Reference, person, company, email, city"
+                aria-label="Search leads"
+                className="h-[38px] w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
 
-        <AdminFilterSelect
-          label="Stage"
-          value={stage}
-          onChange={(next) => { setStage(next); setPage(1) }}
-          options={LEAD_STAGES}
-          allLabel="All stages"
-          className="w-36"
-        />
-
-        <AdminFilterSelect
-          label="Destination"
-          value={market}
-          onChange={(next) => { setMarket(next); setPage(1) }}
-          options={MARKET_OPTIONS}
-          allLabel="All destinations"
-          className="w-40"
-        />
-
-        <FilterPopover activeCount={drawerFilterCount} onReset={clearFilters}>
-          {advancedFilters}
-        </FilterPopover>
-
-        {activeFilters > 0 && (
-          <Button variant="ghost" onClick={clearFilters}>
-            Reset filters
-          </Button>
-        )}
-      </div>
-
-      {/*
-        The active filters, as chips.
-
-        They used to live at the top of the rail. With the rail gone they sit
-        under the bar, because the one thing a popover cannot do is show what
-        is applied while it is closed.
-      */}
-      {filterChips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {filterChips.map((chip) => (
-            <button
-              key={chip.key}
-              type="button"
-              onClick={chip.onClear}
-              className="inline-flex max-w-full items-center gap-1 rounded-(--radius-control) bg-slate-100 py-1 pl-2.5 pr-1.5 text-xs text-slate-700 transition-colors hover:bg-slate-200"
+            {/* Below `lg` the rail is not rendered, so this is the only way to
+                reach the filters. Hidden once the rail itself is visible. */}
+            <Button
+              variant={activeFilters > 0 ? 'primary' : 'secondary'}
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className="shrink-0 lg:hidden"
             >
-              <span className="truncate">{chip.label}</span>
-              <X className="size-3 shrink-0 text-slate-500" aria-hidden="true" />
-            </button>
-          ))}
-        </div>
-      )}
+              <Filter className="size-4" aria-hidden="true" />
+              Filters{activeFilters > 0 ? ` (${activeFilters})` : ''}
+            </Button>
+          </div>
 
       {/*
         --- Row 2: act on the register ------------------------------------
@@ -747,15 +749,6 @@ export function LeadsPage() {
         </p>
       )}
 
-      {/*
-        The register, full width.
-
-        The rail that used to sit beside it is gone — its filters are in the
-        "More filters" popover above. `min-w-0` is kept because the table's own
-        `overflow-x-auto` needs it: without it a wide register pushes the page
-        sideways instead of scrolling inside its own frame.
-      */}
-      <div className="min-w-0 space-y-4">
           {/* --- Bulk actions -------------------------------------------------- */}
           {selected.size > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-lg bg-brand-50 px-4 py-2.5 ring-1 ring-inset ring-brand-200">
@@ -920,6 +913,7 @@ export function LeadsPage() {
               </div>
             </div>
           )}
+        </div>
       </div>
     </div>
   )
