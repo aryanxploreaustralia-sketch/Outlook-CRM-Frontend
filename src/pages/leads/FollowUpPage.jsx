@@ -35,9 +35,8 @@ import { useApiResource } from '@/hooks/useApiResource'
 import { useDebouncedValue } from '@/admin/hooks/useDebouncedValue'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { formatDate } from '@/utils/datetime'
-
-const PAGE_SIZE = 50
 
 /** Mirrors the server's `REPLY_STATUS`. Labels only; the values are the API's. */
 const REPLY_STATUS_OPTIONS = [
@@ -110,6 +109,10 @@ export function FollowUpPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
+  // Rows per page is the reader's choice, not a constant. Changing it returns to
+  // page one: page 8 of a 25-row list is past the end of a 50-row one, and landing
+  // on an empty page reads as lost data.
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   const [selected, setSelected] = useState(new Set())
   const [composer, setComposer] = useState(null)
@@ -117,7 +120,7 @@ export function FollowUpPage() {
   const [outcome, setOutcome] = useState(null)
 
   const query = useMemo(
-    () => ({ search, replyStatus, followUpStatus, market, minWaitingDays, from, to, page, limit: PAGE_SIZE }),
+    () => ({ search, replyStatus, followUpStatus, market, minWaitingDays, from, to, page, limit: pageSize }),
     [search, replyStatus, followUpStatus, market, minWaitingDays, from, to, page],
   )
 
@@ -491,31 +494,15 @@ export function FollowUpPage() {
         </div>
       )}
 
-      {pagination?.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <p className="text-slate-600">
-            Page {pagination.page} of {pagination.totalPages} · {pagination.total} enquiries
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!pagination.hasPrevious}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!pagination.hasNext}
-              onClick={() => setPage((current) => current + 1)}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={pagination?.total ?? 0}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => { setPageSize(next); setPage(1) }}
+        noun="enquiries"
+        disabled={isInitialLoading}
+      />
 
       {/* --- Composer ------------------------------------------------------ */}
       {composer && (

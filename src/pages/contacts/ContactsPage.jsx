@@ -9,8 +9,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ChevronLeft,
-  ChevronRight,
   Download,
   LayoutGrid,
   List,
@@ -32,13 +30,16 @@ import { Button } from '@/components/ui/Button'
 import { CONTACT_FILTERS, SORT_OPTIONS, TRANSFER_FORMATS } from '@/constants/contact.constants'
 import { useContacts } from '@/hooks/useContacts'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { resolveErrorVariant } from '@/utils/apiError'
-
-const PAGE_SIZE = 50
 
 export function ContactsPage() {
   const [view, setView] = useState('list')
   const [page, setPage] = useState(1)
+  // Rows per page is the reader's choice, not a constant. Changing it returns to
+  // page one: page 8 of a 25-row list is past the end of a 50-row one, and landing
+  // on an empty page reads as lost data.
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [sort, setSort] = useState('-created')
   const [filter, setFilter] = useState('')
   const [company, setCompany] = useState('')
@@ -62,7 +63,7 @@ export function ContactsPage() {
     runBulk,
     sync,
     exportAll,
-  } = useContacts({ page, limit: PAGE_SIZE, sort, search, filter, company, country })
+  } = useContacts({ page, limit: pageSize, sort, search, filter, company, country })
 
   /** Debounced so typing does not fire a request per keystroke. */
   useEffect(() => {
@@ -400,33 +401,15 @@ export function ContactsPage() {
       )}
 
       {/* --- Pagination ----------------------------------------------------- */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">
-            Page {pagination.page} of {pagination.totalPages} · {pagination.total} contacts
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              disabled={!pagination.hasPreviousPage || isLoading}
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage((current) => current + 1)}
-              disabled={!pagination.hasNextPage || isLoading}
-            >
-              Next
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={pagination?.total ?? 0}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => { setPageSize(next); setPage(1) }}
+        noun="contacts"
+        disabled={isLoading}
+      />
 
       {/* Export formats, when nothing is selected. */}
       {selected.size === 0 && items.length > 0 && (

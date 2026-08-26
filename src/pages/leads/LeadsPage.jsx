@@ -9,8 +9,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   Download,
   Filter,
@@ -26,6 +24,7 @@ import {
 import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { FilterPanel } from '@/components/filters/FilterPanel'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
@@ -75,11 +74,13 @@ import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
 import { formatDate } from '@/utils/datetime'
 
-const PAGE_SIZE = 50
-
 
 export function LeadsPage() {
   const [page, setPage] = useState(1)
+  /* Rows per page is the reader's choice, not a constant. Changing it returns
+       to page one: page 8 of a 25-row list is past the end of a 50-row one, and
+       landing on an empty page reads as lost data. */
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [stage, setStage] = useState('')
   const [city, setCity] = useState('')
   const [market, setMarket] = useState('')
@@ -130,7 +131,7 @@ export function LeadsPage() {
   const { items, pagination, isInitialLoading, isLoading, isError, error, refresh, isBusy, actionError, moveStage } =
     useLeadList({
       page,
-      limit: PAGE_SIZE,
+      limit: pageSize,
       stage,
       city,
       market,
@@ -584,7 +585,6 @@ export function LeadsPage() {
     return <ErrorScreen variant={resolveErrorVariant(error)} error={error} onRetry={() => refresh()} />
   }
 
-  const totalPages = pagination?.totalPages ?? 1
 
   return (
     <div className="space-y-5">
@@ -896,23 +896,16 @@ export function LeadsPage() {
           />
 
           {/* --- Pagination ---------------------------------------------------- */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-              <p className="text-sm text-slate-500">
-                Page {page} of {totalPages} — {pagination?.total?.toLocaleString()} enquiries
-              </p>
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                  <ChevronLeft className="size-4" aria-hidden="true" />
-                  Previous
-                </Button>
-                <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                  Next
-                  <ChevronRight className="size-4" aria-hidden="true" />
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={pagination?.total ?? 0}
+            onPageChange={setPage}
+            onPageSizeChange={(next) => { setPageSize(next); setPage(1) }}
+            noun="enquiries"
+            disabled={isLoading}
+            className="border-t border-slate-200 pt-4"
+          />
         </div>
       </div>
     </div>

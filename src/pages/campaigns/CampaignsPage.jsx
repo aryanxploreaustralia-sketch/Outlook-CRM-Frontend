@@ -10,8 +10,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BarChart3,
-  ChevronLeft,
-  ChevronRight,
   Copy,
   Megaphone,
   Pause,
@@ -30,21 +28,24 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { AVAILABLE_CONTROLS, CAMPAIGN_FILTERS, CONTROL_LABELS } from '@/constants/campaign.constants'
 import { useCampaignList } from '@/hooks/useCampaigns'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { resolveErrorVariant } from '@/utils/apiError'
 import { formatDateTime } from '@/utils/datetime'
-
-const PAGE_SIZE = 25
 
 const CONTROL_ICONS = { pause: Pause, resume: Play, cancel: Square, archive: Copy }
 
 export function CampaignsPage() {
   const [page, setPage] = useState(1)
+  // Rows per page is the reader's choice, not a constant. Changing it returns to
+  // page one: page 8 of a 25-row list is past the end of a 50-row one, and landing
+  // on an empty page reads as lost data.
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [status, setStatus] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
 
   const { items, pagination, isInitialLoading, isLoading, isError, error, refresh, action, isBusy, actionError, control, clone } =
-    useCampaignList({ page, limit: PAGE_SIZE, status, search })
+    useCampaignList({ page, limit: pageSize, status, search })
 
   /** Debounced so typing does not fire a request per keystroke. */
   useEffect(() => {
@@ -59,7 +60,6 @@ export function CampaignsPage() {
     return <ErrorScreen variant={resolveErrorVariant(error)} error={error} onRetry={() => refresh()} />
   }
 
-  const totalPages = pagination?.totalPages ?? 1
 
   return (
     <div className="space-y-6">
@@ -210,23 +210,15 @@ export function CampaignsPage() {
       )}
 
       {/* --- Pagination --------------------------------------------------- */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-          <p className="text-sm text-slate-500">
-            Page {page} of {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              <ChevronLeft className="size-4" aria-hidden="true" />
-              Previous
-            </Button>
-            <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              Next
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={pagination?.total ?? 0}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => { setPageSize(next); setPage(1) }}
+        noun="campaigns"
+        disabled={isLoading}
+      />
     </div>
   )
 }

@@ -15,8 +15,6 @@ import { Link } from 'react-router-dom'
 import {
   AlertCircle,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Inbox,
   Paperclip,
   PenSquare,
@@ -33,10 +31,9 @@ import { Spinner } from '@/components/ui/Spinner'
 import { formatBytes, MAIL_STATUS_FILTERS } from '@/constants/mail.constants'
 import { useMailHistory } from '@/hooks/useMailHistory'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { resolveErrorVariant } from '@/utils/apiError'
 import { formatDateTime } from '@/utils/datetime'
-
-const PAGE_SIZE = 20
 
 /** Formats an ISO timestamp, tolerating null and invalid input. */
 /**
@@ -151,13 +148,17 @@ function MailDetail({ id }) {
 
 export function MailHistoryPage() {
   const [page, setPage] = useState(1)
+  // Rows per page is the reader's choice, not a constant. Changing it returns to
+  // page one: page 8 of a 25-row list is past the end of a 50-row one, and landing
+  // on an empty page reads as lost data.
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [status, setStatus] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState(null)
 
   const { items, pagination, isInitialLoading, isLoading, isError, error, refresh, remove, deletingId } =
-    useMailHistory({ page, limit: PAGE_SIZE, status, search })
+    useMailHistory({ page, limit: pageSize, status, search })
 
   /** Debounced so typing does not fire a request per keystroke. */
   useEffect(() => {
@@ -361,36 +362,15 @@ export function MailHistoryPage() {
       )}
 
       {/* --- Pagination ---------------------------------------------------- */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">
-            Page {pagination.page} of {pagination.totalPages} · {pagination.total} message
-            {pagination.total === 1 ? '' : 's'}
-          </p>
-
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              disabled={!pagination.hasPreviousPage || isLoading}
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-              Previous
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage((current) => current + 1)}
-              disabled={!pagination.hasNextPage || isLoading}
-            >
-              Next
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={pagination?.total ?? 0}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => { setPageSize(next); setPage(1) }}
+        noun="messages"
+        disabled={isLoading}
+      />
     </div>
   )
 }

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, Trash2, ChevronLeft, ChevronRight, RefreshCw, Search } from 'lucide-react'
+import { Building2, Trash2, RefreshCw, Search } from 'lucide-react'
 
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { Button } from '@/components/ui/Button'
@@ -16,19 +16,22 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { COMPANY_STATUS_STYLES } from '@/constants/lead.constants'
 import { useCompanyList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { resolveErrorVariant } from '@/utils/apiError'
-
-const PAGE_SIZE = 50
 
 export function CompaniesPage() {
   const [page, setPage] = useState(1)
+  /* Rows per page is the reader's choice, not a constant. Changing it returns
+       to page one: page 8 of a 25-row list is past the end of a 50-row one, and
+       landing on an empty page reads as lost data. */
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [sort, setSort] = useState('-leads')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
 
   const { items, pagination, isInitialLoading, isLoading, isError, error, refresh } = useCompanyList({
     page,
-    limit: PAGE_SIZE,
+    limit: pageSize,
     sort,
     search,
   })
@@ -41,7 +44,6 @@ export function CompaniesPage() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const totalPages = pagination?.totalPages ?? 1
   const total = pagination?.total ?? 0
 
   /*
@@ -329,23 +331,16 @@ export function CompaniesPage() {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-200 pt-4">
-          <p className="text-sm text-slate-500">
-            Page {page} of {totalPages} — {pagination?.total?.toLocaleString()} companies
-          </p>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              <ChevronLeft className="size-4" aria-hidden="true" />
-              Previous
-            </Button>
-            <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              Next
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={pagination?.total ?? 0}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => { setPageSize(next); setPage(1) }}
+        noun="companies"
+        disabled={isLoading}
+        className="border-t border-slate-200 pt-4"
+      />
     </div>
   )
 }

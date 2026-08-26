@@ -16,8 +16,6 @@ import {
   AlertCircle,
   ArrowLeft,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   History,
   RefreshCw,
 } from 'lucide-react'
@@ -29,9 +27,8 @@ import { Button } from '@/components/ui/Button'
 import { formatDateTime, formatDuration, formatRelative } from '@/constants/provider.constants'
 import { useApiResource } from '@/hooks/useApiResource'
 import { ROUTE_PATHS } from '@/routes/paths'
+import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { resolveErrorVariant } from '@/utils/apiError'
-
-const PAGE_SIZE = 20
 
 /** One counter in the run summary. */
 function Metric({ label, value, tone = 'text-slate-900' }) {
@@ -45,6 +42,9 @@ function Metric({ label, value, tone = 'text-slate-900' }) {
 
 export function SyncHistoryPage() {
   const [page, setPage] = useState(1)
+  // Rows per page is the reader's choice; changing it returns to page one,
+  // because page 8 of a 25-row list is past the end of a 50-row one.
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [expandedId, setExpandedId] = useState(null)
 
   /**
@@ -62,7 +62,7 @@ export function SyncHistoryPage() {
   const [allMailboxes, setAllMailboxes] = useState(false)
 
   const fetcher = useCallback(
-    ({ signal }) => fetchSyncHistory({ page, limit: PAGE_SIZE, mailboxId, allMailboxes, signal }),
+    ({ signal }) => fetchSyncHistory({ page, limit: pageSize, mailboxId, allMailboxes, signal }),
     [page, mailboxId, allMailboxes],
   )
 
@@ -279,33 +279,14 @@ export function SyncHistoryPage() {
         </ul>
       )}
 
-      {meta && meta.totalPages > 1 && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">
-            Page {meta.page} of {meta.totalPages} · {meta.total} run{meta.total === 1 ? '' : 's'}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              disabled={!meta.hasPreviousPage || isLoading}
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-              Previous
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage((current) => current + 1)}
-              disabled={!meta.hasNextPage || isLoading}
-            >
-              Next
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalItems={meta?.total ?? 0}
+        onPageChange={setPage}
+        onPageSizeChange={(next) => { setPageSize(next); setPage(1) }}
+        noun="runs"
+      />
 
       <p className="text-center text-xs text-slate-400">
         History is retained for 30 days.
