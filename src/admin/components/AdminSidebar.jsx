@@ -96,17 +96,15 @@ export function AdminSidebar({
           'sidebar-surface flex flex-col bg-sidebar-bg',
           'border-r border-sidebar-border',
           isMobile
-            ? `fixed inset-y-0 left-0 z-40 w-(--spacing-sidebar) transition-transform duration-300 ease-out ${
-                isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
-              }`
+            ? `fixed inset-y-0 left-0 z-40 w-(--spacing-sidebar) transition-transform duration-300 ease-out ${isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+            }`
             : `sticky top-0 h-dvh shrink-0 transition-[width] duration-200 ease-out ${width}`,
         ].join(' ')}
       >
         {/* --- Workspace ----------------------------------------------------- */}
         <div
-          className={`flex h-(--spacing-topbar) shrink-0 items-center border-b border-sidebar-border ${
-            isCollapsed ? 'justify-center px-2' : 'gap-2.5 px-4'
-          }`}
+          className={`flex h-(--spacing-topbar) shrink-0 items-center border-b border-sidebar-border ${isCollapsed ? 'justify-center px-2' : 'gap-2.5 px-4'
+            }`}
         >
           {/*
             Phase 16.1A: a workspace block, not a wordmark.
@@ -200,9 +198,8 @@ export function AdminSidebar({
         <div className="shrink-0 border-t border-sidebar-border p-3">
           {user && (
             <div
-              className={`mb-1.5 flex items-center rounded-(--radius-control) bg-sidebar-bg-elevated py-2.5 ${
-                isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
-              }`}
+              className={`mb-1.5 flex items-center rounded-(--radius-control) bg-sidebar-bg-elevated py-2.5 ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
+                }`}
             >
               {/* The presence dot sits on the avatar, as it does in Teams — a
                   live session is exactly what it reports. */}
@@ -239,9 +236,8 @@ export function AdminSidebar({
             to={ROUTE_PATHS.DASHBOARD}
             onClick={handleNavigate}
             title={isCollapsed ? 'Back to CRM' : undefined}
-            className={`flex w-full items-center rounded-(--radius-control) text-[0.8125rem] font-medium text-sidebar-text ring-1 ring-inset ring-sidebar-border transition-colors duration-(--duration-fast) hover:bg-sidebar-hover hover:text-sidebar-text-strong hover:ring-sidebar-hover ${
-              isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2.5'
-            }`}
+            className={`flex w-full items-center rounded-(--radius-control) text-[0.8125rem] font-medium text-sidebar-text ring-1 ring-inset ring-sidebar-border transition-colors duration-(--duration-fast) hover:bg-sidebar-hover hover:text-sidebar-text-strong hover:ring-sidebar-hover ${isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2.5'
+              }`}
           >
             <LayoutGrid className="size-[1.125rem] shrink-0" aria-hidden="true" />
             {!isCollapsed && <span>Back to CRM</span>}
@@ -254,9 +250,8 @@ export function AdminSidebar({
               onClick={onToggleCollapse}
               aria-expanded={!isCollapsed}
               aria-controls="admin-sidebar"
-              className={`mt-1 flex w-full items-center rounded-lg py-2 text-xs font-medium text-sidebar-text/70 transition-colors hover:bg-sidebar-hover hover:text-sidebar-text-strong ${
-                isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
-              }`}
+              className={`mt-1 flex w-full items-center rounded-lg py-2 text-xs font-medium text-sidebar-text/70 transition-colors hover:bg-sidebar-hover hover:text-sidebar-text-strong ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
+                }`}
             >
               {isCollapsed ? (
                 <ChevronRight className="size-4 shrink-0" aria-hidden="true" />

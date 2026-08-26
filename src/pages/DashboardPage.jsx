@@ -34,9 +34,10 @@ import { ConnectionBadge } from '@/components/common/ConnectionBadge'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { ContactsCard } from '@/components/dashboard/ContactsCard'
 import { CrmOverviewCard } from '@/components/dashboard/CrmOverviewCard'
+import { DashboardMetrics } from '@/components/dashboard/DashboardMetrics'
 import { QuickActionsCard } from '@/components/dashboard/QuickActionsCard'
 import { RecentLeadsCard } from '@/components/dashboard/RecentLeadsCard'
-import { SkeletonCard, SkeletonProfile } from '@/components/ui/Skeleton'
+import { SkeletonCard } from '@/components/ui/Skeleton'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useRecentLeads } from '@/hooks/useRecentLeads'
@@ -92,24 +93,18 @@ export function DashboardPage() {
           <div className="h-6 w-56 animate-pulse rounded-md bg-slate-200/80" />
           <div className="h-4 w-80 animate-pulse rounded-md bg-slate-200/60" />
         </div>
-        {/* Mirrors the final layout: register first, then the connection
-            cards, so the page does not reflow once the payload lands. */}
+        {/*
+          Mirrors the final layout exactly — figures, the two panels, actions,
+          then the address book — so nothing moves once the payload lands. The
+          previous version described an older arrangement and the page jumped.
+        */}
+        <div className="h-[4.75rem] animate-pulse rounded-xl border border-slate-200 bg-slate-50" />
         <div className="grid gap-5 lg:grid-cols-2">
           <SkeletonCard rows={6} />
           <SkeletonCard rows={6} />
         </div>
-        <SkeletonCard rows={2} />
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div className="lg:col-span-1">
-            <SkeletonProfile />
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:col-span-2">
-            <SkeletonCard rows={2} />
-            <SkeletonCard rows={3} />
-            <SkeletonCard rows={4} />
-            <SkeletonCard rows={3} />
-          </div>
-        </div>
+        <SkeletonCard rows={3} />
+        <SkeletonCard rows={3} />
         <p className="text-center text-sm text-slate-500">Loading your dashboard…</p>
       </div>
     )
@@ -131,7 +126,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* --- Page heading -------------------------------------------------- */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
             Welcome back{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}
@@ -140,8 +135,22 @@ export function DashboardPage() {
             Your enquiries and today's work, at a glance.
           </p>
         </div>
-        <ConnectionBadge connection={connection} />
+        {/*
+          Kept, and kept quiet. A disconnected mailbox means nothing sends, so
+          this is the one operational fact the home screen cannot omit — but it
+          is a status line, not a headline, so it sits opposite the subtitle
+          rather than level with the title.
+        */}
+        <div className="shrink-0 pt-0.5">
+          <ConnectionBadge connection={connection} />
+        </div>
       </div>
+
+      {/* --- The figures ----------------------------------------------------
+          Directly under the heading, because they are what the page is opened
+          for. Same values and same destinations as when they sat inside the
+          Enquiries card; only their position changed. */}
+      <DashboardMetrics sales={dashboard?.sales} />
 
       {/* --- The register --------------------------------------------------
           The whole page now: the enquiries, the work queued against them and
@@ -150,7 +159,7 @@ export function DashboardPage() {
 
           `sales` is null when the server's aggregation failed — each card
           renders its own unavailable state rather than fabricating zeroes. */}
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid items-stretch gap-5 lg:grid-cols-2">
         <CrmOverviewCard sales={dashboard?.sales} />
         {/*
           The list comes from `GET /v1/leads`, not from the dashboard payload —

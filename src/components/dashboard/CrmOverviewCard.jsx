@@ -1,19 +1,20 @@
 /**
- * The register at a glance: headline counts and the stage split.
+ * Where the register stands, by stage.
  *
- * Every figure comes from the `sales` block of `GET /v1/dashboard`, which is
- * the server's `leadStatistics` aggregation. Nothing here is computed from a
- * sample, estimated, or held as a default — a number on this card is a number
- * the database returned.
+ * ## What this card no longer does
  *
- * ## Why `sales === null` is its own state
+ * It used to open with five headline figures and then show the stage split
+ * beneath them. The figures moved to `DashboardMetrics`, directly under the
+ * page heading, because they are what the page is opened for. What is left is
+ * the context for those numbers, and it is presented as context: compact rows
+ * with a thin share indicator, not six bars competing with everything else on
+ * the screen.
  *
- * The server builds `sales` in a try/catch and hands back `null` when the
- * aggregation fails, precisely so one broken widget cannot blank the dashboard.
- * Rendering `0` in that case would be a lie in the most damaging direction:
- * "you have no leads" and "we could not count your leads" look identical to the
- * reader but mean opposite things. So a failure says so and offers the register
- * itself as the way to check.
+ * ## The data is untouched
+ *
+ * The same `sales.byStage` map, the same `LEAD_STAGES` order, the same total
+ * (the sum of the stage counts), the same share arithmetic and the same link.
+ * Read from `LEAD_STAGES` so this list cannot drift from the filter dropdown.
  */
 
 import { Link } from 'react-router-dom'
@@ -22,7 +23,6 @@ import { ArrowRight, Users } from 'lucide-react'
 import { LEAD_STAGES } from '@/constants/lead.constants'
 import { ROUTE_PATHS } from '@/routes/paths'
 
-/** Bar colours per stage, matching the badge palette so the two read as one system. */
 const STAGE_BAR = Object.freeze({
   active: 'bg-blue-500',
   inactive: 'bg-amber-500',
@@ -32,45 +32,36 @@ const STAGE_BAR = Object.freeze({
   query: 'bg-sky-500',
 })
 
-/** A headline count. `null` renders an em dash rather than a zero. */
-function Figure({ label, value, to }) {
-  const body = (
-    <>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
-        {typeof value === 'number' ? value.toLocaleString() : '—'}
-      </dd>
-    </>
-  )
+/** The card's frame, so the failure state and the populated state agree. */
+function Panel({ children }) {
+  return (
+    <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <Users className="size-4 text-slate-400" aria-hidden="true" />
+          Enquiries by stage
+        </h2>
+        <Link
+          to={ROUTE_PATHS.LEADS}
+          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-900"
+        >
+          View all <ArrowRight className="size-3" aria-hidden="true" />
+        </Link>
+      </div>
 
-  return to ? (
-    <Link
-      to={to}
-      className="rounded-lg px-3 py-2 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-    >
-      {body}
-    </Link>
-  ) : (
-    <div className="px-3 py-2">{body}</div>
+      {children}
+    </section>
   )
 }
 
-/** @param {{ sales: ?object }} props */
 export function CrmOverviewCard({ sales }) {
   if (!sales) {
     return (
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="text-sm font-semibold text-slate-900">Enquiries</h2>
-        <p className="mt-2 text-sm text-slate-500">
+      <Panel>
+        <p className="mt-3 text-sm text-slate-500">
           These figures could not be loaded. The rest of the dashboard is unaffected.
         </p>
-        <Link
-          to={ROUTE_PATHS.LEADS}
-          className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-900"
-        >
-          Open the register <ArrowRight className="size-3.5" />
-        </Link>
-      </section>
+      </Panel>
     )
   }
 
@@ -78,69 +69,50 @@ export function CrmOverviewCard({ sales }) {
   const total = LEAD_STAGES.reduce((sum, stage) => sum + (byStage[stage.value] ?? 0), 0)
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Users className="size-4 text-slate-400" aria-hidden="true" />
-          Enquiries
-        </h2>
-        <Link
-          to={ROUTE_PATHS.LEADS}
-          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-900"
-        >
-          View all <ArrowRight className="size-3" />
-        </Link>
-      </div>
+    <Panel>
+      {total === 0 && (
+        <p className="mt-3 text-sm text-slate-500">No enquiries yet.</p>
+      )}
 
-      <dl className="mt-3 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
-        <Figure label="Total" value={sales.totalLeads} to={ROUTE_PATHS.LEADS} />
-        {/*
-          `sales.recentLeads` is a COUNT — enquiries created in the last thirty
-          days — not a list. Reading it as one is what broke this page in
-          production, so it is labelled here for what it actually measures.
-          The list of recent enquiries comes from `GET /v1/leads` instead; see
-          `useRecentLeads`.
-        */}
-        <Figure label="New in 30 days" value={sales.recentLeads} to={ROUTE_PATHS.LEADS} />
-        <Figure label="Companies" value={sales.companies} to={ROUTE_PATHS.COMPANIES} />
-        <Figure label="Contacts" value={sales.contacts} to={ROUTE_PATHS.CONTACTS} />
-        <Figure label="Campaign ready" value={sales.campaignReady} to={ROUTE_PATHS.CAMPAIGNS} />
-      </dl>
+      <ul className="mt-3 space-y-0.5">
+        {LEAD_STAGES.map((stage) => {
+          const count = byStage[stage.value] ?? 0
+          // Guarded against a zero total so an empty register renders flat
+          // indicators rather than NaN widths.
+          const share = total === 0 ? 0 : (count / total) * 100
 
-      {/* --- Stage split ---------------------------------------------------
-          The four stages the register carries, in board order. Read from
-          LEAD_STAGES so this cannot drift from the filter dropdown. */}
-      <div className="mt-5">
-        <div className="flex items-baseline justify-between">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">By stage</h3>
-          {total === 0 && <span className="text-xs text-slate-400">No enquiries yet</span>}
-        </div>
+          return (
+            <li
+              key={stage.value}
+              /*
+               * A row, not a bar chart. The indicator is capped to a narrow
+               * column so a dominant stage cannot stretch a rule across the
+               * card — the count is the fact, the bar is the hint.
+               */
+              className="flex items-center gap-3 rounded-md px-1 py-1.5"
+            >
+              <span className="w-24 shrink-0 truncate text-sm text-slate-600">{stage.label}</span>
 
-        <ul className="mt-2 space-y-2">
-          {LEAD_STAGES.map((stage) => {
-            const count = byStage[stage.value] ?? 0
-            // Guarded against a zero total so an empty register renders flat
-            // bars rather than NaN widths.
-            const share = total === 0 ? 0 : (count / total) * 100
+              <span className="h-1.5 w-full max-w-32 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                <span
+                  className={`block h-full rounded-full ${STAGE_BAR[stage.value] ?? 'bg-slate-400'}`}
+                  style={{ width: `${share}%` }}
+                />
+              </span>
 
-            return (
-              <li key={stage.value} className="flex items-center gap-3">
-                <span className="w-20 shrink-0 text-sm text-slate-600">{stage.label}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className={`h-full rounded-full ${STAGE_BAR[stage.value] ?? 'bg-slate-400'}`}
-                    style={{ width: `${share}%` }}
-                  />
-                </div>
-                <span className="w-12 shrink-0 text-right text-sm tabular-nums text-slate-700">
-                  {count.toLocaleString()}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-    </section>
+              <span className="ml-auto shrink-0 text-sm font-medium tabular-nums text-slate-800">
+                {count.toLocaleString()}
+              </span>
+
+              {/* The share in words, for anybody who cannot see the bar. */}
+              <span className="w-10 shrink-0 text-right text-xs tabular-nums text-slate-400">
+                {total === 0 ? '' : `${Math.round(share)}%`}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </Panel>
   )
 }
 

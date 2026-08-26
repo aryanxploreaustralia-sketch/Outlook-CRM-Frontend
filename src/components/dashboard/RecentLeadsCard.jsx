@@ -67,7 +67,7 @@ function LoadingRows() {
  */
 export function RecentLeadsCard({ leads, isLoading = false, isError = false, onRetry }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
+    <section className="flex h-full flex-col rounded-xl border border-slate-200 bg-white p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
           <Inbox className="size-4 text-slate-400" aria-hidden="true" />
@@ -124,38 +124,50 @@ export function RecentLeadsCard({ leads, isLoading = false, isError = false, onR
               card enforces for itself rather than a trim it depends on. Safe
               now only because `leads` is contractually an array — see above. */}
           {leads.slice(0, RECENT_LEADS_LIMIT).map((lead) => (
-            <li key={lead.id} className="flex items-center gap-3 py-2">
+            <li key={lead.id} className="flex items-center gap-3 py-2.5">
               <div className="min-w-0 flex-1">
+                {/*
+                  Name first, reference beneath it in a monospaced face. They
+                  used to share one line with the company and the remark, which
+                  left nothing for the eye to anchor on while scanning.
+                */}
                 <Link
                   to={`${ROUTE_PATHS.LEADS}/${lead.id}`}
                   className="block truncate text-sm font-medium text-slate-900 hover:underline"
                 >
                   {lead.contactPerson || lead.reference || 'Untitled enquiry'}
                 </Link>
-                <p className="truncate text-xs text-slate-500">
-                  {[lead.reference, lead.companyName].filter(Boolean).join(' · ') || '—'}
-                  {/* Split out of the join so the remark itself is clickable. */}
+
+                <p className="mt-0.5 flex min-w-0 items-baseline gap-1.5 text-xs text-slate-500">
+                  {lead.reference && (
+                    <span className="shrink-0 font-mono text-[11px] text-slate-400">
+                      {lead.reference}
+                    </span>
+                  )}
+                  {lead.companyName && <span className="truncate">{lead.companyName}</span>}
+                  {/* Kept separate so the remark itself stays clickable. */}
                   {lead.internalNotes && (
-                    <>
-                      {' · '}
+                    <span className="min-w-0 truncate">
                       <RemarkCell
                         variant="inline"
                         remarks={lead.internalNotes}
                         reference={lead.reference}
                         emptyFallback={null}
                       />
-                    </>
+                    </span>
                   )}
                 </p>
               </div>
+
               <span
-                className="hidden shrink-0 text-xs tabular-nums text-slate-400 sm:block"
+                className="hidden shrink-0 text-xs tabular-nums text-slate-500 sm:block"
                 title="Travel date"
               >
                 {/* Prose travel dates like "August" are shown as written — the
                     sheet's only timing signal for those enquiries. */}
                 {lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—')}
               </span>
+
               <LeadStageBadge stage={lead.stage} />
             </li>
           ))}
