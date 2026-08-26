@@ -27,6 +27,7 @@ import {
 import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
 import { AdminFilterSelect } from '@/admin/components/AdminFilter'
+import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { FilterPanel } from '@/components/filters/FilterPanel'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
@@ -44,31 +45,32 @@ import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
 const MARKET_OPTIONS = MARKETS.filter((market) => market.value)
 
 /**
- * The period, and which date it applies to.
+ * The two date filters face opposite directions.
  *
- * Both lists mirror the Lead monitor's so the two registers offer the same
- * vocabulary, and every value here is one the server already accepts: the
- * presets are resolved by `resolveRange` and the fields are the four the lead
- * query schema whitelists. Nothing is invented for the sake of the menu.
+ * Travel is ahead of the consultant and a quote is behind them, so the presets
+ * differ even though the control is the same. Every key here is one
+ * `DATE_WINDOWS` knows how to resolve.
  */
-const DATE_PRESET_OPTIONS = [
+const TRAVEL_PRESETS = [
+  { value: 'today', label: 'Today' },
+  { value: 'tomorrow', label: 'Tomorrow' },
+  { value: 'next7', label: 'Next 7 days' },
+  { value: 'next14', label: 'Next 14 days' },
+  { value: 'next30', label: 'Next 30 days' },
+  { value: 'next60', label: 'Next 60 days' },
+]
+
+const QUOTE_PRESETS = [
   { value: 'today', label: 'Today' },
   { value: 'yesterday', label: 'Yesterday' },
   { value: 'last7', label: 'Last 7 days' },
-  { value: 'last14', label: 'Last 14 days' },
   { value: 'last30', label: 'Last 30 days' },
-  { value: 'thisWeek', label: 'This week' },
-  { value: 'lastWeek', label: 'Last week' },
   { value: 'thisMonth', label: 'This month' },
   { value: 'lastMonth', label: 'Last month' },
 ]
 
-const DATE_FIELD_OPTIONS = [
-  { value: 'travelDate', label: 'Travel date' },
-  { value: 'quoteDate', label: 'Query date' },
-  { value: 'createdAt', label: 'Created date' },
-  { value: 'updatedAt', label: 'Last activity' },
-]
+/** The empty window, so "cleared" means one thing in every place it is used. */
+const NO_RANGE = { preset: '', from: '', to: '' }
 import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -111,8 +113,8 @@ export function LeadsPage() {
    * cannot describe.
    */
   const [searchParams] = useSearchParams()
-  const [dateField, setDateField] = useState('travelDate')
-  const [preset, setPreset] = useState('')
+  const [travelRange, setTravelRange] = useState(NO_RANGE)
+  const [quoteRange, setQuoteRange] = useState(NO_RANGE)
 
   const [campaignEligible, setCampaignEligible] = useState(() => {
     const requested = searchParams.get('campaignEligible')
@@ -136,12 +138,16 @@ export function LeadsPage() {
       travelMonth,
       campaignEligible,
       /*
-       * The period, on a named field — the same pair the Lead monitor sends.
-       * `dateField` is only meaningful with a period, so it is omitted when
-       * none is chosen and the server adds no date clause at all.
+       * Two independent windows, as plain calendar dates.
+       *
+       * Undefined when unset, and `fetchLeads` drops undefined keys — so a
+       * register with no date filter sends no date parameters at all and the
+       * server adds no date clause.
        */
-      dateField: preset ? dateField : undefined,
-      preset: preset || undefined,
+      travelFrom: travelRange.from || undefined,
+      travelTo: travelRange.to || undefined,
+      quoteFrom: quoteRange.from || undefined,
+      quoteTo: quoteRange.to || undefined,
       search,
     })
 
@@ -226,10 +232,12 @@ export function LeadsPage() {
         handledBy,
         travelMonth,
         campaignEligible,
-        // The period too, or the workbook would hold a different set of rows
-        // from the one on screen — the exact mismatch this export avoids.
-        dateField: preset ? dateField : undefined,
-        preset: preset || undefined,
+        // The date windows too, or the workbook would hold a different set of
+        // rows from the one on screen — the exact mismatch this export avoids.
+        travelFrom: travelRange.from || undefined,
+        travelTo: travelRange.to || undefined,
+        quoteFrom: quoteRange.from || undefined,
+        quoteTo: quoteRange.to || undefined,
         search,
       })
 
@@ -259,11 +267,13 @@ export function LeadsPage() {
   // be silently included in a bulk stage change.
   useEffect(() => {
     setSelected(new Set())
-  }, [page, stage, city, market, handledBy, travelMonth, campaignEligible, preset, dateField, search])
+  }, [page, stage, city, market, handledBy, travelMonth, campaignEligible, travelRange, quoteRange, search])
 
   const activeFilters = useMemo(
-    () => [stage, city, market, handledBy, travelMonth, campaignEligible, preset].filter(Boolean).length,
-    [stage, city, market, handledBy, travelMonth, campaignEligible, preset],
+    () =>
+      [stage, city, market, handledBy, travelMonth, campaignEligible, travelRange.preset, quoteRange.preset]
+        .filter(Boolean).length,
+    [stage, city, market, handledBy, travelMonth, campaignEligible, travelRange.preset, quoteRange.preset],
   )
 
   /*
@@ -273,8 +283,8 @@ export function LeadsPage() {
    * button's badge would promise filters the drawer does not contain.
    */
   const drawerFilterCount = useMemo(
-    () => [stage, city, handledBy, travelMonth, campaignEligible].filter(Boolean).length,
-    [stage, city, handledBy, travelMonth, campaignEligible],
+    () => [city, handledBy, travelMonth, campaignEligible].filter(Boolean).length,
+    [city, handledBy, travelMonth, campaignEligible],
   )
 
   /*
@@ -377,22 +387,10 @@ export function LeadsPage() {
     {
       id: 'status',
       title: 'Lead status',
+      /* Stage moved to the filter bar. Leaving a second control here bound to
+         the same state would give one filter two homes. */
       content: (
         <>
-          <label className="block">
-            {label('Stage')}
-            <select
-              value={stage}
-              onChange={(event) => { setStage(event.target.value); setPage(1) }}
-              className={FIELD}
-            >
-              <option value="">All stages</option>
-              {LEAD_STAGES.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-
           <label className="block">
             {label('Campaign')}
             <select
@@ -428,22 +426,10 @@ export function LeadsPage() {
     },
     {
       id: 'destination',
-      title: 'Destination',
+      title: 'Departure',
+      /* Destination moved to the filter bar, for the same reason as Stage. */
       content: (
         <>
-          <label className="block">
-            {label('Destination')}
-            <select
-              value={market}
-              onChange={(event) => { setMarket(event.target.value); setPage(1) }}
-              className={FIELD}
-            >
-              {MARKETS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-
           <label className="block">
             {label('Departure city')}
             <select
@@ -492,12 +478,19 @@ export function LeadsPage() {
     market && { key: 'market', label: `Destination: ${MARKETS.find((o) => o.value === market)?.label ?? market}`, onClear: () => { setMarket(''); setPage(1) } },
     city && { key: 'city', label: `City: ${city}`, onClear: () => { setCity(''); setPage(1) } },
     travelMonth && { key: 'travelMonth', label: `Travel: ${travelMonth}`, onClear: () => { setTravelMonth(''); setPage(1) } },
-    preset && {
-      key: 'preset',
-      label: `${DATE_FIELD_OPTIONS.find((o) => o.value === dateField)?.label ?? 'Date'}: ${
-        DATE_PRESET_OPTIONS.find((o) => o.value === preset)?.label ?? preset
+    travelRange.preset && {
+      key: 'travelRange',
+      label: `Travel date: ${
+        TRAVEL_PRESETS.find((o) => o.value === travelRange.preset)?.label ?? 'Custom range'
       }`,
-      onClear: () => { setPreset(''); setPage(1) },
+      onClear: () => { setTravelRange(NO_RANGE); setPage(1) },
+    },
+    quoteRange.preset && {
+      key: 'quoteRange',
+      label: `Quote date: ${
+        QUOTE_PRESETS.find((o) => o.value === quoteRange.preset)?.label ?? 'Custom range'
+      }`,
+      onClear: () => { setQuoteRange(NO_RANGE); setPage(1) },
     },
   ].filter(Boolean)
 
@@ -508,7 +501,8 @@ export function LeadsPage() {
     setHandledBy('')
     setTravelMonth('')
     setCampaignEligible('')
-    setPreset('')
+    setTravelRange(NO_RANGE)
+    setQuoteRange(NO_RANGE)
     setPage(1)
   }
 
@@ -544,6 +538,38 @@ export function LeadsPage() {
           that from the session — so a selector offering "all owners" would
           promise something the API will not honour.
         */}
+        {/*
+          The four filters a consultant actually reaches for, on the bar; the
+          rest behind "More filters".
+
+          There is deliberately no owner control. This register only ever holds
+          the signed-in person's own enquiries — the server decides that from
+          the session — so a selector offering other owners would promise
+          something the API will not honour.
+        */}
+        <DateRangeFilter
+          label="Travel date"
+          presets={TRAVEL_PRESETS}
+          value={travelRange}
+          onChange={(next) => { setTravelRange(next); setPage(1) }}
+        />
+
+        <DateRangeFilter
+          label="Quote date"
+          presets={QUOTE_PRESETS}
+          value={quoteRange}
+          onChange={(next) => { setQuoteRange(next); setPage(1) }}
+        />
+
+        <AdminFilterSelect
+          label="Stage"
+          value={stage}
+          onChange={(next) => { setStage(next); setPage(1) }}
+          options={LEAD_STAGES}
+          allLabel="All stages"
+          className="w-36"
+        />
+
         <AdminFilterSelect
           label="Destination"
           value={market}
@@ -552,28 +578,6 @@ export function LeadsPage() {
           allLabel="All destinations"
           className="w-40"
         />
-
-        <AdminFilterSelect
-          label="Period"
-          value={preset}
-          onChange={(next) => { setPreset(next); setPage(1) }}
-          options={DATE_PRESET_OPTIONS}
-          allLabel="Any date"
-          className="w-36"
-        />
-
-        {/* Which date the period applies to. Hidden until there is a period,
-            because on its own it filters nothing. */}
-        {preset && (
-          <AdminFilterSelect
-            label="Date field"
-            value={dateField}
-            onChange={(next) => { setDateField(next); setPage(1) }}
-            options={DATE_FIELD_OPTIONS}
-            includeAll={false}
-            className="w-36"
-          />
-        )}
 
         <Button variant={drawerFilterCount > 0 ? 'primary' : 'secondary'} onClick={() => setShowFilters((open) => !open)}>
           <Filter className="size-4" aria-hidden="true" />
