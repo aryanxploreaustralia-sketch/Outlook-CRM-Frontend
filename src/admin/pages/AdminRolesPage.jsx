@@ -40,7 +40,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
-import { AlertTriangle, Info, KeyRound, Lock, RefreshCw, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, KeyRound, Lock, RefreshCw, ShieldCheck } from 'lucide-react'
 
 import {
   AdminBadge,
@@ -202,20 +202,6 @@ export function AdminRolesPage() {
       isRefreshing={isRefreshing}
       actions={actions}
     >
-      <div className="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-card">
-        <Info className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden="true" />
-        <div className="min-w-0 text-sm">
-          <p className="font-medium text-slate-900">These roles are enforced</p>
-          <p className="mt-0.5 text-slate-600">
-            Every API endpoint and every screen requires a permission, and roles are the bundles
-            that grant them. This table is generated from the same constants the server checks on
-            each request, so it cannot describe access the server would not honour. Ticking a
-            permission changes what the server enforces, immediately and for everyone holding that
-            role. Owner is fixed: it is the way back if another role is misconfigured.
-          </p>
-        </div>
-      </div>
-
       {/*
         A refusal, shown once at the top rather than beside the checkbox.
         The control has already snapped back to what the server holds, so this
