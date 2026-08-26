@@ -28,7 +28,7 @@ import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/l
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
 import { AdminFilterSelect } from '@/admin/components/AdminFilter'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
-import { FilterPanel } from '@/components/filters/FilterPanel'
+import { FilterPopover } from '@/components/filters/FilterPopover'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
@@ -123,7 +123,6 @@ export function LeadsPage() {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(() => new Set())
-  const [showFilters, setShowFilters] = useState(false)
 
   const { facets, refresh: refreshFacets } = useLeadFacets()
 
@@ -383,7 +382,7 @@ export function LeadsPage() {
    * Every control below is the one that was in the toolbar, unchanged: same
    * state, same `onChange`, same `setPage(1)`. Only the container is new.
    */
-  const filterGroups = [
+  const advancedFilterGroups = [
     {
       id: 'status',
       title: 'Lead status',
@@ -494,6 +493,23 @@ export function LeadsPage() {
     },
   ].filter(Boolean)
 
+  /*
+   * The advanced filters, rendered flat for the popover.
+   *
+   * The same group definitions the rail used — each group's heading and its
+   * controls, unchanged and still bound to the page's own state. Flattened
+   * here rather than rewritten so there is one definition of what an advanced
+   * filter is.
+   */
+  const advancedFilters = advancedFilterGroups.map((group) => (
+    <section key={group.id}>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+        {group.title}
+      </h3>
+      <div className="mt-1.5 space-y-2.5">{group.content}</div>
+    </section>
+  ))
+
   const clearFilters = () => {
     setStage('')
     setCity('')
@@ -579,16 +595,45 @@ export function LeadsPage() {
           className="w-40"
         />
 
-        <Button variant={drawerFilterCount > 0 ? 'primary' : 'secondary'} onClick={() => setShowFilters((open) => !open)}>
-          <Filter className="size-4" aria-hidden="true" />
-          More filters{drawerFilterCount > 0 ? ` (${drawerFilterCount})` : ''}
-        </Button>
+        <FilterPopover activeCount={drawerFilterCount} onReset={clearFilters}>
+          {advancedFilters}
+        </FilterPopover>
 
         {activeFilters > 0 && (
           <Button variant="ghost" onClick={clearFilters}>
-            Clear
+            Reset filters
           </Button>
         )}
+      </div>
+
+      {/*
+        The active filters, as chips.
+
+        They used to live at the top of the rail. With the rail gone they sit
+        under the bar, because the one thing a popover cannot do is show what
+        is applied while it is closed.
+      */}
+      {filterChips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {filterChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.onClear}
+              className="inline-flex max-w-full items-center gap-1 rounded-(--radius-control) bg-slate-100 py-1 pl-2.5 pr-1.5 text-xs text-slate-700 transition-colors hover:bg-slate-200"
+            >
+              <span className="truncate">{chip.label}</span>
+              <X className="size-3 shrink-0 text-slate-500" aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* --- Actions -------------------------------------------------------
+          Split from the filters above: one row decides what the register
+          shows, the other acts on it. They shared a row while the rail held
+          the filters, which made a nine-button line nobody could scan. */}
+      <div className="flex flex-wrap items-center gap-3">
 
         <Button variant="secondary" onClick={() => refresh()} disabled={isLoading}>
           <RefreshCw className={`size-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -678,25 +723,14 @@ export function LeadsPage() {
       )}
 
       {/*
-        Rail beside table (Phase 21).
+        The register, full width.
 
-        `items-start` so the rail keeps its own height instead of stretching to
-        the register's, and `min-w-0` on the table column because a flex child
-        defaults to `min-width:auto` — without it the table's own
-        `overflow-x-auto` never engages and a wide register pushes the page
+        The rail that used to sit beside it is gone — its filters are in the
+        "More filters" popover above. `min-w-0` is kept because the table's own
+        `overflow-x-auto` needs it: without it a wide register pushes the page
         sideways instead of scrolling inside its own frame.
       */}
-      <div className="flex items-start gap-5">
-        <FilterPanel
-          isOpen={showFilters}
-          onClose={() => setShowFilters(false)}
-          groups={filterGroups}
-          chips={filterChips}
-          activeCount={activeFilters}
-          onClearAll={activeFilters > 0 ? clearFilters : undefined}
-        />
-
-        <div className="min-w-0 flex-1 space-y-4">
+      <div className="min-w-0 space-y-4">
           {/* --- Bulk actions -------------------------------------------------- */}
           {selected.size > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-lg bg-brand-50 px-4 py-2.5 ring-1 ring-inset ring-brand-200">
@@ -861,7 +895,6 @@ export function LeadsPage() {
               </div>
             </div>
           )}
-        </div>
       </div>
     </div>
   )
