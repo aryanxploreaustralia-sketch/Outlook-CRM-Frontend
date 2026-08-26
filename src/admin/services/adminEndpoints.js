@@ -171,6 +171,12 @@ export const ADMIN_ENDPOINTS = Object.freeze({
   /** One enquiry, whoever owns it. Same guard as the list above. */
   leadDetail: (id) => `/v1/admin/leads/${id}`,
 
+  /** Per-day counts for the dashboard calendar. Accepts from, to, tz. */
+  calendar: '/v1/admin/calendar',
+
+  /** One day's records, for the calendar's detail drawer. */
+  calendarDay: (date) => `/v1/admin/calendar/${date}`,
+
   /**
    * Deep dependency probes.
    *

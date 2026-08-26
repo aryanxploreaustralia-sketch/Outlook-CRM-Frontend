@@ -55,6 +55,7 @@ import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import { AdminGreeting } from '@/admin/components/AdminGreeting'
 import { AdminLeadsOverview } from '@/admin/components/AdminLeadsOverview'
 import { AdminTravelSoon } from '@/admin/components/AdminTravelSoon'
+import { AdminCalendar } from '@/admin/components/AdminCalendar'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminBreadcrumbs, useAdminResource } from '@/admin/hooks'
 import { useDateRange } from '@/admin/hooks/useDateRange'
@@ -194,6 +195,12 @@ export function AdminDashboardPage() {
           happen. The Lead monitor is deliberately untouched — this card links
           into it with the window already applied. */}
       <AdminTravelSoon />
+
+      {/* --- Calendar -------------------------------------------------------
+          Below Travel soon, and answering the question it cannot: not "who is
+          going next" but "which dates are busy". Different endpoint, different
+          shape, no shared state — neither section can affect the other. */}
+      <AdminCalendar />
 
       {/* --- Shortcuts ------------------------------------------------------ */}
       <AdminCard title="Go to">

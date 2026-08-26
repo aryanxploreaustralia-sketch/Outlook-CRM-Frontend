@@ -510,6 +510,22 @@ export function fetchAdminLeads({ signal, ...params } = {}) {
   return get(ADMIN_ENDPOINTS.leads, { params: clean(params), signal })
 }
 
+/**
+ * Per-day counts for the calendar grid.
+ *
+ * `tz` is the reader's own IANA zone. The server groups task due-times in it,
+ * so a task due late in the evening lands on the date the reader would call it
+ * — travel dates are date-only values and stay in UTC regardless.
+ */
+export function fetchAdminCalendar({ signal, ...params } = {}) {
+  return get(ADMIN_ENDPOINTS.calendar, { params: clean(params), signal })
+}
+
+/** One day's records, for the detail drawer. */
+export function fetchAdminCalendarDay(date, { signal, ...params } = {}) {
+  return get(ADMIN_ENDPOINTS.calendarDay(date), { params: clean(params), signal })
+}
+
 // ---------------------------------------------------------------------------
 // Platform
 // ---------------------------------------------------------------------------
@@ -628,6 +644,8 @@ export default {
   fetchAdminDashboard,
   fetchAdminHealth,
   fetchAdminLead,
+  fetchAdminCalendar,
+  fetchAdminCalendarDay,
   fetchAdminLeads,
   fetchAdminMailboxes,
   fetchAdminOrganization,
