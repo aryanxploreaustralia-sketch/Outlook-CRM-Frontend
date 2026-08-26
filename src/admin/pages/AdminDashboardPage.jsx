@@ -126,7 +126,7 @@ export function AdminDashboardPage() {
          * The `AdminHeader` above carries only a breadcrumb, and a control
          * alone on that line looked detached from the page it scopes.
          */
-        action={<AdminDateRange value={range} onChange={setRange} resolved={data?.period} />}
+        action={<AdminDateRange value={range} onChange={setRange} />}
       />
 
       {/* --- Period-scoped ------------------------------------------------

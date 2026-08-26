@@ -10,13 +10,15 @@
  * The client sends `preset=last7`, not a pair of dates it computed. That keeps
  * every widget agreeing on what "last 7 days" means, and stops the boundary
  * shifting because one reader's browser is in a different timezone from the
- * data. The resolved window comes back in each response and is displayed here,
- * so the reader can see exactly what they are looking at.
+ * data.
+ *
+ * The resolved window still comes back in every response; this control simply
+ * no longer prints it. The dropdown's own selected option is the answer to
+ * "which period am I looking at", and a second line restating it in dates was
+ * noise under every page header.
  */
 
 import { useId, useState } from 'react'
-import { Check } from 'lucide-react'
-import { formatDate } from '@/utils/datetime'
 
 const PRESETS = [
   { value: 'today', label: 'Today' },
@@ -29,10 +31,6 @@ const PRESETS = [
   { value: 'thisYear', label: 'This year' },
   { value: 'all', label: 'All time' },
 ]
-
-const formatBound = (value) =>
-  // The house format, so the chip and the rows it filters read alike.
-  value ? formatDate(value, { empty: null }) : null
 
 /** The two date inputs, and the one rule about which way round they go. */
 function CustomBounds({ value, onChange }) {
@@ -66,19 +64,13 @@ function CustomBounds({ value, onChange }) {
  * @param {{
  *   value: { preset?: string, from?: string, to?: string },
  *   onChange: (next: { preset?: string, from?: string, to?: string }) => void,
- *   resolved?: { preset?: string, from?: ?string, to?: ?string },
  *   trailing?: import('react').ReactNode,
- *   label?: ?string,
  * }} props
  *   Built to sit in a page header's action slot, beside Refresh and Export —
  *   never in a band of its own. It replaced a full-width row of ten buttons
  *   that claimed a strip of every reporting screen for a choice made once.
- *
- *   `label` defaults to "Period" because a bare dropdown among the page actions
- *   does not say what it selects. Pass `null` where an adjacent heading already
- *   names it and a second label would only repeat it.
  */
-export function AdminDateRange({ value, onChange, resolved, trailing, label = 'Period' }) {
+export function AdminDateRange({ value, onChange, trailing }) {
   const [showCustom, setShowCustom] = useState(Boolean(value.from || value.to))
 
   /*
@@ -110,11 +102,15 @@ export function AdminDateRange({ value, onChange, resolved, trailing, label = 'P
      * now hangs off `relative` below, where it cannot influence the row.
      */
     <div className="relative flex items-center gap-2">
-      <label
-        htmlFor={selectId}
-        className={label ? 'whitespace-nowrap text-xs text-slate-500' : 'sr-only'}
-      >
-        {label ? `${label}:` : 'Reporting period'}
+      {/*
+        Present but not painted.
+
+        The visible "Period:" is gone — the selected option already says "Last
+        30 days" — but a bare `<select>` announces itself to a screen reader as
+        an unnamed combo box, so the name stays in the accessibility tree.
+      */}
+      <label htmlFor={selectId} className="sr-only">
+        Reporting period
       </label>
       <select
         id={selectId}
@@ -146,33 +142,18 @@ export function AdminDateRange({ value, onChange, resolved, trailing, label = 'P
       {trailing}
 
       {/*
-        Everything below the control, right-aligned to its edge.
-
-        Out of flow on purpose: the resolved window belongs to the period and
-        must not push the action row taller, and the custom inputs must not
-        shove the page down the moment somebody picks "Custom" — that would be
-        the full-width band this phase removed, returning through the back door.
+        The custom inputs, out of flow on purpose: they must not shove the page
+        down the moment somebody picks "Custom" — that would be the full-width
+        band this phase removed, returning through the back door.
 
         Transparent to the pointer, or this strip would sit over the content
-        beneath the header and swallow clicks meant for it. The popover, which
-        is a real control, takes its own events back.
+        beneath the header and swallow clicks meant for it.
       */}
-      {(showCustom || resolved) && (
-        <div className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 flex flex-col items-end gap-1.5">
-          {showCustom && (
-            <div className="pointer-events-auto rounded-(--radius-card) border border-slate-200 bg-white p-3 shadow-dropdown">
-              <CustomBounds value={value} onChange={onChange} />
-            </div>
-          )}
-
-          {resolved && (
-            <p className="flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-400">
-              <Check className="size-3" aria-hidden="true" />
-              {resolved.from
-                ? `${formatBound(resolved.from)} – ${formatBound(resolved.to)}`
-                : 'All recorded data'}
-            </p>
-          )}
+      {showCustom && (
+        <div className="pointer-events-none absolute right-0 top-full z-20 mt-1.5 flex justify-end">
+          <div className="pointer-events-auto rounded-(--radius-card) border border-slate-200 bg-white p-3 shadow-dropdown">
+            <CustomBounds value={value} onChange={onChange} />
+          </div>
         </div>
       )}
     </div>

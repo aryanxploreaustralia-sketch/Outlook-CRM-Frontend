@@ -275,7 +275,7 @@ export function AdminAuditPage() {
           the same place: page title left, page actions then period top-right.
           Same component, same `range` state, same `setRange` — the request is
           byte-for-byte what it was when this sat in a bar below the title. */}
-      <AdminDateRange value={range} onChange={setRange} resolved={data?.range} />
+      <AdminDateRange value={range} onChange={setRange} />
     </>
   )
 
