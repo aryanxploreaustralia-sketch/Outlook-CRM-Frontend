@@ -530,9 +530,16 @@ export function LeadsPage() {
 
   return (
     <div className="space-y-5">
-      {/* --- Toolbar ------------------------------------------------------ */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-56 flex-1">
+      {/*
+        --- Row 1: find and filter ---------------------------------------
+        One row, one rhythm. Every control here renders a 38px box — the
+        search input, both date triggers, both selects and the More filters
+        button — so `items-center` has nothing to correct and no control sits
+        proud of its neighbours. 8px between controls, which is the gap the
+        rest of the product uses inside a group.
+      */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-64 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <input
             type="search"
@@ -540,7 +547,10 @@ export function LeadsPage() {
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Reference, person, company, email, city"
             aria-label="Search leads"
-            className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            /* `border-slate-300` and the brand focus ring, matching the
+                selects beside it — this was the one control still on
+                `slate-200` and a blue focus ring of its own. */
+            className="h-[38px] w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition-colors focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
 
@@ -629,11 +639,18 @@ export function LeadsPage() {
         </div>
       )}
 
-      {/* --- Actions -------------------------------------------------------
-          Split from the filters above: one row decides what the register
-          shows, the other acts on it. They shared a row while the rail held
-          the filters, which made a nine-button line nobody could scan. */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/*
+        --- Row 2: act on the register ------------------------------------
+        Split from the filters above: one row decides what the register shows,
+        the other acts on it. They shared a row while the rail held the
+        filters, which made a nine-button line nobody could scan.
+
+        Same 8px gap as row 1. "Delete all" is pushed to the far end by
+        `ms-auto` on its own wrapper — a flex rule, not a margin guessed at
+        until it looked right — so it reads as separate from the everyday
+        actions without drifting when the row wraps.
+      */}
+      <div className="flex flex-wrap items-center gap-2">
 
         <Button variant="secondary" onClick={() => refresh()} disabled={isLoading}>
           <RefreshCw className={`size-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -687,12 +704,20 @@ export function LeadsPage() {
         </Button>
 
         {/*
-          Deliberately the last item and visually quiet until hovered. It sits
-          with the import actions because that is where it is used — clear the
-          register, import again — but it should never be the thing the eye
-          lands on first.
+          Last, quiet, and held at the far end of the row.
+
+          `ms-auto` consumes the free space before it, so the destructive
+          action is separated from the everyday ones by the layout rather than
+          by a margin guessed at until it looked right — and when the row wraps
+          it stays at the end of its line instead of drifting into the middle.
+          Ghost styling keeps it from being the thing the eye lands on first.
         */}
-        <Button variant="ghost" onClick={openDeleteDialog} title="Delete every lead record">
+        <Button
+          variant="ghost"
+          onClick={openDeleteDialog}
+          title="Delete every lead record"
+          className="ms-auto"
+        >
           <Trash2 className="size-4 text-rose-600" aria-hidden="true" />
           <span className="text-rose-700">Delete all</span>
         </Button>

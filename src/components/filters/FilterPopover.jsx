@@ -61,6 +61,17 @@ export function FilterPopover({ label = 'More filters', activeCount = 0, onReset
         variant={activeCount > 0 ? 'primary' : 'secondary'}
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
+        /*
+         * `rounded-lg`, overriding the button's own control radius.
+         *
+         * This trigger sits in the filter row between a select and a search
+         * field, both of which use `rounded-lg`. Matching its neighbours
+         * matters more here than matching buttons in other rows, and the
+         * two-pixel difference is visible when the corners line up side by
+         * side. Tailwind emits `.rounded-lg` after the token rule, so the
+         * override resolves deterministically rather than by luck.
+         */
+        className="rounded-lg"
       >
         <SlidersHorizontal className="size-4" aria-hidden="true" />
         {label}

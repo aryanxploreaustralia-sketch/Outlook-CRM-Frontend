@@ -153,17 +153,29 @@ export function DateRangeFilter({ label, presets, value, onChange, allLabel = 'A
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
         aria-label={`${label}: ${summary}`}
-        className={`flex items-center gap-1.5 rounded-(--radius-control) border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+        /*
+         * Sized to match the selects beside it, not to its own taste.
+         *
+         * `px-3 py-2 text-sm` with a 1px border is 38px — the same box the
+         * search input and the stage/destination selects render. It used to be
+         * `px-2.5 py-1.5 text-xs`, which is 30px, and that eight-pixel
+         * difference was most of what made the filter row look uneven.
+         *
+         * `rounded-lg` for the same reason: it sits between two selects that
+         * use it, and a control-token radius here would be the odd corner in
+         * the row.
+         */
+        className={`flex h-[38px] items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
           active
-            ? 'border-brand-300 bg-brand-50 text-brand-800'
+            ? 'border-brand-300 bg-brand-50 font-medium text-brand-800'
             : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
         } focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40`}
       >
-        <CalendarDays className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
+        <CalendarDays className="size-4 shrink-0 opacity-70" aria-hidden="true" />
         <span className="whitespace-nowrap">
           {label}: {summary}
         </span>
-        <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden="true" />
+        <ChevronDown className="size-3.5 shrink-0 opacity-60" aria-hidden="true" />
       </button>
 
       {isOpen && (
