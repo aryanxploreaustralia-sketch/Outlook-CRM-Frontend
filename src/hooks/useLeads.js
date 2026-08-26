@@ -38,6 +38,15 @@ export function useLeadList({
   travelMonth = '',
   campaignEligible = '',
   search = '',
+  /*
+   * The period pair, forwarded verbatim.
+   *
+   * Both are undefined unless a period is chosen, and `fetchLeads` drops
+   * undefined keys — so a register with no date filter sends exactly the
+   * request it sent before these existed.
+   */
+  dateField,
+  preset,
   enabled = true,
 } = {}) {
   const [action, setAction] = useState(null)
@@ -46,10 +55,10 @@ export function useLeadList({
   const fetcher = useCallback(
     ({ signal }) =>
       fetchLeads(
-        { page, limit, sort, stage, city, company, handledBy, market, travelMonth, campaignEligible, search },
+        { page, limit, sort, stage, city, company, handledBy, market, travelMonth, campaignEligible, dateField, preset, search },
         { signal },
       ),
-    [page, limit, sort, stage, city, company, handledBy, market, travelMonth, campaignEligible, search],
+    [page, limit, sort, stage, city, company, handledBy, market, travelMonth, campaignEligible, dateField, preset, search],
   )
 
   const resource = useApiResource(fetcher, { enabled })

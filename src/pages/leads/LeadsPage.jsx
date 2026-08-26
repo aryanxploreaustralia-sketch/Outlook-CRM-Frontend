@@ -26,6 +26,7 @@ import {
 
 import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
+import { AdminFilterSelect } from '@/admin/components/AdminFilter'
 import { FilterPanel } from '@/components/filters/FilterPanel'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
@@ -34,6 +35,40 @@ import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { STORAGE_KEYS } from '@/constants/app.constants'
 import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
+
+/**
+ * Destinations, without the "all" entry — `AdminFilterSelect` supplies that
+ * itself from `allLabel`, and leaving the source's blank option in would show
+ * it twice.
+ */
+const MARKET_OPTIONS = MARKETS.filter((market) => market.value)
+
+/**
+ * The period, and which date it applies to.
+ *
+ * Both lists mirror the Lead monitor's so the two registers offer the same
+ * vocabulary, and every value here is one the server already accepts: the
+ * presets are resolved by `resolveRange` and the fields are the four the lead
+ * query schema whitelists. Nothing is invented for the sake of the menu.
+ */
+const DATE_PRESET_OPTIONS = [
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: 'last7', label: 'Last 7 days' },
+  { value: 'last14', label: 'Last 14 days' },
+  { value: 'last30', label: 'Last 30 days' },
+  { value: 'thisWeek', label: 'This week' },
+  { value: 'lastWeek', label: 'Last week' },
+  { value: 'thisMonth', label: 'This month' },
+  { value: 'lastMonth', label: 'Last month' },
+]
+
+const DATE_FIELD_OPTIONS = [
+  { value: 'travelDate', label: 'Travel date' },
+  { value: 'quoteDate', label: 'Query date' },
+  { value: 'createdAt', label: 'Created date' },
+  { value: 'updatedAt', label: 'Last activity' },
+]
 import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -76,6 +111,9 @@ export function LeadsPage() {
    * cannot describe.
    */
   const [searchParams] = useSearchParams()
+  const [dateField, setDateField] = useState('travelDate')
+  const [preset, setPreset] = useState('')
+
   const [campaignEligible, setCampaignEligible] = useState(() => {
     const requested = searchParams.get('campaignEligible')
     return requested === '1' || requested === 'true' ? 'true' : ''
@@ -97,6 +135,13 @@ export function LeadsPage() {
       handledBy,
       travelMonth,
       campaignEligible,
+      /*
+       * The period, on a named field — the same pair the Lead monitor sends.
+       * `dateField` is only meaningful with a period, so it is omitted when
+       * none is chosen and the server adds no date clause at all.
+       */
+      dateField: preset ? dateField : undefined,
+      preset: preset || undefined,
       search,
     })
 
@@ -181,6 +226,10 @@ export function LeadsPage() {
         handledBy,
         travelMonth,
         campaignEligible,
+        // The period too, or the workbook would hold a different set of rows
+        // from the one on screen — the exact mismatch this export avoids.
+        dateField: preset ? dateField : undefined,
+        preset: preset || undefined,
         search,
       })
 
@@ -210,11 +259,22 @@ export function LeadsPage() {
   // be silently included in a bulk stage change.
   useEffect(() => {
     setSelected(new Set())
-  }, [page, stage, city, market, handledBy, travelMonth, campaignEligible, search])
+  }, [page, stage, city, market, handledBy, travelMonth, campaignEligible, preset, dateField, search])
 
   const activeFilters = useMemo(
-    () => [stage, city, market, handledBy, travelMonth, campaignEligible].filter(Boolean).length,
-    [stage, city, market, handledBy, travelMonth, campaignEligible],
+    () => [stage, city, market, handledBy, travelMonth, campaignEligible, preset].filter(Boolean).length,
+    [stage, city, market, handledBy, travelMonth, campaignEligible, preset],
+  )
+
+  /*
+   * How many of the filters live behind "More filters" are set.
+   *
+   * Destination and the period sit on the bar itself, so counting them in the
+   * button's badge would promise filters the drawer does not contain.
+   */
+  const drawerFilterCount = useMemo(
+    () => [stage, city, handledBy, travelMonth, campaignEligible].filter(Boolean).length,
+    [stage, city, handledBy, travelMonth, campaignEligible],
   )
 
   /*
@@ -432,6 +492,13 @@ export function LeadsPage() {
     market && { key: 'market', label: `Destination: ${MARKETS.find((o) => o.value === market)?.label ?? market}`, onClear: () => { setMarket(''); setPage(1) } },
     city && { key: 'city', label: `City: ${city}`, onClear: () => { setCity(''); setPage(1) } },
     travelMonth && { key: 'travelMonth', label: `Travel: ${travelMonth}`, onClear: () => { setTravelMonth(''); setPage(1) } },
+    preset && {
+      key: 'preset',
+      label: `${DATE_FIELD_OPTIONS.find((o) => o.value === dateField)?.label ?? 'Date'}: ${
+        DATE_PRESET_OPTIONS.find((o) => o.value === preset)?.label ?? preset
+      }`,
+      onClear: () => { setPreset(''); setPage(1) },
+    },
   ].filter(Boolean)
 
   const clearFilters = () => {
@@ -441,6 +508,7 @@ export function LeadsPage() {
     setHandledBy('')
     setTravelMonth('')
     setCampaignEligible('')
+    setPreset('')
     setPage(1)
   }
 
@@ -466,10 +534,57 @@ export function LeadsPage() {
           />
         </div>
 
-        <Button variant={activeFilters > 0 ? 'primary' : 'secondary'} onClick={() => setShowFilters((open) => !open)}>
+        {/*
+          Destination and the period, on the bar; everything else behind "More
+          filters". The same split the Lead monitor makes, for the same reason:
+          these two are set daily and the rest are not.
+
+          There is deliberately no owner control. This register only ever
+          contains the signed-in person's own enquiries — the server decides
+          that from the session — so a selector offering "all owners" would
+          promise something the API will not honour.
+        */}
+        <AdminFilterSelect
+          label="Destination"
+          value={market}
+          onChange={(next) => { setMarket(next); setPage(1) }}
+          options={MARKET_OPTIONS}
+          allLabel="All destinations"
+          className="w-40"
+        />
+
+        <AdminFilterSelect
+          label="Period"
+          value={preset}
+          onChange={(next) => { setPreset(next); setPage(1) }}
+          options={DATE_PRESET_OPTIONS}
+          allLabel="Any date"
+          className="w-36"
+        />
+
+        {/* Which date the period applies to. Hidden until there is a period,
+            because on its own it filters nothing. */}
+        {preset && (
+          <AdminFilterSelect
+            label="Date field"
+            value={dateField}
+            onChange={(next) => { setDateField(next); setPage(1) }}
+            options={DATE_FIELD_OPTIONS}
+            includeAll={false}
+            className="w-36"
+          />
+        )}
+
+        <Button variant={drawerFilterCount > 0 ? 'primary' : 'secondary'} onClick={() => setShowFilters((open) => !open)}>
           <Filter className="size-4" aria-hidden="true" />
-          Filters{activeFilters > 0 ? ` (${activeFilters})` : ''}
+          More filters{drawerFilterCount > 0 ? ` (${drawerFilterCount})` : ''}
         </Button>
+
+        {activeFilters > 0 && (
+          <Button variant="ghost" onClick={clearFilters}>
+            Clear
+          </Button>
+        )}
 
         <Button variant="secondary" onClick={() => refresh()} disabled={isLoading}>
           <RefreshCw className={`size-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -610,17 +725,45 @@ export function LeadsPage() {
               {Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-12 w-full rounded-lg" />)}
             </div>
           ) : items.length === 0 ? (
+            /*
+             * Two different empty registers, two different answers.
+             *
+             * "Import the workbook" is the right prompt for somebody who has no
+             * enquiries at all. Shown to somebody whose filters simply matched
+             * nothing it is misleading — it suggests their data is missing when
+             * it is merely hidden — so a filtered miss offers the way back out
+             * instead.
+             */
             <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
-              <Megaphone className="mx-auto size-8 text-slate-300" aria-hidden="true" />
-              <h2 className="mt-3 text-base font-semibold text-slate-900">No enquiries yet</h2>
-              <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-                Upload the sales workbook and every row becomes a lead, with its company and contact
-                resolved automatically.
-              </p>
-              <Button as={Link} to={ROUTE_PATHS.LEAD_IMPORT} className="mt-5">
-                <Upload className="size-4" aria-hidden="true" />
-                Import the workbook
-              </Button>
+              {activeFilters > 0 || search ? (
+                <>
+                  <Filter className="mx-auto size-8 text-slate-300" aria-hidden="true" />
+                  <h2 className="mt-3 text-base font-semibold text-slate-900">No leads found</h2>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+                    No enquiries match the current filters. Try adjusting them.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    className="mt-5"
+                    onClick={() => { clearFilters(); setSearchInput('') }}
+                  >
+                    Clear filters
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Megaphone className="mx-auto size-8 text-slate-300" aria-hidden="true" />
+                  <h2 className="mt-3 text-base font-semibold text-slate-900">No enquiries yet</h2>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+                    Upload the sales workbook and every row becomes a lead, with its company and
+                    contact resolved automatically.
+                  </p>
+                  <Button as={Link} to={ROUTE_PATHS.LEAD_IMPORT} className="mt-5">
+                    <Upload className="size-4" aria-hidden="true" />
+                    Import the workbook
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
             <div className="scroll-x overflow-x-auto rounded-xl border border-slate-200 bg-white">
