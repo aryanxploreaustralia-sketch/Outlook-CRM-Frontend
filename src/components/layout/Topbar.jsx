@@ -23,6 +23,7 @@ import { useSearchHotkey } from '@/hooks/useSearchHotkey'
 import { NotificationBell } from '@/components/layout/NotificationBell'
 import { UserMenu } from '@/components/layout/UserMenu'
 import { Button } from '@/components/ui/Button'
+import { InstallAppButton } from '@/components/pwa/InstallAppButton'
 
 /**
  * @param {{
@@ -93,6 +94,12 @@ export function Topbar({
             ⌘K
           </kbd>
         </button>
+
+        {/* --- Install offer -------------------------------------------------
+            Renders `null` unless Chromium has fired `beforeinstallprompt`, so
+            for anybody already running the installed app — or on a browser that
+            cannot install it — this row is byte-for-byte what it was. */}
+        <InstallAppButton />
 
         {/* --- Notifications -------------------------------------------------
             Live since Phase H4. Replaces the disabled placeholder that had

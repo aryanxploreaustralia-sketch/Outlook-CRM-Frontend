@@ -11,6 +11,14 @@
     {
       "files": ["vite.config.js", "*.config.js"],
       "env": { "node": true }
+    },
+    {
+      "files": ["scripts/**"],
+      "env": { "node": true }
+    },
+    {
+      "files": ["public/sw.js"],
+      "env": { "serviceworker": true, "browser": true }
     }
   ]
 }

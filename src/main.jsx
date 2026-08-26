@@ -11,6 +11,7 @@ import { createRoot } from 'react-dom/client'
 
 import App from '@/App'
 import { env } from '@/config/env'
+import { registerServiceWorker } from '@/pwa/registerServiceWorker'
 import '@/styles/index.css'
 
 const container = document.getElementById('root')
@@ -26,3 +27,12 @@ createRoot(container).render(
     <App />
   </StrictMode>,
 )
+
+/*
+ * After the render call, and a no-op outside production.
+ *
+ * Nothing above depends on it and nothing below awaits it: if the worker fails
+ * to register the CRM is exactly the application it was before this line
+ * existed.
+ */
+registerServiceWorker()
