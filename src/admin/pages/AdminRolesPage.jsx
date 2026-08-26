@@ -40,7 +40,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
-import { AlertTriangle, KeyRound, Lock, RefreshCw, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, Lock, RefreshCw, ShieldCheck } from 'lucide-react'
 
 import {
   AdminBadge,
@@ -182,7 +182,7 @@ export function AdminRolesPage() {
     return (
       <AdminPageContainer
         title="Roles & permissions"
-        subtitle="What each role may do"
+        subtitle="Manage and review access permissions."
         breadcrumb={breadcrumb}
         actions={actions}
       >
@@ -197,7 +197,7 @@ export function AdminRolesPage() {
   return (
     <AdminPageContainer
       title="Roles & permissions"
-      subtitle="The permission bundles this CRM enforces"
+      subtitle="Manage and review access permissions."
       breadcrumb={breadcrumb}
       isRefreshing={isRefreshing}
       actions={actions}
@@ -230,29 +230,28 @@ export function AdminRolesPage() {
       )}
 
       {/* --- Your own access ------------------------------------------------ */}
-      <AdminSection
-        title="My permissions"
-        description="What your account can do. Useful when a screen or button is not where you expect it."
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <AdminStatCard label="My role" value={mine?.label ?? myRole ?? '—'} tone={ADMIN_TONE.BRAND} />
-          <AdminStatCard label="Permissions held" value={formatCount(myPermissions.size)} />
-          <AdminStatCard
-            label="Roles defined"
-            value={formatCount(roles.length)}
-            isLoading={isLoading}
-          />
-        </div>
+      {/* The three figures stand on their own above the detail rather than
+          inside a section with it. They answer "who am I here" in one line;
+          the panel below answers "what does that get me". */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <AdminStatCard label="My role" value={mine?.label ?? myRole ?? '—'} tone={ADMIN_TONE.BRAND} />
+        <AdminStatCard label="Permissions held" value={formatCount(myPermissions.size)} />
+        <AdminStatCard
+          label="Roles defined"
+          value={formatCount(roles.length)}
+          isLoading={isLoading}
+        />
+      </div>
 
-        <AdminCard
-          title={
-            <span className="flex items-center gap-2">
-              <KeyRound className="size-4 text-slate-400" aria-hidden="true" />
-              Everything your role grants
-            </span>
-          }
-        >
+      <AdminSection title="Your permissions" description="Access available to your current role.">
+        {/*
+          `padded={false}` because the panel's own rows carry the gutter: each
+          category header is a full-width target, and a card inset would leave
+          its hover state floating in a margin instead of filling the row.
+        */}
+        <AdminCard padded={false}>
           <PermissionList
+            variant="grouped"
             groups={groups}
             catalogue={catalogue}
             granted={myPermissions}
