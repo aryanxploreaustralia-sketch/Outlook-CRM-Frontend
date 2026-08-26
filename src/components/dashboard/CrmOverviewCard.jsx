@@ -10,11 +10,20 @@
  * with a thin share indicator, not six bars competing with everything else on
  * the screen.
  *
+ * ## Why it ends with a summary
+ *
+ * The card sits in a two-column row opposite Recent enquiries and stretches to
+ * match it. Six short rows do not fill that height, which left an obvious gap
+ * below them. The summary is pushed to the bottom with `mt-auto`, so the space
+ * the layout was always going to allocate is occupied by something useful
+ * instead of by nothing.
+ *
  * ## The data is untouched
  *
  * The same `sales.byStage` map, the same `LEAD_STAGES` order, the same total
- * (the sum of the stage counts), the same share arithmetic and the same link.
- * Read from `LEAD_STAGES` so this list cannot drift from the filter dropdown.
+ * (the sum of the stage counts) and the same share arithmetic. The ring, the
+ * legend and the three figures are all read from those — there is no second
+ * request and no value here that the rows above do not already describe.
  */
 
 import { Link } from 'react-router-dom'
@@ -31,6 +40,97 @@ const STAGE_BAR = Object.freeze({
   not_operating: 'bg-rose-400',
   query: 'bg-sky-500',
 })
+
+/** The same palette as the bars, as SVG strokes, so the ring cannot drift. */
+const STAGE_STROKE = Object.freeze({
+  active: 'stroke-blue-500',
+  inactive: 'stroke-amber-500',
+  confirmed: 'stroke-emerald-500',
+  closed: 'stroke-slate-400',
+  not_operating: 'stroke-rose-400',
+  query: 'stroke-sky-500',
+})
+
+const RING_SIZE = 76
+const RING_STROKE = 9
+const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS
+
+/**
+ * The stage split as a ring.
+ *
+ * Drawn with `stroke-dasharray` on one circle per stage rather than with arc
+ * paths: a dash length is a plain fraction of the circumference, which cannot
+ * produce the malformed wedge that arc maths does at 0% and at 100%.
+ *
+ * An empty register draws the track alone. A register where one stage holds
+ * everything draws one unbroken ring. Both are correct and neither is a
+ * special case in the code.
+ */
+function StageRing({ byStage, total }) {
+  let consumed = 0
+
+  return (
+    <svg
+      viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+      className="size-[76px] shrink-0 -rotate-90"
+      role="img"
+      aria-label={
+        total === 0
+          ? 'No enquiries to distribute'
+          : LEAD_STAGES.filter((stage) => (byStage[stage.value] ?? 0) > 0)
+              .map((stage) => `${stage.label} ${Math.round(((byStage[stage.value] ?? 0) / total) * 100)}%`)
+              .join(', ')
+      }
+    >
+      {/* The track. Always drawn, so a zero total still reads as a ring. */}
+      <circle
+        cx={RING_SIZE / 2}
+        cy={RING_SIZE / 2}
+        r={RING_RADIUS}
+        fill="none"
+        strokeWidth={RING_STROKE}
+        className="stroke-slate-100"
+      />
+
+      {total > 0 &&
+        LEAD_STAGES.map((stage) => {
+          const count = byStage[stage.value] ?? 0
+          if (count === 0) return null
+
+          const length = (count / total) * RING_LENGTH
+          const offset = -consumed
+          consumed += length
+
+          return (
+            <circle
+              key={stage.value}
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RING_RADIUS}
+              fill="none"
+              strokeWidth={RING_STROKE}
+              strokeDasharray={`${length} ${RING_LENGTH - length}`}
+              strokeDashoffset={offset}
+              className={STAGE_STROKE[stage.value] ?? 'stroke-slate-400'}
+            />
+          )
+        })}
+    </svg>
+  )
+}
+
+/** One figure in the summary row. */
+function Summary({ label, value }) {
+  return (
+    <div className="min-w-0">
+      <dt className="truncate text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">
+        {label}
+      </dt>
+      <dd className="mt-0.5 text-lg font-semibold tabular-nums text-slate-900">{value}</dd>
+    </div>
+  )
+}
 
 /** The card's frame, so the failure state and the populated state agree. */
 function Panel({ children }) {
@@ -68,11 +168,12 @@ export function CrmOverviewCard({ sales }) {
   const byStage = sales.byStage ?? {}
   const total = LEAD_STAGES.reduce((sum, stage) => sum + (byStage[stage.value] ?? 0), 0)
 
+  const activeCount = byStage.active ?? 0
+  const activeShare = total === 0 ? null : Math.round((activeCount / total) * 100)
+
   return (
     <Panel>
-      {total === 0 && (
-        <p className="mt-3 text-sm text-slate-500">No enquiries yet.</p>
-      )}
+      {total === 0 && <p className="mt-3 text-sm text-slate-500">No enquiries yet.</p>}
 
       <ul className="mt-3 space-y-0.5">
         {LEAD_STAGES.map((stage) => {
@@ -112,6 +213,39 @@ export function CrmOverviewCard({ sales }) {
           )
         })}
       </ul>
+
+      {/* --- Summary --------------------------------------------------------
+          `mt-auto` puts this against the bottom of whatever height the row
+          gives the card, which is what closes the gap. Everything below is
+          derived from `byStage` and `total` above. */}
+      <div className="mt-auto space-y-4 border-t border-slate-100 pt-4">
+        <dl className="grid grid-cols-3 gap-3">
+          <Summary label="Total" value={total.toLocaleString()} />
+          <Summary label="Active" value={activeCount.toLocaleString()} />
+          {/* An em dash, not 0%, when there is nothing to take a share of. */}
+          <Summary label="Active share" value={activeShare === null ? '—' : `${activeShare}%`} />
+        </dl>
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+          <StageRing byStage={byStage} total={total} />
+
+          {/*
+            A colour key, not a second table. The counts are in the rows above;
+            repeating them here would be the clutter this card is losing.
+          */}
+          <ul className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-1.5">
+            {LEAD_STAGES.map((stage) => (
+              <li key={stage.value} className="flex min-w-0 items-center gap-2">
+                <span
+                  className={`size-2 shrink-0 rounded-full ${STAGE_BAR[stage.value] ?? 'bg-slate-400'}`}
+                  aria-hidden="true"
+                />
+                <span className="truncate text-xs text-slate-600">{stage.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </Panel>
   )
 }
