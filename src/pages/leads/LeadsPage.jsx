@@ -25,6 +25,7 @@ import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/l
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
+import { describeParty } from '@/utils/party'
 import { FilterPanel } from '@/components/filters/FilterPanel'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
@@ -333,7 +334,9 @@ export function LeadsPage() {
         key: 'pax',
         header: 'Pax',
         cellClassName: 'whitespace-nowrap px-3 py-2 text-slate-500',
-        render: (lead) => lead.paxText ?? '—',
+        // The headline only — the full breakdown belongs on the detail
+        // page, not in a narrow column. Same helper, so the two agree.
+        render: (lead) => describeParty(lead).summary ?? '—',
       },
       {
         key: 'remarks',

@@ -28,6 +28,7 @@ import { LeadEditDialog } from '@/components/leads/LeadEditDialog'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { LoadingScreen } from '@/components/common/LoadingScreen'
 import { Button } from '@/components/ui/Button'
+import { describeParty } from '@/utils/party'
 
 /** One labelled fact. Absent values read as an em dash, never as blank. */
 function Fact({ label, value }) {
@@ -166,7 +167,9 @@ export function AdminLeadDetailPage() {
               label="Travel Date"
               value={lead.travelDate ? formatDate(lead.travelDate) : lead.travelDateText}
             />
-            <Fact label="Pax" value={lead.paxText} />
+            {/* The same consolidated line the CRM detail shows, so one
+                enquiry does not describe its party two ways. */}
+            <Fact label="Party" value={describeParty(lead).text} />
             <Fact label="City" value={lead.city} />
             <Fact label="Market" value={lead.market} />
             <Fact label="Handled by" value={lead.handledBy} />

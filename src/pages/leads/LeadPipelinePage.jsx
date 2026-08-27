@@ -17,6 +17,7 @@ import { usePipeline } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
 import { formatDate as displayDate } from '@/utils/datetime'
+import { describeParty } from '@/utils/party'
 
 /* Null, not a dash: the card falls back to the sheet's prose travel date. */
 const formatDate = (value) => displayDate(value, { empty: null })
@@ -93,7 +94,7 @@ export function LeadPipelinePage() {
                       <p className="mt-0.5 truncate text-sm font-medium text-slate-900">{lead.contactPerson}</p>
                       <p className="truncate text-xs text-slate-500">{lead.companyName ?? '—'}</p>
                       <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-slate-400">
-                        {lead.paxText && <span>{lead.paxText}</span>}
+                        {describeParty(lead).summary && <span>{describeParty(lead).summary}</span>}
                         {(lead.travelDate || lead.travelDateText) && (
                           <span>· {formatDate(lead.travelDate) ?? lead.travelDateText}</span>
                         )}

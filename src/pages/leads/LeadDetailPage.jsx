@@ -21,6 +21,7 @@ import { useApiResource } from '@/hooks/useApiResource'
 import { useLead } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
+import { describeParty } from '@/utils/party'
 import { formatDate, formatDateTime } from '@/utils/datetime'
 
 
@@ -179,13 +180,15 @@ export function LeadDetailPage() {
                 lead.travelDate ? formatDate(lead.travelDate) : (lead.travelDateText ?? '—'),
               ],
               ['Departure city', lead.city ?? '—'],
-              ['Party', lead.paxText ?? '—'],
-              [
-                'Adults / children',
-                lead.adultCount === null && lead.childCount === null
-                  ? 'Not parsed'
-                  : `${lead.adultCount ?? '?'} / ${lead.childCount ?? 0}`,
-              ],
+              /*
+                One passenger field, not two.
+                
+                "Party: 45 Pax" beside "Adults / children: 45 / 0" said the
+                same thing twice, and the first half was the workbook's own
+                wording rather than a total — `"2A + 2 C"` is four people, not
+                two. `describeParty` resolves both into one line.
+              */
+              ['Party', describeParty(lead).text ?? '—'],
               ['Handled by', lead.handledBy ?? '—'],
               ['From', lead.source ?? '—'],
               // Who the enquiry belongs to. `handledBy` above is the
