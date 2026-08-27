@@ -187,9 +187,22 @@ export function LeadCreatePage() {
       } catch (caught) {
         setError(caught)
 
-        // The server returns field-level detail for validation failures; map it
-        // onto the inputs so the user is told where the problem is.
-        const fields = caught?.details?.fields ?? []
+        /*
+         * The server returns field-level detail for validation failures; map it
+         * onto the inputs so the user is told where the problem is.
+         *
+         * `details` *is* the array. This read `details.fields`, which is always
+         * undefined — so every validation failure fell back to an empty list
+         * and the page showed only the generic banner with nothing marked. A
+         * rejection whose cause is on screen but unattributed is the hardest
+         * kind to act on, and it is what made the `assignTo` defect above look
+         * like an unexplained refusal.
+         *
+         * `Array.isArray` rather than a bare `??`: a 4xx that carries an object
+         * in `details` — the mail routes send `{ reason }` — must not be spread
+         * into field errors.
+         */
+        const fields = Array.isArray(caught?.details) ? caught.details : []
         if (fields.length > 0) {
           setFieldErrors(
             Object.fromEntries(fields.map((entry) => [entry.field, entry.message])),
