@@ -904,7 +904,6 @@ export function LeadsPage() {
             onPageSizeChange={(next) => { setPageSize(next); setPage(1) }}
             noun="enquiries"
             disabled={isLoading}
-            className="border-t border-slate-200 pt-4"
           />
         </div>
       </div>

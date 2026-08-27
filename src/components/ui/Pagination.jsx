@@ -1,20 +1,28 @@
 /**
- * The pagination control, for every paginated table in the product.
+ * The pagination footer, for every paginated table in the product.
  *
  * ## One implementation
  *
- * This used to live under `admin/` and three admin screens used it, while nine
- * other tables each hand-rolled a Previous/Next pair with slightly different
- * wording, spacing and disabled rules. Same job, ten designs. It lives here now
- * so a CRM page and an admin page can render the identical control, and
- * `AdminPagination` re-exports it so nothing that already imported it changed.
+ * This used to live under `admin/` and three admin screens used it, while
+ * seven other tables each hand-rolled a Previous/Next pair with slightly
+ * different wording, spacing and disabled rules. Same job, ten designs. It
+ * lives here now so a CRM page and an admin page render the identical control,
+ * and `AdminPagination` re-exports it so nothing that imported it changed.
+ *
+ * ## The frame belongs to the component
+ *
+ * The rule above the footer is drawn here rather than passed in. Two callers
+ * used to supply `className="border-t pt-4"` and five did not, so the same
+ * control sat in a bordered footer on some screens and floated loose on
+ * others. A component that looks different depending on who rendered it is not
+ * a shared component.
  *
  * ## It paginates nothing itself
  *
- * Deliberately. It reports which page is wanted and how large a page should be;
- * fetching that page is the caller's job, and every caller here asks the server
- * for it. A component that sliced a local array would quietly invite pages to
- * load ten thousand rows in order to show twenty-five.
+ * Deliberately. It reports which page is wanted and how large a page should
+ * be; fetching that page is the caller's job, and every caller here asks the
+ * server for it. A component that sliced a local array would quietly invite
+ * pages to load ten thousand rows in order to show twenty-five.
  */
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -24,8 +32,18 @@ export const PAGE_SIZE_OPTIONS = Object.freeze([10, 25, 50, 100])
 export const DEFAULT_PAGE_SIZE = 25
 
 /**
- * Builds the page window: first, last, the current page and one either side,
- * with `null` marking an elision.
+ * The page numbers to draw, with `null` marking an elision.
+ *
+ * Always the first page, the last page, and a run of three centred on the
+ * current one — clamped so an edge extends inward rather than running off:
+ *
+ *     page 1    →  1 2 3 … 309
+ *     page 150  →  1 … 149 150 151 … 309
+ *     page 309  →  1 … 307 308 309
+ *
+ * The run is a fixed width at every position, so the control does not change
+ * size as somebody pages through and the buttons stay where the cursor left
+ * them.
  *
  * @param {number} current
  * @param {number} total
@@ -34,13 +52,16 @@ export const DEFAULT_PAGE_SIZE = 25
 function buildWindow(current, total) {
   if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1)
 
-  const pages = new Set([1, total, current, current - 1, current + 1])
-  const sorted = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b)
+  // A three-wide run around the current page, pushed inside the bounds.
+  const start = Math.min(Math.max(current - 1, 1), total - 2)
+  const run = [start, start + 1, start + 2]
+
+  const pages = [...new Set([1, ...run, total])].sort((a, b) => a - b)
 
   const withGaps = []
   let previous = 0
 
-  for (const page of sorted) {
+  for (const page of pages) {
     // Only a skip of more than one page earns an ellipsis. Hiding a single
     // number behind "…" costs the same space and loses the number.
     if (page - previous > 1) withGaps.push(null)
@@ -51,8 +72,19 @@ function buildWindow(current, total) {
   return withGaps
 }
 
+/**
+ * A page button.
+ *
+ * `min-w-8` rather than a fixed `size-8`: page 309 needs more room than page 3,
+ * and a fixed square either crops the digits or forces every button to be as
+ * wide as the widest page number in the set.
+ */
 const PAGE_BUTTON =
-  'inline-flex size-8 items-center justify-center rounded-md text-xs font-medium transition-colors'
+  'inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs font-medium ' +
+  'transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ' +
+  'disabled:cursor-not-allowed disabled:opacity-40'
+
+const IDLE_BUTTON = 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
 
 /**
  * @param {{
@@ -68,7 +100,7 @@ const PAGE_BUTTON =
  * }} props
  *   `onPageSizeChange` is optional: a table whose page size is fixed simply
  *   omits it and no selector is drawn. `noun` names what is being counted, so
- *   a register says "records" and a mailbox says "messages".
+ *   an empty mailbox reads "No messages to display".
  */
 export function Pagination({
   page,
@@ -92,97 +124,106 @@ export function Pagination({
   const count = (value) => value.toLocaleString()
 
   return (
-    <div className={`flex flex-col items-center justify-between gap-3 sm:flex-row ${className}`}>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <p className="text-xs text-slate-500" aria-live="polite">
-          {/* An empty table reads "Showing 0 of 0 records" rather than the
-              "0–0" a range would produce, which describes nothing. */}
-          {totalItems === 0 ? (
-            <>
-              Showing <span className="font-medium text-slate-700">0</span> of{' '}
-              <span className="font-medium text-slate-700">0</span> {noun}
-            </>
-          ) : (
-            <>
-              Showing <span className="font-medium text-slate-700">{count(from)}</span>–
-              <span className="font-medium text-slate-700">{count(to)}</span> of{' '}
-              <span className="font-medium text-slate-700">{count(totalItems)}</span> {noun}
-            </>
-          )}
-        </p>
+    <div
+      className={`flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-slate-200 pt-3.5 ${className}`}
+    >
+      {/* --- What is on screen ------------------------------------------- */}
+      <p className="text-xs text-slate-500" aria-live="polite">
+        {totalItems === 0 ? (
+          // A range describes nothing when there is nothing. Say so plainly.
+          `No ${noun} to display`
+        ) : (
+          <>
+            Showing <span className="font-medium text-slate-700">{count(from)}</span>–
+            <span className="font-medium text-slate-700">{count(to)}</span> of{' '}
+            <span className="font-medium text-slate-700">{count(totalItems)}</span>
+          </>
+        )}
+      </p>
 
+      {/*
+        The two controls travel together and stay at the right edge, so they
+        line up with the table above them however the row wraps.
+      */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {onPageSizeChange && (
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="sr-only">Rows per page</span>
+          <label className="flex items-center gap-2 text-xs text-slate-500">
+            {/* Hidden on the narrowest screens, where the number alone is
+                unambiguous and the words cost a wrap. */}
+            <span className="hidden sm:inline">Rows per page</span>
+            <span className="sr-only sm:hidden">Rows per page</span>
             <select
               value={pageSize}
               disabled={disabled}
               onChange={(event) => onPageSizeChange(Number(event.target.value))}
-              className="rounded-md border border-slate-300 bg-white py-1 pl-2 pr-6 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-slate-50"
+              className="h-8 rounded-md border border-slate-300 bg-white pl-2.5 pr-7 text-xs font-medium text-slate-700 transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
             >
               {pageSizeOptions.map((size) => (
                 <option key={size} value={size}>
-                  {size} per page
+                  {size}
                 </option>
               ))}
             </select>
           </label>
         )}
+
+        {/*
+          Hidden when there is only one page — a lone "1" between two dead
+          arrows is chrome that tells the reader nothing. The count on the left
+          stays, because how many records matched is still worth knowing.
+        */}
+        {totalPages > 1 && (
+          <nav aria-label="Pagination" className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => onPageChange(page - 1)}
+              disabled={!canPrevious}
+              aria-label="Previous page"
+              className={`${PAGE_BUTTON} ${IDLE_BUTTON} disabled:hover:bg-transparent`}
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </button>
+
+            {buildWindow(page, totalPages).map((entry, index) =>
+              entry === null ? (
+                <span
+                  key={`gap-${index}`}
+                  className="px-1 text-xs text-slate-400"
+                  aria-hidden="true"
+                >
+                  …
+                </span>
+              ) : (
+                <button
+                  key={entry}
+                  type="button"
+                  onClick={() => onPageChange(entry)}
+                  disabled={disabled}
+                  /* `aria-current` is what tells a screen reader which page is
+                     open. The colour is the sighted half of the same fact. */
+                  aria-current={entry === page ? 'page' : undefined}
+                  aria-label={`Page ${entry}`}
+                  className={`${PAGE_BUTTON} ${
+                    entry === page ? 'bg-brand-600 text-white hover:bg-brand-700' : IDLE_BUTTON
+                  }`}
+                >
+                  {entry}
+                </button>
+              ),
+            )}
+
+            <button
+              type="button"
+              onClick={() => onPageChange(page + 1)}
+              disabled={!canNext}
+              aria-label="Next page"
+              className={`${PAGE_BUTTON} ${IDLE_BUTTON} disabled:hover:bg-transparent`}
+            >
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </button>
+          </nav>
+        )}
       </div>
-
-      {/*
-        The page buttons are hidden when there is only one page — a lone "1"
-        next to two disabled arrows is chrome that tells the reader nothing.
-        The count above stays, because how many records matched is still worth
-        knowing.
-      */}
-      {totalPages > 1 && (
-        <nav aria-label="Pagination" className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onPageChange(page - 1)}
-            disabled={!canPrevious}
-            aria-label="Previous page"
-            className={`${PAGE_BUTTON} text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent`}
-          >
-            <ChevronLeft className="size-4" aria-hidden="true" />
-          </button>
-
-          {buildWindow(page, totalPages).map((entry, index) =>
-            entry === null ? (
-              <span key={`gap-${index}`} className="px-1 text-xs text-slate-400" aria-hidden="true">
-                …
-              </span>
-            ) : (
-              <button
-                key={entry}
-                type="button"
-                onClick={() => onPageChange(entry)}
-                disabled={disabled}
-                aria-current={entry === page ? 'page' : undefined}
-                aria-label={`Page ${entry}`}
-                className={`${PAGE_BUTTON} ${
-                  entry === page
-                    ? 'bg-brand-600 text-white shadow-card'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                } disabled:cursor-not-allowed disabled:opacity-40`}
-              >
-                {entry}
-              </button>
-            ),
-          )}
-
-          <button
-            type="button"
-            onClick={() => onPageChange(page + 1)}
-            disabled={!canNext}
-            aria-label="Next page"
-            className={`${PAGE_BUTTON} text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent`}
-          >
-            <ChevronRight className="size-4" aria-hidden="true" />
-          </button>
-        </nav>
-      )}
     </div>
   )
 }
