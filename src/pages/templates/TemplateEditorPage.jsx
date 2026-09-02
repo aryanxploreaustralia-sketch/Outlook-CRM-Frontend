@@ -15,7 +15,7 @@
  * for writing simple prose, and switching to it is a deliberate choice.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, Code2, Eye, Power, Save, Send, Type } from 'lucide-react'
 
@@ -30,7 +30,6 @@ import {
 import { fetchLeads } from '@/api/services/lead.service'
 import { RichTextEditor } from '@/components/mail/RichTextEditor'
 import { TemplatePreview } from '@/components/templates/TemplatePreview'
-import { VariablePicker } from '@/components/templates/VariablePicker'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import {
@@ -39,7 +38,6 @@ import {
   TEMPLATE_STATUS,
 } from '@/constants/template.constants'
 import { isCancelledError } from '@/utils/apiError'
-import { useTemplateVariables } from '@/hooks/useTemplates'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 const EMPTY = {
@@ -77,9 +75,6 @@ export function TemplateEditorPage() {
 
   const [testAddress, setTestAddress] = useState('')
   const [isTesting, setIsTesting] = useState(false)
-
-  const { variables } = useTemplateVariables()
-  const bodyRef = useRef(null)
 
   const setField = useCallback((field, value) => {
     setDraft((current) => ({ ...current, [field]: value }))
@@ -169,41 +164,6 @@ export function TemplateEditorPage() {
       controller.abort()
     }
   }, [draft.subject, draft.bodyHtml, draft.bodyText, leadId, id])
-
-  /**
-   * Inserts a variable at the caret.
-   *
-   * Appending to the end would be simpler and useless — a variable belongs
-   * where the writer's cursor is, mid-sentence.
-   */
-  const insertVariable = useCallback(
-    (token) => {
-      if (bodyMode !== 'html') {
-        setField('bodyHtml', `${draft.bodyHtml}${token}`)
-        return
-      }
-
-      const field = bodyRef.current
-      if (!field) {
-        setField('bodyHtml', `${draft.bodyHtml}${token}`)
-        return
-      }
-
-      const start = field.selectionStart ?? draft.bodyHtml.length
-      const end = field.selectionEnd ?? start
-      const next = `${draft.bodyHtml.slice(0, start)}${token}${draft.bodyHtml.slice(end)}`
-
-      setField('bodyHtml', next)
-
-      // Restored after React re-renders, or the caret jumps to the end and the
-      // next insert lands in the wrong place.
-      requestAnimationFrame(() => {
-        field.focus()
-        field.setSelectionRange(start + token.length, start + token.length)
-      })
-    },
-    [bodyMode, draft.bodyHtml, setField],
-  )
 
   const isValid = draft.name.trim() && draft.subject.trim() && draft.bodyHtml.trim()
 
@@ -439,8 +399,6 @@ export function TemplateEditorPage() {
             />
           </div>
 
-          <VariablePicker variables={variables} onInsert={insertVariable} isDisabled={isArchived} />
-
           <div>
             <div className="flex items-center justify-between gap-2">
               <label htmlFor="tpl-body" className="block text-sm font-medium text-slate-700">
@@ -476,7 +434,6 @@ export function TemplateEditorPage() {
             {bodyMode === 'html' ? (
               <textarea
                 id="tpl-body"
-                ref={bodyRef}
                 rows={16}
                 value={draft.bodyHtml}
                 onChange={(event) => setField('bodyHtml', event.target.value)}
