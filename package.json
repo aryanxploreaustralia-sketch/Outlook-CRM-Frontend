@@ -19,7 +19,9 @@
     "verify:hydration": "node scripts/verify-hydration.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "verify:offline-reads": "node scripts/verify-offline-reads.mjs",
-    "verify:offline-writes": "node scripts/verify-offline-writes.mjs"
+    "verify:offline-writes": "node scripts/verify-offline-writes.mjs",
+    "verify:offline-deletes": "node scripts/verify-offline-deletes.mjs",
+    "verify:sync-coordinator": "node scripts/verify-sync-coordinator.mjs"
   },
   "dependencies": {
     "axios": "^1.19.0",

@@ -35,8 +35,10 @@ import { contactsRepository } from '@/offline/repositories/contactsRepository.js
 import { identityRepository } from '@/offline/repositories/identityRepository.js'
 import { leadsRepository } from '@/offline/repositories/leadsRepository.js'
 import { META, metaKey, syncMetaRepository } from '@/offline/repositories/syncMetaRepository.js'
-import { isAvailable } from '@/offline/db/database.js'
-import { SYNC_STATUS } from '@/offline/db/schema.js'
+import { syncQueueRepository } from '@/offline/repositories/syncQueueRepository.js'
+import { isAvailable, openDatabase } from '@/offline/db/database.js'
+import { partitionPulledRecords } from '@/offline/sync/reconcile.js'
+import { OPERATION, QUEUE_STATUS, STORE, SYNC_STATUS } from '@/offline/db/schema.js'
 
 /** Entity name → the Phase 1 repository that stores it. */
 const REPOSITORIES = Object.freeze({
@@ -131,22 +133,80 @@ async function applyDeletions({ entity, deletions, userId }) {
   const repository = REPOSITORIES[entity]
   let applied = 0
 
+  const tombstone = async (id) => {
+    /*
+     * Phase 6 — a server deletion must never quietly erase queued local work.
+     *
+     * The record is tombstoned either way, because the server is the source of
+     * truth about whether it still exists. What changes is the fate of any
+     * mutation this user had queued for it:
+     *
+     *  - a pending CREATE cannot be affected: its record has no server id yet,
+     *    so no server tombstone can name it.
+     *  - a pending UPDATE becomes a **conflict**. The user edited something a
+     *    colleague deleted, and neither "apply the edit" (which would resurrect
+     *    the record) nor "drop the edit" (which would lose their work) is ours
+     *    to choose. It is preserved, unretried, for a person to settle.
+     *  - a pending DELETE **agrees** with the server, so it is completed. Two
+     *    parties reached the same conclusion; sending the request would only
+     *    ask the server to delete something already gone.
+     *
+     * Anything already `completed`, `failed` or `conflict` is left alone — it
+     * is history or it is already waiting for someone.
+     */
+    const queued = (await syncQueueRepository.byRecord(id, { userId })) ?? []
+
+    for (const entry of queued) {
+      if (entry.status !== QUEUE_STATUS.PENDING) continue
+
+      if (entry.operation === OPERATION.DELETE) {
+        await syncQueueRepository.setStatus(entry.opId, QUEUE_STATUS.COMPLETED, { userId })
+        continue
+      }
+
+      if (entry.operation === OPERATION.UPDATE) {
+        const db = await openDatabase(userId)
+        await db.put(STORE.SYNC_QUEUE, {
+          ...entry,
+          status: QUEUE_STATUS.CONFLICT,
+          httpStatus: null,
+          lastError: 'The record was deleted on the server while this change was queued.',
+          conflict: {
+            detectedAt: new Date().toISOString(),
+            conflictType: 'deletedOnServer',
+            entity,
+            id: String(id),
+            baseUpdatedAt: entry.baseUpdatedAt ?? null,
+            serverUpdatedAt: null,
+            serverDeleted: true,
+          },
+        })
+      }
+    }
+
+    return repository.markDeleted(id, { userId })
+  }
+
   for (const deletion of deletions ?? []) {
     if (deletion?.purged) {
       /*
        * A purge names no id, so every cached record of this entity is suspect.
        * They are tombstoned in place — see the note above on why not removed.
+       *
+       * The purge semantics themselves are untouched: it is still one feed row
+       * meaning "all of them", never expanded into per-record traffic. Each
+       * local record simply takes the same path a named deletion would.
        */
       const all = await repository.all({ userId })
       for (const record of all) {
-        await repository.markDeleted(record.id, { userId })
+        await tombstone(record.id)
         applied += 1
       }
       continue
     }
 
     if (deletion?.id) {
-      const marked = await repository.markDeleted(deletion.id, { userId })
+      const marked = await tombstone(deletion.id)
       if (marked) applied += 1
     }
   }
@@ -164,6 +224,10 @@ async function applyDeletions({ entity, deletions, userId }) {
  * @param {(progress: object) => void} [params.onProgress]
  */
 async function hydrateEntity({ entity, userId, signal = null, onProgress }) {
+  /** Records held back because the user has unsynced work on them. */
+  let guardedTotal = 0
+  /** Queued mutations that became conflicts because the server moved. */
+  let conflictTotal = 0
   const repository = REPOSITORIES[entity]
 
   let cursor = await syncMetaRepository.get(cursorKey(entity), { userId })
@@ -175,7 +239,7 @@ async function hydrateEntity({ entity, userId, signal = null, onProgress }) {
     if (signal?.aborted) return { entity, result: null, written, deleted, pages }
 
     if (pages >= MAX_PAGES_PER_ENTITY) {
-      return { entity, result: HYDRATION_RESULT.PAGE_LIMIT, written, deleted, pages }
+      return { entity, result: HYDRATION_RESULT.PAGE_LIMIT, written, deleted, pages, guarded: guardedTotal, conflicts: conflictTotal }
     }
 
     // --- fetch ------------------------------------------------------------
@@ -190,11 +254,11 @@ async function hydrateEntity({ entity, userId, signal = null, onProgress }) {
       const { result } = classifyError(error)
       // The cursor is untouched, so the next run resumes from the last page
       // that actually landed.
-      return { entity, result, written, deleted, pages, error }
+      return { entity, result, written, deleted, pages, error, guarded: guardedTotal, conflicts: conflictTotal }
     }
 
     if (!page || !Array.isArray(page.records)) {
-      return { entity, result: HYDRATION_RESULT.MALFORMED, written, deleted, pages }
+      return { entity, result: HYDRATION_RESULT.MALFORMED, written, deleted, pages, guarded: guardedTotal, conflicts: conflictTotal }
     }
 
     // --- write, and only then advance -------------------------------------
@@ -205,7 +269,25 @@ async function hydrateEntity({ entity, userId, signal = null, onProgress }) {
        * `owner` is stamped locally because the API does not send it (the CRM's
        * DTOs omit it deliberately) and the index needs a value.
        */
-      const count = await repository.putMany(page.records, {
+      /*
+       * Phase 7 — a pull must not overwrite an unsynced local change.
+       *
+       * `putMany` marks what it writes as `synced`, which is a lie for a record
+       * the user has edited offline: their change would disappear from the
+       * register while its queue entry still claimed to be pending. Records
+       * with something queued are held back here and handled as metadata only;
+       * if the server has moved past what the queued mutation assumed, that
+       * mutation becomes a conflict rather than a stale overwrite waiting to
+       * happen. See `reconcile.js`.
+       */
+      const { writable, guarded, conflicts } = await partitionPulledRecords({
+        entity, records: page.records, userId,
+      })
+
+      guardedTotal += guarded
+      conflictTotal += conflicts
+
+      const count = await repository.putMany(writable, {
         userId,
         owner: userId,
         status: SYNC_STATUS.SYNCED,
@@ -219,7 +301,7 @@ async function hydrateEntity({ entity, userId, signal = null, onProgress }) {
        * fetched again next time — which is the whole reason writes precede the
        * cursor.
        */
-      return { entity, result: HYDRATION_RESULT.WRITE_FAILED, written, deleted, pages, error }
+      return { entity, result: HYDRATION_RESULT.WRITE_FAILED, written, deleted, pages, error, guarded: guardedTotal, conflicts: conflictTotal }
     }
 
     pages += 1
@@ -234,7 +316,7 @@ async function hydrateEntity({ entity, userId, signal = null, onProgress }) {
 
     if (!page.hasMore) {
       await syncMetaRepository.setLastPull(entity, new Date().toISOString(), { userId })
-      return { entity, result: HYDRATION_RESULT.COMPLETED, written, deleted, pages }
+      return { entity, result: HYDRATION_RESULT.COMPLETED, written, deleted, pages, guarded: guardedTotal, conflicts: conflictTotal }
     }
   }
 }

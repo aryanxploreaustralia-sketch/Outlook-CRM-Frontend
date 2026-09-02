@@ -22,8 +22,7 @@ import { Topbar } from '@/components/layout/Topbar'
 import { useAuth } from '@/hooks/useAuth'
 import { useUi } from '@/hooks/useUi'
 import { PendingSyncNotice } from '@/components/common/PendingSyncNotice'
-import { useOfflineHydration } from '@/offline/sync/useOfflineHydration.js'
-import { useSyncQueue } from '@/offline/write'
+import { useSyncCoordinator } from '@/offline/sync/useSyncCoordinator.js'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 /** Fallback title when a route declares no handle. */
@@ -43,17 +42,18 @@ export function DashboardLayout() {
    *
    * Nothing reads that cache yet. Deleting this line removes the feature.
    */
-  useOfflineHydration()
-
   /*
-   * Offline-first Phase 5 — the outbox, surfaced once for the whole app.
+   * Offline-first Phase 7 — the single synchronisation trigger.
    *
-   * Mounted here for the same reason hydration is: it is the one shell every
-   * authenticated page renders inside, so the queue is drained and reported
-   * once per session rather than once per navigation. It renders nothing when
-   * the queue is empty.
+   * This one hook replaced two: hydration used to pull from its own effect and
+   * the queue drained from another, with nothing preventing them overlapping.
+   * The coordinator serialises push then pull behind one lock, and this is the
+   * only place the application starts it.
+   *
+   * It renders nothing and blocks nothing. Deleting this line removes automatic
+   * synchronisation entirely.
    */
-  const queue = useSyncQueue()
+  const queue = useSyncCoordinator()
   const navigate = useNavigate()
   const matches = useMatches()
   const [isSigningOut, setIsSigningOut] = useState(false)

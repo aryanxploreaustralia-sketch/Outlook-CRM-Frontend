@@ -139,8 +139,8 @@ export async function updateLead(id, payload, { signal, headers } = {}) {
   return response.data?.data?.lead ?? null
 }
 
-export async function deleteLead(id, { signal } = {}) {
-  const response = await httpClient.delete(ENDPOINTS.leads.detail(id), { signal })
+export async function deleteLead(id, { signal, headers } = {}) {
+  const response = await httpClient.delete(ENDPOINTS.leads.detail(id), { signal, headers })
   return response.data?.data ?? null
 }
 
@@ -231,8 +231,8 @@ export async function updateCompany(id, payload, { signal, headers } = {}) {
  * Its enquiries are deliberately untouched by the server — a lead keeps
  * pointing at the company it came from. Nothing here needs to compensate.
  */
-export async function deleteCompany(id, { signal } = {}) {
-  const response = await httpClient.delete(ENDPOINTS.companies.detail(id), { signal })
+export async function deleteCompany(id, { signal, headers } = {}) {
+  const response = await httpClient.delete(ENDPOINTS.companies.detail(id), { signal, headers })
 
   return response.data?.data ?? null
 }

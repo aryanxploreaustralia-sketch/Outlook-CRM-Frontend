@@ -12,6 +12,9 @@ import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { deleteCompany, updateCompany } from '@/api/services/lead.service'
+import { useAuth } from '@/hooks/useAuth'
+import { isTransportFailure } from '@/offline/read'
+import { deleteLocal } from '@/offline/write'
 import { COMPANY_STATUS_STYLES, LEAD_STAGES } from '@/constants/lead.constants'
 import { useCompany } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -23,6 +26,7 @@ export function CompanyDetailPage() {
   const { id } = useParams()
   const { company, contacts, leads, byStage, isInitialLoading, isError, error, refresh } = useCompany(id)
   const navigate = useNavigate()
+  const userId = useAuth().user?.id ?? null
 
   /*
    * `draft` is null until Edit is pressed, and discarding is setting it back to
@@ -92,7 +96,13 @@ export function CompanyDetailPage() {
   const remove = async () => {
     setIsDeleting(true)
     try {
-      await deleteCompany(id)
+      try {
+        await deleteCompany(id)
+      } catch (thrown) {
+        // Only a dropped connection queues this locally; a refusal is a refusal.
+        if (!isTransportFailure(thrown) || !userId) throw thrown
+        await deleteLocal('companies', id, { userId })
+      }
       // Back to the register, which refetches on mount — the deleted company is
       // gone from it without anything here having to invalidate a cache.
       navigate(ROUTE_PATHS.COMPANIES, { replace: true })

@@ -25,6 +25,9 @@ import {
 } from 'lucide-react'
 
 import { deleteContact, fetchContact, updateContact } from '@/api/services/contact.service'
+import { useAuth } from '@/hooks/useAuth'
+import { isTransportFailure } from '@/offline/read'
+import { deleteLocal } from '@/offline/write'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { ContactAvatar } from '@/components/contacts/ContactAvatar'
 import { Button } from '@/components/ui/Button'
@@ -63,6 +66,7 @@ function Field({ icon: Icon, label, value, href }) {
 export function ContactDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const userId = useAuth().user?.id ?? null
 
   const [isDeleting, setIsDeleting] = useState(false)
   const [favorite, setFavorite] = useState(null)
@@ -94,12 +98,23 @@ export function ContactDetailPage() {
 
     setIsDeleting(true)
     try {
-      await deleteContact(id)
+      try {
+        await deleteContact(id)
+      } catch (thrown) {
+        /*
+         * Only a transport failure falls back to the local queue. A 403 or a
+         * 409 is the server refusing, and recording a local deletion for a
+         * record the server will not delete would hide the record from this
+         * user while it stayed live for everybody else.
+         */
+        if (!isTransportFailure(thrown) || !userId) throw thrown
+        await deleteLocal('contacts', id, { userId })
+      }
       navigate(ROUTE_PATHS.CONTACTS)
     } finally {
       setIsDeleting(false)
     }
-  }, [contact?.displayName, id, navigate])
+  }, [contact?.displayName, id, navigate, userId])
 
   if (isError) {
     return (

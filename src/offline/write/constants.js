@@ -19,6 +19,16 @@ import { STORE } from '@/offline/db/schema.js'
  */
 export const MUTATION_ID_HEADER = 'X-Client-Mutation-Id'
 
+/**
+ * The header carrying the version a mutation was written against.
+ *
+ * Must match `EXPECTED_VERSION_HEADER` in the backend's
+ * `utils/optimisticConcurrency.js`. Sending it opts the request into the
+ * server's version check; omitting it leaves the request on exactly the path
+ * every online mutation already takes.
+ */
+export const EXPECTED_VERSION_HEADER = 'X-Expected-Updated-At'
+
 /** Which local store holds each entity. */
 export const WRITABLE = Object.freeze({
   leads: STORE.LEADS,
@@ -36,4 +46,4 @@ export const WRITABLE = Object.freeze({
  */
 export const CREATE_UNSUPPORTED = Object.freeze(['companies'])
 
-export default { MUTATION_ID_HEADER, WRITABLE, CREATE_UNSUPPORTED }
+export default { MUTATION_ID_HEADER, EXPECTED_VERSION_HEADER, WRITABLE, CREATE_UNSUPPORTED }

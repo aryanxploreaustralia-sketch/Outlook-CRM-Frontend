@@ -51,8 +51,8 @@ export async function updateContact(id, payload, { signal, headers } = {}) {
   return response.data?.data?.contact
 }
 
-export async function deleteContact(id, { signal } = {}) {
-  const response = await httpClient.delete(ENDPOINTS.contacts.detail(id), { signal })
+export async function deleteContact(id, { signal, headers } = {}) {
+  const response = await httpClient.delete(ENDPOINTS.contacts.detail(id), { signal, headers })
   return response.data?.data
 }
 

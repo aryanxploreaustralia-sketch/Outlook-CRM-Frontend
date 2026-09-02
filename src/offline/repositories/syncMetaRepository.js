@@ -23,6 +23,14 @@ export const META = Object.freeze({
   LAST_STATUS: 'lastStatus',
   /** Schema version the data was written under, for local diagnostics. */
   DATA_VERSION: 'dataVersion',
+
+  /* --- Phase 7 --------------------------------------------------------- */
+  /** ISO time the last synchronisation was ATTEMPTED. */
+  LAST_SYNC_AT: 'lastSyncAt',
+  /** ISO time the last synchronisation SUCCEEDED. The two differ after a failure. */
+  LAST_SUCCESS_AT: 'lastSuccessfulSyncAt',
+  /** `{ at, message }` of the last failure, or null. Never a credential. */
+  LAST_ERROR: 'lastSyncError',
 })
 
 /** `lastPull:leads` from ('lastPull', 'leads'). */

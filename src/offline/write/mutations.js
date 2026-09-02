@@ -17,9 +17,8 @@
  *
  * ## What is deliberately not here
  *
- * No network code, and no DELETE. Deletion is Phase 6: tombstones and conflict
- * resolution have to be designed together, and a half-designed offline delete
- * risks destroying a record that a colleague edited in the meantime.
+ * No network code. Phase 6 adds DELETE alongside create and edit; resolution of
+ * a conflict is still not here, and is not automatic anywhere.
  */
 
 import { META_KEY, OPERATION, QUEUE_STATUS, STORE, SYNC_STATUS, createMeta } from '@/offline/db/schema.js'
@@ -274,6 +273,97 @@ export async function updateLocal(entity, id, changes, { userId } = {}) {
  * persisted in the queue, and never sent, so there is no point at which it
  * could be mistaken for something the server honoured.
  */
+/**
+ * Deletes a record locally and queues the deletion.
+ *
+ * ## The local record is hidden, not destroyed
+ *
+ * `markDeleted`-style tombstoning rather than a `delete`: the row carries the
+ * payload, the base version and the queue link that the server round trip still
+ * needs. Destroying it would leave a queue entry pointing at nothing, and would
+ * make the deletion unrecoverable if the server refused it. Phase 4's
+ * `isVisible` already excludes `_sync.deletedLocally`, so the record leaves
+ * every list, detail read, facet and offline search the moment this returns —
+ * without anything in the read layer needing to change.
+ *
+ * ## A record the server has never seen is simply withdrawn
+ *
+ * If the pending mutation is still a CREATE, the record does not exist in
+ * MongoDB and never did. Sending a CREATE followed by a DELETE would make an
+ * enquiry, audit it, allocate a reference and then bin it — visible to
+ * colleagues for the moment in between, and recorded in the audit log forever.
+ * So the CREATE is cancelled and the local row removed outright: no request is
+ * made, because there is nothing on the server to undo.
+ *
+ * @param {string} entity
+ * @param {string} id
+ * @param {{ userId: string }} options
+ * @returns {Promise<{ cancelled: boolean, queued: ?object }>}
+ *   `cancelled` is true when nothing needs to reach the server at all.
+ */
+export async function deleteLocal(entity, id, { userId } = {}) {
+  const storeName = WRITABLE[entity]
+  if (!storeName) throw new Error(`Cannot delete ${entity} offline.`)
+  if (!userId) throw new Error('An offline delete needs the signed-in user id.')
+
+  const db = await openDatabase(userId)
+  const existing = await db.get(storeName, id)
+  if (!existing) throw new Error(`No cached ${entity} record with id ${id}.`)
+
+  const queued = await db.getAll(STORE.SYNC_QUEUE)
+  const open = coalescable(queued, id)
+  const meta = metaOf(existing)
+
+  // --- the record never reached the server: withdraw it entirely ------------
+  if (open?.operation === OPERATION.CREATE) {
+    const transaction = db.transaction([storeName, STORE.SYNC_QUEUE], 'readwrite')
+    await transaction.objectStore(storeName).delete(id)
+    await transaction.objectStore(STORE.SYNC_QUEUE).delete(open.opId)
+    await transaction.done
+
+    return { cancelled: true, queued: null, record: null }
+  }
+
+  const record = {
+    ...existing,
+    [META_KEY]: {
+      ...meta,
+      status: SYNC_STATUS.PENDING_DELETE,
+      deletedLocally: true,
+      localVersion: (meta.localVersion ?? 0) + 1,
+    },
+  }
+
+  /*
+   * A pending EDIT is replaced rather than followed.
+   *
+   * The user's final intent is deletion, and sending the edit first would write
+   * a version of the record that nobody will ever see, audit it as an update,
+   * and then delete it. Collapsing to a single DELETE loses no observable state.
+   *
+   * The **base version is the edit's**, not the current record's: it is the
+   * version the user was actually looking at when they began, so the server's
+   * concurrency check still asks the right question — "has anyone else touched
+   * this since?" — rather than a question about a version only this client saw.
+   */
+  const entry = queueEntry({
+    entity,
+    recordId: id,
+    operation: OPERATION.DELETE,
+    payload: {},
+    ownerId: userId,
+    baseUpdatedAt: open?.baseUpdatedAt ?? meta.serverUpdatedAt ?? existing.updatedAt ?? null,
+  })
+
+  const transaction = db.transaction([storeName, STORE.SYNC_QUEUE], 'readwrite')
+  await transaction.objectStore(storeName).put(record)
+  if (open) await transaction.objectStore(STORE.SYNC_QUEUE).delete(open.opId)
+  await transaction.objectStore(STORE.SYNC_QUEUE).put(entry)
+  await transaction.done
+
+  return { cancelled: false, queued: entry, record, replaced: open?.opId ?? null }
+}
+
 function stripOwnership(payload = {}) {
   const {
     owner: _owner, ownerId: _ownerId, userId: _userId, user: _user,
@@ -283,4 +373,4 @@ function stripOwnership(payload = {}) {
   return safe
 }
 
-export default { createLocal, updateLocal, WRITABLE, CREATE_UNSUPPORTED }
+export default { createLocal, updateLocal, deleteLocal, WRITABLE, CREATE_UNSUPPORTED }

@@ -528,16 +528,24 @@ check(visible.items[0].contactPerson === 'Visible Offline', '   with its values'
 check(visible.items[0]._sync === undefined, '   and the _sync envelope still stripped')
 
 // ---------------------------------------------------------------------------
-section('20. DELETE IS NOT IMPLEMENTED')
+section('20. PHASE 5 SCOPE — create and edit only')
 
+/*
+ * This section asserted that DELETE did not exist, which was true of Phase 5
+ * and is no longer true: Phase 6 implements offline deletion, and its own suite
+ * (`verify:offline-deletes`) proves it. Deleting the section outright would
+ * lose the check that Phase 5's own surface is still intact, so it now asserts
+ * exactly that instead.
+ */
 const writeModule = await vite.ssrLoadModule('/src/offline/write/index.js')
-check(typeof writeModule.deleteLocal !== 'function', '27. no deleteLocal is exported')
-check(!Object.keys(writeModule).some((k) => /delete/i.test(k)),
-  '   nothing delete-shaped is exposed at all', Object.keys(writeModule).join(', '))
+check(typeof writeModule.createLocal === 'function', '27. createLocal is still exported')
+check(typeof writeModule.updateLocal === 'function', '   updateLocal is still exported')
+check(typeof writeModule.drain === 'function', '   the processor is still exported')
 
 const source = await (await import('node:fs/promises'))
   .readFile(new URL('../src/offline/write/processor.js', import.meta.url), 'utf8')
-check(!/OPERATION\.DELETE/.test(source), '   and the processor has no DELETE sender')
+check(/OPERATION\.CREATE/.test(source) && /OPERATION\.UPDATE/.test(source),
+  '   the processor still handles CREATE and UPDATE')
 
 // ---------------------------------------------------------------------------
 await closeAll()

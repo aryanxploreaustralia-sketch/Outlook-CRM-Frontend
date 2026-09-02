@@ -30,10 +30,10 @@
 
 import { OPERATION, QUEUE_STATUS, STORE, SYNC_STATUS, META_KEY, createMeta } from '@/offline/db/schema.js'
 import { openDatabase } from '@/offline/db/database.js'
-import { MUTATION_ID_HEADER, WRITABLE } from '@/offline/write/constants.js'
+import { EXPECTED_VERSION_HEADER, MUTATION_ID_HEADER, WRITABLE } from '@/offline/write/constants.js'
 import { isLocalId } from '@/offline/write/localId.js'
-import { createLead, updateCompany, updateLead } from '@/api/services/lead.service'
-import { createContact, updateContact } from '@/api/services/contact.service'
+import { createLead, deleteCompany, deleteLead, updateCompany, updateLead } from '@/api/services/lead.service'
+import { createContact, deleteContact, updateContact } from '@/api/services/contact.service'
 
 /** How many mutations one drain will attempt. Keeps memory and traffic bounded. */
 export const BATCH_SIZE = 25
@@ -65,14 +65,17 @@ const SENDERS = {
   leads: {
     [OPERATION.CREATE]: (payload, options) => createLead(payload, options),
     [OPERATION.UPDATE]: (id, payload, options) => updateLead(id, payload, options),
+    [OPERATION.DELETE]: (id, _payload, options) => deleteLead(id, options),
   },
   contacts: {
     [OPERATION.CREATE]: (payload, options) => createContact(payload, options),
     [OPERATION.UPDATE]: (id, payload, options) => updateContact(id, payload, options),
+    [OPERATION.DELETE]: (id, _payload, options) => deleteContact(id, options),
   },
   companies: {
     // No create: the API has no `POST /companies`. `mutations.js` refuses to queue one.
     [OPERATION.UPDATE]: (id, payload, options) => updateCompany(id, payload, options),
+    [OPERATION.DELETE]: (id, _payload, options) => deleteCompany(id, options),
   },
 }
 
@@ -191,6 +194,26 @@ async function reconcile({ entity, entry, serverRecord, userId }) {
 }
 
 /**
+ * Marks a delete mutation accepted.
+ *
+ * The local record keeps its `deletedLocally` tombstone rather than being
+ * removed: the row is what a later hydration reconciles against, and Phase 3's
+ * deletion handling has never destroyed a row either. Nothing displays it —
+ * Phase 4's `isVisible` excludes it from every read.
+ */
+async function completeDeletion({ entry, userId }) {
+  const db = await openDatabase(userId)
+  await db.put(STORE.SYNC_QUEUE, {
+    ...entry,
+    status: QUEUE_STATUS.COMPLETED,
+    serverRecordId: String(entry.recordId),
+    lastError: null,
+    httpStatus: 200,
+    lastAttemptAt: new Date().toISOString(),
+  })
+}
+
+/**
  * Rewrites later entries that still point at a now-superseded local id.
  *
  * A create and the edits queued after it all reference `local_…`. Once the
@@ -265,12 +288,36 @@ async function processOne(entry, { userId, signal }) {
    * every attempt — which is the whole reason a lost response cannot become a
    * duplicate record.
    */
-  const options = { signal, headers: { [MUTATION_ID_HEADER]: entry.opId } }
+  const options = {
+    signal,
+    headers: {
+      [MUTATION_ID_HEADER]: entry.opId,
+      /*
+       * The version this mutation was written against, when there is one.
+       *
+       * Sending it opts this request into the server's atomic version check.
+       * A CREATE has no base version and sends nothing, which is correct: there
+       * is no prior version for a record that does not exist yet.
+       */
+      ...(entry.baseUpdatedAt ? { [EXPECTED_VERSION_HEADER]: entry.baseUpdatedAt } : {}),
+    },
+  }
 
   try {
     const response = entry.operation === OPERATION.CREATE
       ? await send(entry.payload, options)
       : await send(entry.recordId, entry.payload, options)
+
+    /*
+     * A DELETE returns `{ id, deleted: true }` rather than a record, so there is
+     * nothing to reconcile a document against. The local row is already
+     * tombstoned and stays that way — the server has now agreed with it. The
+     * next hydration will carry the soft-deleted record and confirm it again.
+     */
+    if (entry.operation === OPERATION.DELETE) {
+      await completeDeletion({ entry, userId })
+      return { ok: true, stop: null }
+    }
 
     const serverRecord = recordFrom(response, entry.entity)
 
@@ -304,8 +351,28 @@ async function processOne(entry, { userId, signal }) {
     }
 
     if (verdict.terminal) {
-      // A conflict or a permanent rejection. Kept, never deleted.
-      await saveEntry({ ...next, status: verdict.terminal }, { userId })
+      /*
+       * A conflict or a permanent rejection. Kept, never deleted.
+       *
+       * A 409 carries the server's account of the disagreement in
+       * `error.details` — which version it expected, which version the server
+       * holds, and whether the record was deleted underneath. That is preserved
+       * verbatim: it is the entire input to whatever resolves this later, and
+       * regenerating it after the fact is impossible.
+       */
+      await saveEntry({
+        ...next,
+        status: verdict.terminal,
+        conflict: verdict.terminal === QUEUE_STATUS.CONFLICT
+          ? {
+              detectedAt: new Date().toISOString(),
+              baseUpdatedAt: entry.baseUpdatedAt ?? null,
+              ...(error?.details && typeof error.details === 'object' && !Array.isArray(error.details)
+                ? error.details
+                : {}),
+            }
+          : (entry.conflict ?? null),
+      }, { userId })
       return { ok: false, stop: null }
     }
 
