@@ -16,6 +16,8 @@ import {
   syncContacts,
 } from '@/api/services/contact.service'
 import { useApiResource } from '@/hooks/useApiResource'
+import { useAuth } from '@/hooks/useAuth'
+import { hasLocalData, readLocalContacts, withLocalFallback } from '@/offline/read'
 
 /**
  * @param {{ page?: number, limit?: number, sort?: string, search?: string,
@@ -41,13 +43,29 @@ export function useContacts({
   // reference every render and re-fetch endlessly.
   const tagKey = tags.join(',')
 
+  const userId = useAuth().user?.id ?? null
+
+  /*
+   * Phase 4 — the same request, with the local cache behind it.
+   *
+   * `group` is the one parameter the cache cannot honour: membership lives on
+   * a ContactGroup document that is not cached, so a grouped view falls back to
+   * an unfiltered local list rather than to a wrong one. Reading a group offline
+   * belongs to whichever phase caches groups.
+   */
   const fetcher = useCallback(
-    ({ signal }) =>
-      fetchContacts(
-        { page, limit, sort, search, filter, company, country, group, tags: tagKey },
-        { signal },
-      ),
-    [page, limit, sort, search, filter, company, country, group, tagKey],
+    ({ signal }) => {
+      const params = { page, limit, sort, search, filter, company, country, group, tags: tagKey }
+      if (!userId) return fetchContacts(params, { signal })
+
+      return withLocalFallback({
+        online: (options) => fetchContacts(params, options),
+        local: () => readLocalContacts(params, { userId }),
+        hasLocal: () => hasLocalData('contacts', { userId }),
+        signal,
+      })
+    },
+    [page, limit, sort, search, filter, company, country, group, tagKey, userId],
   )
 
   const resource = useApiResource(fetcher, { enabled })

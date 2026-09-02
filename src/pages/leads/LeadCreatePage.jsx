@@ -23,6 +23,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, Check, Info, Save } from 'lucide-react'
 
 import { createLead, fetchLeadAssignees, fetchNextReference } from '@/api/services/lead.service'
+import { useAuth } from '@/hooks/useAuth'
+import { isTransportFailure } from '@/offline/read'
+import { createLocal } from '@/offline/write'
 import { Button } from '@/components/ui/Button'
 import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -88,6 +91,7 @@ const INPUT_CLASS =
 
 export function LeadCreatePage() {
   const navigate = useNavigate()
+  const userId = useAuth().user?.id ?? null
 
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [sendMail, setSendMail] = useState(true)
@@ -159,7 +163,37 @@ export function LeadCreatePage() {
       setFieldErrors({})
 
       try {
-        const result = await createLead({ ...form, sendMail })
+        let result
+        try {
+          result = await createLead({ ...form, sendMail })
+        } catch (networkError) {
+          /*
+           * Only a transport failure earns the offline path.
+           *
+           * A 400 or a 422 is the server telling the user their form is wrong,
+           * and saving that locally would queue a mutation certain to be
+           * rejected again while telling them it worked. Those fall through to
+           * the existing error handling below, unchanged.
+           */
+          if (!isTransportFailure(networkError) || !userId) throw networkError
+
+          const saved = await createLocal('leads', { ...form, sendMail }, { userId })
+
+          /*
+           * Deliberately not "Lead created". No reference number exists yet —
+           * the server allocates it — and claiming one would put a number in
+           * front of the user that will not match the record they eventually
+           * get. See `PendingSyncNotice` on why the wording matters.
+           */
+          navigate(ROUTE_PATHS.LEADS, {
+            state: {
+              notice: 'Saved on this device — waiting to sync. It will reach the CRM when the connection returns.',
+              warnings: [],
+            },
+          })
+
+          return void saved
+        }
 
         const assignedElsewhere = Boolean(form.assignTo)
         const manager = managers.find((option) => option.id === form.assignTo)
@@ -212,7 +246,7 @@ export function LeadCreatePage() {
         setIsSaving(false)
       }
     },
-    [form, sendMail, navigate, managers],
+    [form, sendMail, navigate, managers, userId],
   )
 
   return (

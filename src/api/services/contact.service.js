@@ -41,13 +41,13 @@ export async function fetchContact(id, { signal } = {}) {
   return response.data?.data
 }
 
-export async function createContact(payload, { signal } = {}) {
-  const response = await httpClient.post(ENDPOINTS.contacts.list, payload, { signal })
+export async function createContact(payload, { signal, headers } = {}) {
+  const response = await httpClient.post(ENDPOINTS.contacts.list, payload, { signal, headers })
   return response.data?.data
 }
 
-export async function updateContact(id, payload, { signal } = {}) {
-  const response = await httpClient.put(ENDPOINTS.contacts.detail(id), payload, { signal })
+export async function updateContact(id, payload, { signal, headers } = {}) {
+  const response = await httpClient.put(ENDPOINTS.contacts.detail(id), payload, { signal, headers })
   return response.data?.data?.contact
 }
 

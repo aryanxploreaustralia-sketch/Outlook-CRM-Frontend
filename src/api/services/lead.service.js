@@ -48,8 +48,8 @@ export async function fetchLead(id, { signal } = {}) {
  *
  * @returns {Promise<{ lead, company, contact, mail, warnings }>}
  */
-export async function createLead(payload, { signal } = {}) {
-  const response = await httpClient.post(ENDPOINTS.leads.create, payload, { signal })
+export async function createLead(payload, { signal, headers } = {}) {
+  const response = await httpClient.post(ENDPOINTS.leads.create, payload, { signal, headers })
   return response.data?.data ?? null
 }
 
@@ -134,8 +134,8 @@ export async function updateLeadFull(id, payload, { signal } = {}) {
   return response.data?.data ?? response.data
 }
 
-export async function updateLead(id, payload, { signal } = {}) {
-  const response = await httpClient.put(ENDPOINTS.leads.detail(id), payload, { signal })
+export async function updateLead(id, payload, { signal, headers } = {}) {
+  const response = await httpClient.put(ENDPOINTS.leads.detail(id), payload, { signal, headers })
   return response.data?.data?.lead ?? null
 }
 
@@ -219,8 +219,8 @@ export async function fetchCompany(id, { signal } = {}) {
  * anything else — so this sends the patch as given rather than keeping a second
  * list of editable fields that would drift from it.
  */
-export async function updateCompany(id, payload, { signal } = {}) {
-  const response = await httpClient.put(ENDPOINTS.companies.detail(id), payload, { signal })
+export async function updateCompany(id, payload, { signal, headers } = {}) {
+  const response = await httpClient.put(ENDPOINTS.companies.detail(id), payload, { signal, headers })
 
   return response.data?.data?.company ?? null
 }

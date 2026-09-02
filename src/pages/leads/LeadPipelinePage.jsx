@@ -13,6 +13,7 @@ import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { LEAD_STAGES } from '@/constants/lead.constants'
 import { usePipeline } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
@@ -45,7 +46,12 @@ export function LeadPipelinePage() {
             <ArrowLeft className="size-3.5" aria-hidden="true" />
             Back to the register
           </Link>
-          <p className="mt-1 text-sm text-slate-500">{total.toLocaleString()} enquiries across ten stages.</p>
+          {/* Counted from the stage list rather than written out, so the
+              sentence cannot drift from the columns beside it — it said "ten"
+              while six were rendered. */}
+          <p className="mt-1 text-sm text-slate-500">
+            {total.toLocaleString()} enquiries across {LEAD_STAGES.length} stages.
+          </p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => refresh()}>
           <RefreshCw className="size-4" aria-hidden="true" />

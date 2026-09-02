@@ -4,6 +4,19 @@
  * The fetch machinery lives in `useApiResource`; these hooks declare what to
  * fetch and own the mutations, so a page renders state and dispatches actions
  * without touching transport.
+ *
+ * ## Reading offline (Phase 4)
+ *
+ * Each read below is wrapped in `withLocalFallback`, which calls the same API
+ * service it always did and reaches for the IndexedDB cache only when the
+ * server could not be reached at all — or when somebody pinned the source to
+ * `local`. On a working network the request, the response and the returned
+ * shape are identical to before; the wrapper adds one `source` field naming who
+ * answered, which nothing is obliged to read.
+ *
+ * The wrapping is skipped entirely until `useAuth` reports a user, because the
+ * cache is keyed per user and there is nothing to read from without one. That
+ * is also what keeps a signed-out render on exactly its old path.
  */
 
 import { useCallback, useState } from 'react'
@@ -21,6 +34,16 @@ import {
   updateLeadFull,
 } from '@/api/services/lead.service'
 import { useApiResource } from '@/hooks/useApiResource'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  hasLocalData,
+  readLocalCompanies,
+  readLocalCompany,
+  readLocalLead,
+  readLocalLeadFacets,
+  readLocalLeads,
+  withLocalFallback,
+} from '@/offline/read'
 
 /**
  * @param {{ page?, limit?, sort?, stage?, city?, company?, handledBy?, market?,
@@ -54,13 +77,21 @@ export function useLeadList({
   const [action, setAction] = useState(null)
   const [actionError, setActionError] = useState(null)
 
+  const userId = useAuth().user?.id ?? null
+
   const fetcher = useCallback(
-    ({ signal }) =>
-      fetchLeads(
-        { page, limit, sort, stage, city, company, handledBy, market, travelMonth, campaignEligible, travelFrom, travelTo, quoteFrom, quoteTo, search },
-        { signal },
-      ),
-    [page, limit, sort, stage, city, company, handledBy, market, travelMonth, campaignEligible, travelFrom, travelTo, quoteFrom, quoteTo, search],
+    ({ signal }) => {
+      const params = { page, limit, sort, stage, city, company, handledBy, market, travelMonth, campaignEligible, travelFrom, travelTo, quoteFrom, quoteTo, search }
+      if (!userId) return fetchLeads(params, { signal })
+
+      return withLocalFallback({
+        online: (options) => fetchLeads(params, options),
+        local: () => readLocalLeads(params, { userId }),
+        hasLocal: () => hasLocalData('leads', { userId }),
+        signal,
+      })
+    },
+    [page, limit, sort, stage, city, company, handledBy, market, travelMonth, campaignEligible, travelFrom, travelTo, quoteFrom, quoteTo, search, userId],
   )
 
   const resource = useApiResource(fetcher, { enabled })
@@ -109,7 +140,27 @@ export function useLead(id, { enabled = true } = {}) {
   const [action, setAction] = useState(null)
   const [actionError, setActionError] = useState(null)
 
-  const fetcher = useCallback(({ signal }) => fetchLead(id, { signal }), [id])
+  const userId = useAuth().user?.id ?? null
+
+  const fetcher = useCallback(
+    ({ signal }) => {
+      if (!userId) return fetchLead(id, { signal })
+
+      return withLocalFallback({
+        online: (options) => fetchLead(id, options),
+        /*
+         * The cache holds the *summary* DTO, which is a subset of the detail
+         * one. Offline that is what there is, and it carries every field the
+         * header and the table render; the sections that need the detail-only
+         * fields simply have nothing to show until the network returns.
+         */
+        local: () => readLocalLead(id, { userId }),
+        hasLocal: async () => Boolean(await readLocalLead(id, { userId })),
+        signal,
+      })
+    },
+    [id, userId],
+  )
   const resource = useApiResource(fetcher, { enabled: enabled && Boolean(id) })
   const { refresh } = resource
 
@@ -200,7 +251,21 @@ export function usePipeline({ perStage = 10, enabled = true } = {}) {
 
 /** Filter dropdown options, fetched once per page. */
 export function useLeadFacets({ enabled = true } = {}) {
-  const fetcher = useCallback(({ signal }) => fetchLeadFacets({ signal }), [])
+  const userId = useAuth().user?.id ?? null
+
+  const fetcher = useCallback(
+    ({ signal }) => {
+      if (!userId) return fetchLeadFacets({ signal })
+
+      return withLocalFallback({
+        online: (options) => fetchLeadFacets(options),
+        local: () => readLocalLeadFacets({ userId }),
+        hasLocal: () => hasLocalData('leads', { userId }),
+        signal,
+      })
+    },
+    [userId],
+  )
   const resource = useApiResource(fetcher, { enabled })
 
   return {
@@ -229,9 +294,21 @@ export function useLeadStatistics({ enabled = true } = {}) {
 }
 
 export function useCompanyList({ page = 1, limit = 50, sort = '-leads', search = '', enabled = true } = {}) {
+  const userId = useAuth().user?.id ?? null
+
   const fetcher = useCallback(
-    ({ signal }) => fetchCompanies({ page, limit, sort, search }, { signal }),
-    [page, limit, sort, search],
+    ({ signal }) => {
+      const params = { page, limit, sort, search }
+      if (!userId) return fetchCompanies(params, { signal })
+
+      return withLocalFallback({
+        online: (options) => fetchCompanies(params, options),
+        local: () => readLocalCompanies(params, { userId }),
+        hasLocal: () => hasLocalData('companies', { userId }),
+        signal,
+      })
+    },
+    [page, limit, sort, search, userId],
   )
   const resource = useApiResource(fetcher, { enabled })
 
@@ -248,7 +325,21 @@ export function useCompanyList({ page = 1, limit = 50, sort = '-leads', search =
 
 /** One company with its people and its enquiries. */
 export function useCompany(id, { enabled = true } = {}) {
-  const fetcher = useCallback(({ signal }) => fetchCompany(id, { signal }), [id])
+  const userId = useAuth().user?.id ?? null
+
+  const fetcher = useCallback(
+    ({ signal }) => {
+      if (!userId) return fetchCompany(id, { signal })
+
+      return withLocalFallback({
+        online: (options) => fetchCompany(id, options),
+        local: () => readLocalCompany(id, { userId }),
+        hasLocal: async () => Boolean(await readLocalCompany(id, { userId })),
+        signal,
+      })
+    },
+    [id, userId],
+  )
   const resource = useApiResource(fetcher, { enabled: enabled && Boolean(id) })
 
   return {

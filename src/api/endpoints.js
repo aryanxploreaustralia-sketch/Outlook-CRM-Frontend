@@ -262,6 +262,20 @@ export const ENDPOINTS = Object.freeze({
   },
 
   /**
+   * Offline-first — the incremental change feed.
+   *
+   * Read by the hydration layer under `@/offline/sync`, and by nothing else.
+   * No existing screen calls these: the CRM's online reads go through the
+   * endpoints above exactly as they always have.
+   */
+  sync: {
+    /** Everything that changed for the signed-in user since their cursor. */
+    changes: '/v1/sync/changes',
+    /** Whether anything is waiting, without transferring it. */
+    status: '/v1/sync/status',
+  },
+
+  /**
    * Employee self-service profile (Phase 17.2).
    *
    * Uploads are raw-body PUT/POST with the filename and metadata in headers —

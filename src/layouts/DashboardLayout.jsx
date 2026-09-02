@@ -21,6 +21,9 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { useAuth } from '@/hooks/useAuth'
 import { useUi } from '@/hooks/useUi'
+import { PendingSyncNotice } from '@/components/common/PendingSyncNotice'
+import { useOfflineHydration } from '@/offline/sync/useOfflineHydration.js'
+import { useSyncQueue } from '@/offline/write'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 /** Fallback title when a route declares no handle. */
@@ -29,6 +32,28 @@ const DEFAULT_TITLE = 'Dashboard'
 export function DashboardLayout() {
   const auth = useAuth()
   const ui = useUi()
+
+  /*
+   * Offline-first Phase 3 — fill the local cache in the background.
+   *
+   * Mounted here because this is the shell every authenticated page already
+   * renders inside, so it runs once per session rather than once per
+   * navigation. It renders nothing, blocks nothing and returns nothing: the
+   * layout below is byte-for-byte what it was.
+   *
+   * Nothing reads that cache yet. Deleting this line removes the feature.
+   */
+  useOfflineHydration()
+
+  /*
+   * Offline-first Phase 5 — the outbox, surfaced once for the whole app.
+   *
+   * Mounted here for the same reason hydration is: it is the one shell every
+   * authenticated page renders inside, so the queue is drained and reported
+   * once per session rather than once per navigation. It renders nothing when
+   * the queue is empty.
+   */
+  const queue = useSyncQueue()
   const navigate = useNavigate()
   const matches = useMatches()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -155,6 +180,14 @@ export function DashboardLayout() {
               handles it once.
             */}
             <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+              <PendingSyncNotice
+                pending={queue.pending}
+                failed={queue.failed}
+                conflict={queue.conflict}
+                isSyncing={queue.isSyncing}
+                onRetry={queue.sync}
+                className="mb-4"
+              />
               <Outlet />
             </div>
 
