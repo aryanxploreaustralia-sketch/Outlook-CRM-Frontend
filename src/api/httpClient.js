@@ -123,6 +123,18 @@ httpClient.interceptors.response.use(
         code: data?.code ?? 'HTTP_ERROR',
         details: data?.errors ?? null,
         isNetwork: false,
+        /*
+         * How long the server says to wait, when it says so at all.
+         *
+         * Read from the body first and the `Retry-After` header second: a proxy
+         * may strip the header, and a caller that guesses instead of waiting is
+         * how one 429 becomes a sustained outage. Null when the server offered
+         * no guidance, so a caller can tell "wait this long" from "unknown".
+         */
+        retryAfterSeconds:
+          Number(data?.retryAfterSeconds)
+          || Number(error.response.headers?.['retry-after'])
+          || null,
       }
     } else if (error.code === 'ECONNABORTED') {
       normalised = {

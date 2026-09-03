@@ -37,9 +37,28 @@ export function useApiResource(fetcher, { enabled = true, pollIntervalMs = 0 } =
   const requestIdRef = useRef(0)
   const isMountedRef = useRef(true)
 
+  /**
+   * When a 429 says this resource may be asked for again.
+   *
+   * A polling resource that ignores a rate limit is the thing that turns one
+   * refused request into a lasting outage: the window reopens, the very next
+   * tick spends it again, and the user is locked out for as long as the tab
+   * stays open. Honouring `Retry-After` is what lets the budget actually
+   * recover. A ref rather than state — changing it must not re-render, and the
+   * interval below reads it at fire time.
+   */
+  const blockedUntilRef = useRef(0)
+
   const load = useCallback(
     async ({ isBackground = false } = {}) => {
       if (!enabled) return null
+
+      /*
+       * Still inside a rate-limit window. Skipped rather than queued: the point
+       * is to make no request at all, and a background poll has nothing to
+       * report that waiting will not also report.
+       */
+      if (Date.now() < blockedUntilRef.current) return null
 
       // Supersede any request still in flight.
       controllerRef.current?.abort()
@@ -69,6 +88,21 @@ export function useApiResource(fetcher, { enabled = true, pollIntervalMs = 0 } =
         const wasAborted = isCancelledError(caught) || controller.signal.aborted
 
         if (wasAborted || !isMountedRef.current || requestId !== requestIdRef.current) return null
+
+        /*
+         * Honour the server's own retry window. `retryAfterSeconds` comes from
+         * the API's 429 body; the fallback covers a proxy that strips it.
+         *
+         * Clamped to fifteen minutes, which is the longest window any limiter
+         * here actually uses. The value arrives over the network, so a proxy
+         * injecting a large `Retry-After` could otherwise park this resource
+         * for days — recoverable only by a reload, and invisible while it
+         * lasted. The ceiling costs nothing when the server is honest.
+         */
+        if (caught?.status === 429) {
+          const seconds = Math.min(Math.max(Number(caught?.retryAfterSeconds) || 60, 0), 900)
+          blockedUntilRef.current = Date.now() + seconds * 1000
+        }
 
         setError(caught)
         setStatus(REQUEST_STATUS.ERROR)
