@@ -80,6 +80,18 @@ export const ROUTE_PATHS = Object.freeze({
 
   /** Public Phase 1 service diagnostics. */
   SYSTEM: '/system',
+
+  /**
+   * Signed in, but neither surface is open to this account.
+   *
+   * A real route rather than a redirect, and that is the whole point: it is the
+   * one destination with nowhere further to send anybody, so it has to be a
+   * page that renders. Sending this case back to `/login` — where an
+   * authenticated visitor is redirected onward again — is exactly the loop this
+   * exists to prevent.
+   */
+  NO_ACCESS: '/no-access',
+
   NOT_FOUND: '*',
 })
 

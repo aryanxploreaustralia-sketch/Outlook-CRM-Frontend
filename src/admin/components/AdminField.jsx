@@ -225,4 +225,68 @@ export function AdminTextArea({
   )
 }
 
+/**
+ * A single on/off grant.
+ *
+ * Deliberately **not** built on `Frame`. That frame puts the label above the
+ * control, which is right for a field somebody fills in and wrong for a
+ * checkbox, where the label is the thing being agreed to and belongs beside the
+ * box. Forcing it through the shared wrapper would produce a stranded tick with
+ * its caption floating above it.
+ *
+ * It keeps the frame's guarantees by hand: a real `htmlFor` association, and
+ * the hint wired through `aria-describedby` so the explanation is announced
+ * rather than only drawn.
+ *
+ * Rendered as a bordered row because it is a permission rather than a
+ * preference — it should read as a distinct decision on the form, not as one
+ * more line of settings.
+ *
+ * @param {object}   props
+ * @param {string}   props.label
+ * @param {boolean}  props.checked
+ * @param {(next: boolean) => void} props.onChange
+ * @param {string}  [props.hint]     Explains what the grant actually does.
+ * @param {boolean} [props.disabled]
+ */
+export function AdminCheckboxField({ label, checked, onChange, hint, disabled = false }) {
+  const id = useId()
+  const hintId = `${id}-hint`
+
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+        disabled ? 'border-slate-200 bg-slate-50' : 'border-slate-300 bg-white'
+      }`}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        aria-describedby={hint ? hintId : undefined}
+        className="mt-0.5 size-4 shrink-0 accent-brand-600 disabled:cursor-not-allowed"
+      />
+
+      <div className="min-w-0">
+        <label
+          htmlFor={id}
+          className={`block text-xs font-medium ${
+            disabled ? 'text-slate-500' : 'cursor-pointer text-slate-700'
+          }`}
+        >
+          {label}
+        </label>
+
+        {hint && (
+          <p id={hintId} className="mt-0.5 text-xs text-slate-500">
+            {hint}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default AdminTextField

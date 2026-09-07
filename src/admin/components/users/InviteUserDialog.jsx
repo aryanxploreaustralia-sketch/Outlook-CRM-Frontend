@@ -34,6 +34,7 @@ import {
 
 import { AdminModal } from '@/admin/components/AdminModal'
 import {
+  AdminCheckboxField,
   AdminSelectField,
   AdminTextArea,
   AdminTextField,
@@ -42,7 +43,21 @@ import { ADMIN_ROLES } from '@/admin/constants/adminRoles.constants'
 import { importAdminUserLeads, inviteAdminUser } from '@/admin/services/admin.service'
 import { Button } from '@/components/ui/Button'
 
-const EMPTY = { fullName: '', email: '', role: '', microsoftEmail: '', notes: '' }
+/**
+ * `userPanelAccess` starts true because that is what every non-owner needs.
+ *
+ * Choosing a role of Owner flips it off — see the effect in the component —
+ * so the default matches the role actually selected rather than making the
+ * commonest case require a tick.
+ */
+const EMPTY = {
+  fullName: '',
+  email: '',
+  role: '',
+  microsoftEmail: '',
+  notes: '',
+  userPanelAccess: true,
+}
 
 /**
  * What the submit button says while each half runs.
@@ -137,6 +152,7 @@ export function InviteUserDialog({ isOpen, onClose, onInvited, roles }) {
   useEffect(() => {
     if (isOpen) {
       setValues(EMPTY)
+      setPanelAccessTouched(false)
       setErrors({})
       setFormError(null)
       setWorkbook(null)
@@ -178,8 +194,32 @@ export function InviteUserDialog({ isOpen, onClose, onInvited, roles }) {
     return { value: key, label: designed?.label ?? key }
   })
 
+  /**
+   * Whether the administrator has expressed their own opinion on the CRM grant.
+   *
+   * Without this, choosing a role would silently overwrite a tick they had
+   * already made — the classic form bug where going back to correct one field
+   * quietly undoes another. Once touched, the checkbox is theirs and the role
+   * no longer moves it.
+   */
+  const [panelAccessTouched, setPanelAccessTouched] = useState(false)
+
   const set = (field) => (value) => {
-    setValues((previous) => ({ ...previous, [field]: value }))
+    setValues((previous) => ({
+      ...previous,
+      [field]: value,
+      /**
+       * The role's default for the CRM grant, applied only while untouched.
+       *
+       * An owner is created for the console, so the CRM is opt-in; every other
+       * role exists to work in the CRM and would be useless without it. This
+       * mirrors exactly what the server does when the field is omitted, so the
+       * form shows the outcome rather than a different one.
+       */
+      ...(field === 'role' && !panelAccessTouched
+        ? { userPanelAccess: value !== 'owner' }
+        : {}),
+    }))
     // The error clears as soon as the user starts fixing it. Leaving it until
     // the next submit means typing under a message that is already wrong.
     setErrors((previous) => (previous[field] ? { ...previous, [field]: null } : previous))
@@ -203,6 +243,7 @@ export function InviteUserDialog({ isOpen, onClose, onInvited, roles }) {
         fullName: values.fullName.trim(),
         email: values.email.trim(),
         role: values.role,
+        userPanelAccess: values.userPanelAccess,
         ...(values.microsoftEmail.trim()
           ? { microsoftEmail: values.microsoftEmail.trim() }
           : {}),
@@ -415,6 +456,28 @@ export function InviteUserDialog({ isOpen, onClose, onInvited, roles }) {
             </div>
           </div>
         )}
+
+        {/*
+          The CRM grant.
+
+          Placed under the role because it only makes sense once the role is
+          chosen: for an owner it is the difference between a console-only
+          account and one that also works in the CRM, and the notice above has
+          just described the administrative half.
+        */}
+        <AdminCheckboxField
+          label="Allow access to User Panel"
+          checked={values.userPanelAccess}
+          onChange={(next) => {
+            setPanelAccessTouched(true)
+            setValues((previous) => ({ ...previous, userPanelAccess: next }))
+          }}
+          hint={
+            values.role === 'owner'
+              ? 'An owner works in the Admin Panel by default. Tick this to also give them the CRM.'
+              : 'Allows this user to access the CRM User Panel in addition to their existing role and permissions.'
+          }
+        />
 
         <AdminTextField
           label="Microsoft address (optional)"

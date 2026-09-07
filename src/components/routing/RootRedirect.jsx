@@ -1,11 +1,18 @@
 /**
  * What `/` does.
  *
- * The root URL is an entry point, not a page. It asks one question — is this
- * person signed in? — and sends them where that answer belongs:
+ * The root URL is an entry point, not a page. It asks who is here and sends them
+ * where they belong:
  *
- *   signed out  ->  /login
- *   signed in   ->  /dashboard
+ *   signed out            ->  /login
+ *   owner                 ->  /admin      (their default workspace)
+ *   CRM access            ->  /dashboard  (the existing behaviour, unchanged)
+ *   console access only   ->  /admin
+ *   neither               ->  /no-access
+ *
+ * The choice itself lives in `routes/landing.js` rather than here, because the
+ * login page's already-signed-in shortcut has to reach the identical answer.
+ * Two call sites deciding separately is how a redirect loop is built.
  *
  * It previously rendered a static "Phase 1" overview describing which modules
  * were not built yet, which meant the CRM's front door showed a development
@@ -36,19 +43,44 @@
 import { Navigate } from 'react-router-dom'
 
 import { LoadingScreen } from '@/components/common/LoadingScreen'
+import { useAdminAccess } from '@/hooks/useAdminAccess'
 import { useAuth } from '@/hooks/useAuth'
+import { resolveLanding } from '@/routes/landing'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 export function RootRedirect() {
   const auth = useAuth()
 
+  /**
+   * The console half of the decision.
+   *
+   * Server-computed and already deferred until the session is confirmed, so
+   * this adds no request for an anonymous visitor. It is the same hook the
+   * sidebar uses, so the answer is shared rather than asked for twice.
+   */
+  const { hasAdminAccess, isReady: accessReady } = useAdminAccess()
+
   if (!auth.isReady) {
     return <LoadingScreen fullScreen message="Starting the CRM" detail="One moment." />
   }
 
-  return (
-    <Navigate to={auth.authenticated ? ROUTE_PATHS.DASHBOARD : ROUTE_PATHS.LOGIN} replace />
-  )
+  if (!auth.authenticated) {
+    return <Navigate to={ROUTE_PATHS.LOGIN} replace />
+  }
+
+  /**
+   * Wait for the console answer before choosing.
+   *
+   * `hasAdminAccess` is false until known, and deciding on that provisional
+   * false would send an administrator whose CRM access is off to the no-access
+   * page for a moment before correcting itself — a flash of a refusal they are
+   * not actually subject to. One extra render is the cheaper mistake.
+   */
+  if (!accessReady) {
+    return <LoadingScreen fullScreen message="Starting the CRM" detail="One moment." />
+  }
+
+  return <Navigate to={resolveLanding({ user: auth.user, hasAdminAccess })} replace />
 }
 
 export default RootRedirect

@@ -57,6 +57,14 @@ export const ADMIN_ENDPOINTS = Object.freeze({
     activate: (id) => `/v1/admin/users/${id}/activate`,
     suspend: (id) => `/v1/admin/users/${id}/suspend`,
     /**
+     * Whether this account may open the CRM.
+     *
+     * Separate from `activate`/`suspend`, which decide whether the person may
+     * sign in at all. This decides which surface they land on once they have,
+     * and the server guards it on the same `users.activate` capability.
+     */
+    userPanelAccess: (id) => `/v1/admin/users/${id}/user-panel-access`,
+    /**
      * Role management (Phase 14.8A). The only endpoint that writes `role`.
      *
      * The GET reports which roles the caller may set on this person and why not

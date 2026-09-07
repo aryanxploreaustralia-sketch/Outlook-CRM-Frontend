@@ -246,6 +246,23 @@ export async function suspendAdminUser(id) {
 }
 
 /**
+ * Grants or revokes access to the CRM itself.
+ *
+ * Independent of role and of the admin console: this widens or narrows one
+ * surface and nothing else. The server refuses the call outright unless the
+ * caller holds `users.activate`, so this is a request rather than a decision.
+ *
+ * @param {string}  id
+ * @param {boolean} userPanelAccess
+ */
+export async function setAdminUserPanelAccess(id, userPanelAccess) {
+  const response = await httpClient.patch(ADMIN_ENDPOINTS.users.userPanelAccess(id), {
+    userPanelAccess,
+  })
+  return response.data?.data ?? null
+}
+
+/**
  * Soft-deletes a user.
  *
  * Resolves to `{ revokedSessions, mailboxesUnassigned, preserved, user }` — the
@@ -654,5 +671,6 @@ export default {
   deleteAdminUserLeads,
   importAdminUserLeads,
   inviteAdminUser,
+  setAdminUserPanelAccess,
   suspendAdminUser,
 }

@@ -7,11 +7,16 @@
  * data change rather than a design one.
  */
 
-import { KeyRound, MonitorSmartphone, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
+import { KeyRound, LayoutGrid, MonitorSmartphone, ShieldCheck } from 'lucide-react'
 
 import { AdminBadge } from '@/admin/components/AdminBadge'
 import { AdminCard } from '@/admin/components/AdminCard'
+import { AdminCheckboxField } from '@/admin/components/AdminField'
 import { PermissionList } from '@/admin/components/users/PermissionList'
+import { PERMISSIONS } from '@/admin/constants/permissions'
+import { usePermission } from '@/admin/hooks/usePermissions'
+import { setAdminUserPanelAccess } from '@/admin/services/admin.service'
 import {
   Fact,
   NotTracked,
@@ -52,6 +57,122 @@ export function UserPermissionsSection({ user, groups, catalogue, isSelf, regist
           granted={user.permissions ?? []}
           emptyMessage="This role grants no permissions."
         />
+      </AdminCard>
+    </UserSection>
+  )
+}
+
+/**
+ * Section 7b — whether this account may open the CRM at all.
+ *
+ * ## Why this is not part of the role section
+ *
+ * The role decides what somebody may *do*; this decides which of the two
+ * surfaces they may enter. Keeping them apart is the point of the feature: an
+ * owner can be given the console alone, or both, without their role or a single
+ * permission changing. Folding the control into the role screen would suggest
+ * the two travel together, which is exactly the assumption this replaces.
+ *
+ * ## Who may change it
+ *
+ * Gated on `users.activate` — the existing capability for granting somebody
+ * access — and the server enforces the same thing on the endpoint. The checkbox
+ * is disabled rather than hidden for an administrator who cannot change it, so
+ * they can still see the account's state; hiding it would leave them unable to
+ * answer "can this person open the CRM?" at all.
+ *
+ * Saves immediately on toggle. There is no second confirmation because the
+ * action is a single reversible boolean, and a dialog for it would be ceremony
+ * around something less consequential than the role change above.
+ */
+export function UserPanelAccessSection({ user, registerRef, onChanged }) {
+  const canManage = usePermission(PERMISSIONS.USERS_ACTIVATE)
+
+  // Seeded from the server and corrected by it: `save` writes back whatever the
+  // response reports rather than trusting the optimistic value.
+  const [allowed, setAllowed] = useState(user.userPanelAccess !== false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null)
+
+  const save = async (next) => {
+    const previous = allowed
+
+    // Optimistic, because the control is the state — leaving the tick behind
+    // while the request flies reads as an unresponsive checkbox.
+    setAllowed(next)
+    setIsSaving(true)
+    setError(null)
+    setNotice(null)
+
+    try {
+      const result = await setAdminUserPanelAccess(user.id, next)
+
+      setAllowed(result?.user?.userPanelAccess !== false)
+      setNotice(
+        next
+          ? 'They can now open the User Panel.'
+          : 'They can no longer open the User Panel.',
+      )
+      onChanged?.()
+      setTimeout(() => setNotice(null), 6000)
+    } catch (caught) {
+      // Rolled back to what the server still believes, so the screen never
+      // shows a grant that was refused.
+      setAllowed(previous)
+      setError(caught?.message ?? 'That change could not be saved.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const isOwner = user.role === 'owner'
+
+  return (
+    <UserSection
+      id="user-panel-access"
+      ref={registerRef('user-panel-access')}
+      title="User Panel access"
+      description="Whether this person can open the CRM. Independent of their role and of the Admin Panel."
+    >
+      <AdminCard
+        title={
+          <span className="flex items-center gap-2">
+            <LayoutGrid className="size-4 text-slate-400" aria-hidden="true" />
+            {allowed ? 'The CRM is available' : 'The CRM is not available'}
+          </span>
+        }
+        description={
+          isOwner
+            ? 'An owner’s default workspace is the Admin Panel either way — this only decides whether the CRM is open to them as well.'
+            : 'Turning this off leaves the account signed in but with no CRM. Their role still decides everything else.'
+        }
+      >
+        <AdminCheckboxField
+          label="Allow access to User Panel"
+          checked={allowed}
+          disabled={!canManage || isSaving}
+          onChange={save}
+          hint="Allows this user to access the CRM User Panel in addition to their existing role and permissions."
+        />
+
+        {!canManage && (
+          <p className="mt-2 text-xs text-slate-500">
+            Changing this needs the “Activate a user” capability.
+          </p>
+        )}
+
+        {error && (
+          <p role="alert" className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+            {error}
+          </p>
+        )}
+
+        {notice && (
+          <p role="status" className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+            {notice}
+          </p>
+        )}
       </AdminCard>
     </UserSection>
   )

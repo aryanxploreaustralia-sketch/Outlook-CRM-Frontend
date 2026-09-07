@@ -64,6 +64,7 @@ import {
 } from '@/admin/components/users/detail/UserWorkSections'
 import {
   UserActivitySection,
+  UserPanelAccessSection,
   UserPermissionsSection,
   UserSecuritySection,
 } from '@/admin/components/users/detail/UserAccessSections'
@@ -111,6 +112,10 @@ const SECTIONS = [
   { id: 'import-leads', label: 'Import leads' },
   { id: 'replies', label: 'Replies' },
   { id: 'permissions', label: 'Permissions' },
+  // Directly after Permissions: both answer "what can this account reach?",
+  // and reading the role's capabilities immediately before the surface grant is
+  // the order the two questions actually arrive in.
+  { id: 'user-panel-access', label: 'User Panel access' },
   { id: 'security', label: 'Security' },
   { id: 'activity', label: 'Activity' },
 ]
@@ -766,6 +771,8 @@ export function AdminUserDetailPage() {
             isSelf={user.isSelf}
             registerRef={register}
           />
+
+          <UserPanelAccessSection user={user} registerRef={register} onChanged={refresh} />
 
           <UserSecuritySection user={user} registerRef={register} />
 

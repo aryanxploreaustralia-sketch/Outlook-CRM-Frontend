@@ -27,9 +27,11 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { adminRoute } from '@/admin/routes/adminRoutes'
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute'
 import { RootRedirect } from '@/components/routing/RootRedirect'
+import { UserPanelRoute } from '@/components/routing/UserPanelRoute'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { RootLayout } from '@/layouts/RootLayout'
 import { ErrorPage } from '@/pages/ErrorPage'
+import { NoAccessPage } from '@/pages/NoAccessPage'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 export const router = createBrowserRouter([
@@ -45,9 +47,14 @@ export const router = createBrowserRouter([
 
   // --- Authenticated application shell ------------------------------------
   {
+    // `UserPanelRoute` composes *inside* the authentication guard rather than
+    // extending it: signed-in-ness and CRM availability are separate questions,
+    // and `ProtectedRoute` documents why it does not answer the second.
     element: (
       <ProtectedRoute>
-        <DashboardLayout />
+        <UserPanelRoute>
+          <DashboardLayout />
+        </UserPanelRoute>
       </ProtectedRoute>
     ),
     errorElement: <ErrorPage />,
@@ -339,6 +346,25 @@ export const router = createBrowserRouter([
   {
     path: ROUTE_PATHS.ROOT,
     element: <RootRedirect />,
+    errorElement: <ErrorPage />,
+  },
+
+  /**
+   * The terminal state for an account with no workspace.
+   *
+   * Authenticated — it names the signed-in account — but deliberately outside
+   * both shells. `DashboardLayout` now sits behind `UserPanelRoute`, so putting
+   * this page inside it would have the guard redirect here and this route send
+   * the browser straight back into the guard. Outside, it simply renders and
+   * the journey ends.
+   */
+  {
+    path: ROUTE_PATHS.NO_ACCESS,
+    element: (
+      <ProtectedRoute>
+        <NoAccessPage />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorPage />,
   },
 

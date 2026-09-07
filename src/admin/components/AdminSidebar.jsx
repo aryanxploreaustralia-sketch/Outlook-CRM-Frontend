@@ -32,6 +32,7 @@ import { usePermissions } from '@/admin/hooks/usePermissions'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { UserAvatar } from '@/components/common/UserAvatar'
 import { env } from '@/config/env'
+import { hasUserPanelAccess } from '@/routes/landing'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 /**
@@ -55,6 +56,16 @@ export function AdminSidebar({
   onCloseDrawer,
 }) {
   const { can } = usePermissions()
+
+  /**
+   * Whether the CRM is open to this account.
+   *
+   * `user` is `auth.user` — the same document `/auth/status` returned — so the
+   * flag is read from the identical source the CRM's own guard uses, and the
+   * link cannot offer a destination that guard would refuse. Absent means
+   * permitted, matching every other read of this field.
+   */
+  const canUseCrm = hasUserPanelAccess(user)
 
   /**
    * Navigation, filtered to what this account may actually open.
@@ -231,7 +242,13 @@ export function AdminSidebar({
 
           {/* The way out. Deliberately a link to the CRM dashboard rather than a
               history-based "back": an operator may have arrived here by typing
-              the URL, in which case there is no back to go to. */}
+              the URL, in which case there is no back to go to.
+
+              Hidden when the account has no CRM access, which is the case an
+              owner configured for the console alone is in. Offering it would
+              send them to a guard that immediately returns them here — a link
+              that visibly does nothing is worse than no link. */}
+          {canUseCrm && (
           <Link
             to={ROUTE_PATHS.DASHBOARD}
             onClick={handleNavigate}
@@ -243,6 +260,7 @@ export function AdminSidebar({
             {!isCollapsed && <span>Back to CRM</span>}
             {isCollapsed && <span className="sr-only">Back to CRM</span>}
           </Link>
+          )}
 
           {canToggleCollapse && (
             <button

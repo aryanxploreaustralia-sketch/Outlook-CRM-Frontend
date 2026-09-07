@@ -25,7 +25,12 @@ export { AdminDateRange } from './AdminDateRange'
 export { AdminDrawer } from './AdminDrawer'
 export { AdminEmptyState } from './AdminEmptyState'
 export { AdminErrorState } from './AdminErrorState'
-export { AdminSelectField, AdminTextArea, AdminTextField } from './AdminField'
+export {
+  AdminCheckboxField,
+  AdminSelectField,
+  AdminTextArea,
+  AdminTextField,
+} from './AdminField'
 export { AdminFilterBar, AdminFilterSelect } from './AdminFilter'
 export { AdminHeader } from './AdminHeader'
 export {
