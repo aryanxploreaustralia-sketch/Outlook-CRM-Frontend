@@ -94,6 +94,8 @@ export function CompanyDetailPage() {
   }
 
   const remove = async () => {
+    let queuedLocally = false
+
     setIsDeleting(true)
     try {
       try {
@@ -102,10 +104,21 @@ export function CompanyDetailPage() {
         // Only a dropped connection queues this locally; a refusal is a refusal.
         if (!isTransportFailure(thrown) || !userId) throw thrown
         await deleteLocal('companies', id, { userId })
+        queuedLocally = true
       }
       // Back to the register, which refetches on mount — the deleted company is
       // gone from it without anything here having to invalidate a cache.
-      navigate(ROUTE_PATHS.COMPANIES, { replace: true })
+      navigate(ROUTE_PATHS.COMPANIES, {
+        replace: true,
+        // Phase 8 — a local tombstone and a server delete look identical here
+        // without this. The delete behaviour itself is unchanged.
+        state: queuedLocally
+          ? {
+              notice:
+                'Deleted on this device — waiting to sync. The deletion will reach the CRM when you’re back online.',
+            }
+          : undefined,
+      })
     } catch (thrown) {
       setNotice({ tone: 'error', text: thrown?.message ?? 'That company could not be deleted.' })
       setConfirmDelete(false)

@@ -22,7 +22,8 @@
     "verify:offline-writes": "node scripts/verify-offline-writes.mjs",
     "verify:offline-deletes": "node scripts/verify-offline-deletes.mjs",
     "verify:sync-coordinator": "node scripts/verify-sync-coordinator.mjs",
-    "verify:panel-access": "node scripts/verify-panel-access.mjs"
+    "verify:panel-access": "node scripts/verify-panel-access.mjs",
+    "verify:offline-ux": "node scripts/verify-offline-ux.mjs"
   },
   "dependencies": {
     "axios": "^1.19.0",

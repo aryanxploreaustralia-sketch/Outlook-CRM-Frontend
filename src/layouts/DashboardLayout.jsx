@@ -19,6 +19,11 @@ import { Outlet, useMatches, useNavigate } from 'react-router-dom'
 import { DashboardFooter } from '@/components/layout/DashboardFooter'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
+import { NavigationNotice } from '@/components/offline/NavigationNotice'
+import { OfflineBanner } from '@/components/offline/OfflineBanner'
+import { SyncStatusPanel } from '@/components/offline/SyncStatusPanel'
+import { UpdateAvailableNotice } from '@/components/pwa/UpdateAvailableNotice'
+import { useConnectionStatus } from '@/offline/ux/useConnectionStatus'
 import { useAuth } from '@/hooks/useAuth'
 import { useUi } from '@/hooks/useUi'
 import { PendingSyncNotice } from '@/components/common/PendingSyncNotice'
@@ -54,6 +59,17 @@ export function DashboardLayout() {
    * synchronisation entirely.
    */
   const queue = useSyncCoordinator()
+
+  /*
+   * Phase 8 — the connectivity projection, read exactly once.
+   *
+   * Composed from the coordinator above and the read layer's existing
+   * `online`/`offline` subscription. It starts no sync, opens no socket and
+   * adds no timer; every value it returns is already published by something
+   * else. Mounted here and passed down as props, so the application holds one
+   * network listener rather than one per component that wants the state.
+   */
+  const connection = useConnectionStatus(queue, auth.user?.id ? String(auth.user.id) : null)
   const navigate = useNavigate()
   const matches = useMatches()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -142,6 +158,7 @@ export function DashboardLayout() {
             title={title}
             subtitle={subtitle}
             user={auth.user}
+            connection={connection}
             isMobile={ui.isMobile}
             onOpenDrawer={ui.openDrawer}
             onSignOut={handleSignOut}
@@ -180,6 +197,28 @@ export function DashboardLayout() {
               handles it once.
             */}
             <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+              {/*
+                Phase 8 — the status strip.
+
+                Order is deliberate: the update offer is the least urgent and
+                sits first so it never pushes a connectivity warning off the
+                fold; the offline banner is the most urgent and sits closest to
+                the content it explains. All three render `null` in the ordinary
+                case, so a connected session with an empty queue sees exactly
+                the page it saw before.
+              */}
+              <UpdateAvailableNotice className="mb-4" />
+
+              {/* The result of whatever the reader just did, carried across the
+                  navigation that followed it. */}
+              <NavigationNotice className="mb-4" />
+
+              <OfflineBanner
+                state={connection.state}
+                pending={connection.pending}
+                className="mb-4"
+              />
+
               <PendingSyncNotice
                 pending={queue.pending}
                 failed={queue.failed}
@@ -188,6 +227,26 @@ export function DashboardLayout() {
                 onRetry={queue.sync}
                 className="mb-4"
               />
+
+              {/*
+                Shown only once a sync has been attempted, or when something is
+                held back. A first-time visitor mid-hydration has nothing useful
+                to read here, and "Not synced yet" beside a spinner would be
+                noise rather than information.
+              */}
+              {(connection.lastSuccessAt || connection.failed > 0 || connection.conflict > 0) && (
+                <SyncStatusPanel
+                  lastSuccessAt={connection.lastSuccessAt}
+                  isSyncing={connection.isSyncing}
+                  isOffline={connection.isOffline}
+                  failed={connection.failed}
+                  conflict={connection.conflict}
+                  lastError={connection.lastError}
+                  onSync={connection.sync}
+                  className="mb-4"
+                />
+              )}
+
               <Outlet />
             </div>
 

@@ -185,9 +185,21 @@ export function LeadCreatePage() {
            * front of the user that will not match the record they eventually
            * get. See `PendingSyncNotice` on why the wording matters.
            */
+          /*
+           * The email half, said accurately.
+           *
+           * `sendMail` survives `stripOwnership` into the queued payload and
+           * the processor replays that payload through `createLead`, so the
+           * introduction genuinely does go out — later, when the queue drains.
+           * Saying nothing about it would leave the sender assuming it had
+           * already gone; saying "sent" would be false. It is queued, and that
+           * is what this says.
+           */
           navigate(ROUTE_PATHS.LEADS, {
             state: {
-              notice: 'Saved on this device — waiting to sync. It will reach the CRM when the connection returns.',
+              notice: sendMail
+                ? 'Saved on this device — waiting to sync. The introduction email is queued and will be sent when you’re back online.'
+                : 'Saved on this device — waiting to sync. It will reach the CRM when the connection returns.',
               warnings: [],
             },
           })

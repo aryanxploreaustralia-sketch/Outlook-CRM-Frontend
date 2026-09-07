@@ -97,6 +97,8 @@ export function ContactDetailPage() {
     if (!window.confirm(`Delete ${contact?.displayName}? It can be restored later.`)) return
 
     setIsDeleting(true)
+    let queuedLocally = false
+
     try {
       try {
         await deleteContact(id)
@@ -109,8 +111,25 @@ export function ContactDetailPage() {
          */
         if (!isTransportFailure(thrown) || !userId) throw thrown
         await deleteLocal('contacts', id, { userId })
+        queuedLocally = true
       }
-      navigate(ROUTE_PATHS.CONTACTS)
+
+      /*
+       * Phase 8 — say which of the two happened.
+       *
+       * A tombstone hides the contact from this device immediately, so without
+       * this the interface is indistinguishable from a server delete, and the
+       * reader has no way to know the record is still live for colleagues.
+       * The delete behaviour itself is untouched.
+       */
+      navigate(ROUTE_PATHS.CONTACTS, {
+        state: queuedLocally
+          ? {
+              notice:
+                'Deleted on this device — waiting to sync. The deletion will reach the CRM when you’re back online.',
+            }
+          : undefined,
+      })
     } finally {
       setIsDeleting(false)
     }

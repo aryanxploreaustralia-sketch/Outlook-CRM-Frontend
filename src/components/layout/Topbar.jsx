@@ -24,6 +24,7 @@ import { NotificationBell } from '@/components/layout/NotificationBell'
 import { UserMenu } from '@/components/layout/UserMenu'
 import { Button } from '@/components/ui/Button'
 import { InstallAppButton } from '@/components/pwa/InstallAppButton'
+import { ConnectionStatusIndicator } from '@/components/offline/ConnectionStatusIndicator'
 
 /**
  * @param {{
@@ -44,6 +45,14 @@ export function Topbar({
   onOpenDrawer,
   onSignOut,
   isSigningOut = false,
+  /**
+   * The connectivity projection from `DashboardLayout`.
+   *
+   * Passed rather than read here so the application keeps a single network
+   * subscription. Optional: omitted, the indicator simply does not render, and
+   * this row is byte-for-byte what it was.
+   */
+  connection = null,
 }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
 
@@ -99,6 +108,18 @@ export function Topbar({
             Renders `null` unless Chromium has fired `beforeinstallprompt`, so
             for anybody already running the installed app — or on a browser that
             cannot install it — this row is byte-for-byte what it was. */}
+        {/* --- Connectivity -------------------------------------------------
+            Browser network state, and deliberately NOT the mailbox
+            `ConnectionBadge` — that one answers whether Microsoft is connected,
+            which is a different question with a different answer. */}
+        {connection && (
+          <ConnectionStatusIndicator
+            state={connection.state}
+            label={connection.label}
+            detail={connection.detail}
+          />
+        )}
+
         <InstallAppButton />
 
         {/* --- Notifications -------------------------------------------------

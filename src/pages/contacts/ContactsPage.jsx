@@ -27,6 +27,7 @@ import { updateContact } from '@/api/services/contact.service'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { ContactCard } from '@/components/contacts/ContactCard'
 import { Button } from '@/components/ui/Button'
+import { useHydrationState } from '@/offline/ux/useHydrationState'
 import { CONTACT_FILTERS, SORT_OPTIONS, TRANSFER_FORMATS } from '@/constants/contact.constants'
 import { useContacts } from '@/hooks/useContacts'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -34,6 +35,12 @@ import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { resolveErrorVariant } from '@/utils/apiError'
 
 export function ContactsPage() {
+  /*
+   * Phase 8 — an empty address book is only news if it was ever downloaded.
+   * Reads existing sync metadata; changes no query and fetches nothing.
+   */
+  const { neverDownloaded } = useHydrationState('contacts')
+
   const [view, setView] = useState('list')
   const [page, setPage] = useState(1)
   // Rows per page is the reader's choice, not a constant. Changing it returns to
@@ -335,12 +342,20 @@ export function ContactsPage() {
         <div className="rounded-xl border border-dashed border-slate-300 bg-white py-12 text-center">
           <Users className="mx-auto size-8 text-slate-300" aria-hidden="true" />
           <p className="mt-3 text-sm font-medium text-slate-700">
-            {search || activeFilters > 0 ? 'No contacts match these filters.' : 'No contacts yet.'}
+            {search || activeFilters > 0
+              ? 'No contacts match these filters.'
+              : neverDownloaded
+                ? 'Contacts aren’t available offline yet.'
+                : 'No contacts yet.'}
           </p>
           <p className="mt-1 text-sm text-slate-500">
             {search || activeFilters > 0
               ? 'Try a different search or clear the filters.'
-              : 'Add one by hand, import a file, or sync from Outlook.'}
+              : neverDownloaded
+                /* Never pulled to this device — an empty list is a fact about
+                   the device, not about the address book. */
+                ? 'This device hasn’t downloaded your address book. Connect to the internet once and it’ll be saved here for offline use.'
+                : 'Add one by hand, import a file, or sync from Outlook.'}
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {search || activeFilters > 0 ? (

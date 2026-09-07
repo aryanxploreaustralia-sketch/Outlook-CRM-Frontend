@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ClipboardList,
+  CloudOff,
   Download,
   Filter,
   Megaphone,
@@ -31,6 +32,7 @@ import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { RemarkCell } from '@/components/leads/RemarkCell'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { Button } from '@/components/ui/Button'
+import { useHydrationState } from '@/offline/ux/useHydrationState'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { STORAGE_KEYS } from '@/constants/app.constants'
 import { LEAD_STAGES, MARKETS } from '@/constants/lead.constants'
@@ -77,6 +79,14 @@ import { formatDate } from '@/utils/datetime'
 
 
 export function LeadsPage() {
+  /*
+   * Phase 8 — is an empty register a fact, or just an undownloaded device?
+   *
+   * Reads existing sync metadata only; it fetches nothing and changes no query.
+   * `unknown` leaves the wording below exactly as it was.
+   */
+  const { neverDownloaded } = useHydrationState('leads')
+
   const [page, setPage] = useState(1)
   /* Rows per page is the reader's choice, not a constant. Changing it returns
        to page one: page 8 of a 25-row list is past the end of a 50-row one, and
@@ -810,6 +820,23 @@ export function LeadsPage() {
                   </Button>
                 </>
               ) : (
+                neverDownloaded ? (
+                /*
+                  Nothing has ever been pulled to this device, so an empty table
+                  says nothing about the business. Telling somebody their
+                  register is empty here would be a lie that looks like data.
+                */
+                <>
+                  <CloudOff className="mx-auto size-8 text-slate-300" aria-hidden="true" />
+                  <h2 className="mt-3 text-base font-semibold text-slate-900">
+                    Enquiries aren’t available offline yet
+                  </h2>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+                    This device hasn’t downloaded your enquiries. Connect to the internet once and
+                    they’ll be saved here for offline use.
+                  </p>
+                </>
+              ) : (
                 <>
                   <Megaphone className="mx-auto size-8 text-slate-300" aria-hidden="true" />
                   <h2 className="mt-3 text-base font-semibold text-slate-900">No enquiries yet</h2>
@@ -822,6 +849,7 @@ export function LeadsPage() {
                     Import the workbook
                   </Button>
                 </>
+                )
               )}
             </div>
           ) : (
