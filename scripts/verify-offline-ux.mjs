@@ -104,10 +104,52 @@ check(
   deriveConnectionUx({ isOffline: false, syncStatus: null, hasSynced: false }) === CONNECTION_UX.CHECKING,
   'onLine but never confirmed → Checking, not a claimed connection',
 )
+/*
+ * The regression this section exists to hold.
+ *
+ * A failed sync used to pin the indicator to "Offline". `queue.status` is the
+ * coordinator's last published state and nothing clears it — no timer, and
+ * `online` fires only on a real connectivity transition, which a server-side
+ * failure never produces. So one rejected preflight could make the CRM insist
+ * it was offline for the rest of the session while the device was online and
+ * the API was healthy.
+ */
 check(
-  deriveConnectionUx({ isOffline: false, syncStatus: SYNC_STATE.OFFLINE }) === CONNECTION_UX.OFFLINE,
-  'the coordinator having failed to reach the server outranks a hopeful onLine flag',
+  deriveConnectionUx({ isOffline: false, syncStatus: SYNC_STATE.OFFLINE }) !== CONNECTION_UX.OFFLINE,
+  'a failed sync does NOT claim the device is offline — the stale-indicator regression',
 )
+check(
+  deriveConnectionUx({ isOffline: false, syncStatus: SYNC_STATE.OFFLINE }) === CONNECTION_UX.ONLINE,
+  'it reports Online, because navigator.onLine is the only connectivity signal',
+)
+check(
+  deriveConnectionUx({ isOffline: true, syncStatus: SYNC_STATE.OFFLINE }) === CONNECTION_UX.OFFLINE,
+  'while a genuinely offline device still reports Offline, whatever the sync said',
+)
+check(
+  deriveConnectionUx({ isOffline: true, syncStatus: null }) === CONNECTION_UX.OFFLINE,
+  'and navigator.onLine === false alone is enough',
+)
+check(
+  deriveConnectionUx({ isOffline: false, syncStatus: SYNC_STATE.SYNCING }) === CONNECTION_UX.SYNCING,
+  'a run in flight still outranks everything',
+)
+check(
+  deriveConnectionUx({ isOffline: false, syncStatus: SYNC_STATE.IDLE }) === CONNECTION_UX.ONLINE,
+  'and the ordinary online/idle case is unchanged',
+)
+
+/*
+ * Every terminal sync outcome, none of which is a connectivity claim. The
+ * failure is surfaced by SyncStatusPanel's last-error line and the pending
+ * count — not by telling somebody their network is down.
+ */
+for (const status of [SYNC_STATE.OFFLINE, SYNC_STATE.ERROR, SYNC_STATE.PARTIAL, SYNC_STATE.CONFLICT]) {
+  check(
+    deriveConnectionUx({ isOffline: false, syncStatus: status }) !== CONNECTION_UX.OFFLINE,
+    `sync status "${status}" never reports the device as offline`,
+  )
+}
 check(
   deriveConnectionUx({ isOffline: true, syncStatus: SYNC_STATE.SYNCING }) === CONNECTION_UX.SYNCING,
   'syncing wins over offline — the most specific true thing is shown',

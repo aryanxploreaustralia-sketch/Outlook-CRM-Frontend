@@ -54,9 +54,30 @@ export const CONNECTION_DETAIL = Object.freeze({
  *     reliable in the negative direction: the device genuinely has no network.
  *     The positive direction is the unreliable one, which is why it does not
  *     short-circuit to ONLINE below.
- *  3. **The coordinator's OFFLINE outranks a hopeful onLine flag.** The
- *     coordinator learned it by actually failing to reach the server, which is
- *     better evidence than the browser's guess.
+ *
+ * ## Why a failed sync does NOT make this say "Offline"
+ *
+ * It used to. `SYNC_STATE.OFFLINE` was treated as outranking the browser's
+ * flag, on the reasoning that the coordinator had learned it by actually
+ * failing to reach the server — better evidence than a guess.
+ *
+ * That is true at the instant it happens and wrong every moment afterwards.
+ * `queue.status` is the coordinator's *last published* state and it is sticky:
+ * nothing clears it until another run publishes something else, and nothing
+ * schedules another run. `online` fires only on a real connectivity
+ * transition, so a server-side failure — an outage, a rejected preflight —
+ * never produces one; `visibilitychange` is throttled to two minutes and needs
+ * a tab switch; and there is deliberately no timer anywhere in the sync layer.
+ *
+ * So a single failed attempt could pin the indicator to "Offline" indefinitely
+ * while the device was online and the API was healthy. That is exactly what
+ * happened when a CORS preflight was rejecting offline mutations: reads worked,
+ * the health endpoint answered, and the CRM insisted it was offline.
+ *
+ * `navigator.onLine === false` is now the sole basis for the claim, because it
+ * is the only input that is actually about connectivity and the only one that
+ * corrects itself. A failed sync is still surfaced — as the failure it is — by
+ * `SyncStatusPanel`'s last-error line and the pending count.
  *
  * @param {object}  params
  * @param {boolean} params.isOffline    From the existing read layer.
@@ -66,8 +87,9 @@ export const CONNECTION_DETAIL = Object.freeze({
  */
 export function deriveConnectionUx({ isOffline, syncStatus, hasSynced = true }) {
   if (syncStatus === SYNC_STATE.SYNCING) return CONNECTION_UX.SYNCING
+
+  // The one connectivity signal, and the only one that corrects itself.
   if (isOffline) return CONNECTION_UX.OFFLINE
-  if (syncStatus === SYNC_STATE.OFFLINE) return CONNECTION_UX.OFFLINE
 
   /*
    * Online according to the browser, but nothing has confirmed the server yet.
