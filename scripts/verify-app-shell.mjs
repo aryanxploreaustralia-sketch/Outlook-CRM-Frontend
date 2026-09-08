@@ -53,6 +53,11 @@ class FakeResponse {
   clone() {
     return new FakeResponse(this.body, { status: this.status, type: this.type })
   }
+
+  /** The install parser reads the shell from the response already in hand. */
+  async text() {
+    return String(this.body)
+  }
 }
 
 /** Cache Storage, faithful to the bits the worker uses. */
@@ -153,7 +158,23 @@ const request = (path, extra = {}) => ({
   ...extra,
 })
 
-const online = async (url) => new FakeResponse(`body:${url}`)
+/**
+ * A shell that references assets, as the real build's does.
+ *
+ * The previous stub returned a body with no markup, so nothing could be
+ * discovered from it and the precache step had nothing to find.
+ */
+const SHELL_HTML = [
+  '<!doctype html><html><head>',
+  '<script type="module" crossorigin src="/assets/index-AAA111.js"></script>',
+  '<link rel="modulepreload" crossorigin href="/assets/jsx-runtime-BBB222.js">',
+  '<link rel="stylesheet" crossorigin href="/assets/index-CCC333.css">',
+  '<link rel="icon" href="/xplore-logo-mark.svg?v=2">',
+  '</head><body><div id="root"></div></body></html>',
+].join('')
+
+const online = async (url) =>
+  new FakeResponse(String(url).includes('/index.html') ? SHELL_HTML : `body:${url}`)
 const offline = async () => {
   throw new TypeError('Failed to fetch')
 }
@@ -173,11 +194,64 @@ section('1. INSTALL PRECACHES THE APP SHELL')
     [...w.cacheStorage.stores.keys()].join(', '),
   )
 
-  let assetCount = 0
-  for (const [name, store] of w.cacheStorage.stores) {
-    if (name.startsWith('xplore-assets-')) assetCount += store.size
+  /*
+   * The gap that made a single online visit insufficient.
+   *
+   * Registration happens on `window.load`, after every subresource has already
+   * downloaded outside this worker — so the entry bundle and stylesheet could
+   * never reach the asset cache on a first visit. A served shell with nothing
+   * to run in it renders a blank page.
+   */
+  const assets = [...w.cacheStorage.stores.entries()]
+    .filter(([name]) => name.startsWith('xplore-assets-'))
+    .flatMap(([, store]) => [...store.keys()])
+
+  check(
+    assets.some((u) => u.endsWith('/assets/index-AAA111.js')),
+    'the entry bundle named by the shell is precached',
+  )
+  check(
+    assets.some((u) => u.endsWith('/assets/index-CCC333.css')),
+    'and the stylesheet',
+  )
+  check(
+    assets.some((u) => u.endsWith('/assets/jsx-runtime-BBB222.js')),
+    'and every modulepreload the shell declares',
+  )
+  check(assets.length === 3, 'exactly the three /assets/ URLs in the HTML', `${assets.length} cached`)
+
+  check(
+    !assets.some((u) => u.includes('xplore-logo-mark')),
+    'a non-/assets/ reference is not swept in',
+  )
+  check(
+    !assets.some((u) => u.includes('LeadCreatePage')),
+    'and no route chunk is discovered — nothing follows imports',
+  )
+}
+
+{
+  // A single failing asset must not fail the install.
+  const w = bootWorker(async (url) => {
+    if (String(url).includes('/index.html')) return new FakeResponse(SHELL_HTML)
+    if (String(url).includes('index-AAA111')) throw new TypeError('Failed to fetch')
+    return new FakeResponse(`body:${url}`)
+  })
+
+  let threw = false
+  try {
+    await w.dispatch('install')
+  } catch {
+    threw = true
   }
-  check(assetCount === 0, 'and precaches NO route chunks — the 1.4 MB stays on demand')
+
+  check(!threw, 'one asset failing does not reject the install')
+  check(Boolean(await w.cacheStorage.match('/index.html')), 'the shell is still cached')
+
+  const partial = [...w.cacheStorage.stores.entries()]
+    .filter(([name]) => name.startsWith('xplore-assets-'))
+    .flatMap(([, store]) => [...store.keys()])
+  check(partial.length === 2, 'and the assets that did succeed are kept', `${partial.length} cached`)
 }
 
 {
@@ -209,7 +283,14 @@ section('2. NAVIGATION FALLS BACK TO THE CACHED SHELL')
 
   check(Boolean(response), 'an offline navigation is answered by the worker')
   check(response?.status === 200, 'with the cached shell, not an error', `status ${response?.status}`)
-  check(String(response?.body).includes('index.html'), 'and it is genuinely the shell')
+  check(
+    String(response?.body).includes('<div id="root">'),
+    'and it is genuinely the shell, not a placeholder',
+  )
+  check(
+    String(response?.body).includes('/assets/index-AAA111.js'),
+    'still naming the entry bundle that was precached alongside it',
+  )
 }
 
 {

@@ -71,6 +71,61 @@ const isStaticAsset = (url) =>
   url.pathname.startsWith('/pwa-icon-') ||
   url.pathname.startsWith('/xplore-logo-mark')
 
+/**
+ * Caches the handful of files the shell cannot boot without.
+ *
+ * ## Why the shell alone was not enough
+ *
+ * `index.html` is inert on its own: it names an entry bundle, a stylesheet and
+ * a couple of preloaded modules, and without them a served shell renders a
+ * blank page. Those files could not reach `ASSET_CACHE` on a first visit
+ * either, because registration happens on `window.load` — which fires *after*
+ * every subresource has already downloaded, outside this worker entirely.
+ *
+ * So a reader who opened the CRM once and then lost their connection got the
+ * shell and nothing to run in it. Caching them here is what makes a single
+ * online visit sufficient.
+ *
+ * ## Bounded on purpose
+ *
+ * Only `/assets/…` URLs written directly in the HTML — four files, ~584 KB.
+ * The 124 lazily-imported route chunks (1.4 MB) are deliberately not
+ * discovered: nothing here follows imports, and precaching routes nobody opens
+ * would make every install slower to solve a problem they do not have. The one
+ * route that must survive a cold start is warmed by the client instead.
+ *
+ * Self-maintaining: the shell is re-fetched with `cache: 'reload'` on every
+ * install, so the names parsed here are always the current build's hashes.
+ *
+ * @param {string} html The shell, as just fetched.
+ */
+async function precacheShellAssets(html) {
+  /*
+   * Matches `src="/assets/…"` and `href="/assets/…"`, which covers the entry
+   * `<script>`, the stylesheet `<link>` and every `modulepreload`. Anchored to
+   * a root-absolute `/assets/` path so nothing else on the page is swept in.
+   */
+  const urls = new Set(
+    [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((match) => match[1]),
+  )
+
+  await Promise.all(
+    [...urls].map(async (url) => {
+      try {
+        await put(ASSET_CACHE, url, await fetch(url))
+      } catch {
+        /*
+         * One asset failing must not fail the install.
+         *
+         * A rejected install would leave the worker not activated at all and
+         * the reader worse off than before this function existed. A missing
+         * file is simply fetched on demand later, exactly as it is today.
+         */
+      }
+    }),
+  )
+}
+
 self.addEventListener('install', (event) => {
   /*
    * The shell, and only the shell.
@@ -109,7 +164,12 @@ self.addEventListener('install', (event) => {
         // `reload` bypasses the HTTP cache so the stored shell is the current
         // build's, never a stale copy a proxy happened to be holding.
         const response = await fetch(SHELL_KEY, { cache: 'reload' })
+
+        // `put` clones internally, so the body below is still unread and the
+        // HTML is parsed from the response already in hand — never a second
+        // request for the same file.
         await put(SHELL_CACHE, SHELL_KEY, response)
+        await precacheShellAssets(await response.text())
       } catch {
         /* No network at install time. The next navigation fills the cache. */
       }
