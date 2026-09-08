@@ -225,6 +225,9 @@ export function DashboardLayout() {
                 conflict={queue.conflict}
                 isSyncing={queue.isSyncing}
                 onRetry={queue.sync}
+                // The only path from `failed` back to `pending`, and it is
+                // reached from a click and nowhere else.
+                onRetryFailed={queue.retryFailed}
                 className="mb-4"
               />
 

@@ -23,6 +23,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { syncQueueRepository } from '@/offline/repositories/syncQueueRepository'
+
 import { useAuth } from '@/hooks/useAuth'
 import {
   SYNC_STATE,
@@ -87,6 +89,40 @@ export function useSyncCoordinator({ enabled = SYNC_ENABLED } = {}) {
   /** A deliberate, user-initiated sync. Ignores the backoff window. */
   const sync = useCallback(() => run('manual', { force: true }), [run])
 
+  /**
+   * Return permanently-failed entries to the queue, then sync.
+   *
+   * ## Why this exists alongside `sync`
+   *
+   * `drain()` selects `pending` only, so a `failed` entry is invisible to an
+   * ordinary sync — correctly, because retrying an unchanged payload against a
+   * 400 would fail identically forever. The consequence was that "needs
+   * attention" had no action behind it: the notice asked for attention and
+   * offered nothing that could give it.
+   *
+   * This is that action, and it is the only path from `failed` back to
+   * `pending` in the application. It is never called automatically — no
+   * effect, no timer and no reconnect handler reaches it — so the rule that
+   * failures are not retried blindly is unchanged. A person decides.
+   *
+   * Conflicts are deliberately excluded by the repository: they need a choice
+   * between two versions, not another attempt.
+   */
+  const retryFailed = useCallback(async () => {
+    if (!enabled || !userId) return
+
+    const revived = await syncQueueRepository.retryFailed({ userId })
+
+    // Nothing was failed after all — another drain may have moved it. Refresh
+    // the counts so the notice matches reality, and do not force a sync.
+    if (revived.length === 0) {
+      await refresh()
+      return
+    }
+
+    await run('retry-failed', { force: true })
+  }, [enabled, userId, refresh, run])
+
   // --- startup ------------------------------------------------------------
   useEffect(() => {
     if (!enabled || !auth.isReady || !auth.authenticated || !userId) return
@@ -130,6 +166,7 @@ export function useSyncCoordinator({ enabled = SYNC_ENABLED } = {}) {
     failed: counts.failed,
     conflict: counts.conflict,
     sync,
+    retryFailed,
     refresh,
   }
 }

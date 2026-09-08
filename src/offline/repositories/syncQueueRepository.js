@@ -163,6 +163,68 @@ export const syncQueueRepository = {
   },
 
   /**
+   * Returns a permanently-failed entry to the queue, at the reader's request.
+   *
+   * ## Why this is not `setStatus(opId, PENDING)`
+   *
+   * `setStatus` deliberately carries `retryCount` across a transition, and the
+   * processor computes `attempts = retryCount + 1` against `MAX_ATTEMPTS`. An
+   * entry that gave up after five attempts would therefore be refused on its
+   * very next drain, before a request was even made — the button would appear
+   * to work and change nothing. Resetting the count is what makes the retry
+   * real, and it is only ever done because a person asked.
+   *
+   * ## `conflict` is never touched
+   *
+   * A conflict is not a failure that can be re-sent: the server has moved on,
+   * and replaying the mutation would overwrite somebody's work. The two
+   * statuses are kept apart everywhere else in the queue and they stay apart
+   * here — this filters on `failed` alone, so a "try again" can never resolve a
+   * conflict by force.
+   *
+   * ## Nothing is discarded
+   *
+   * The payload, the `recordId`, the `opId`, `dependsOn` and `baseUpdatedAt`
+   * are all preserved untouched; only the status, the retry budget and the
+   * stale error text change. The local record is not read or written at all.
+   *
+   * @param {object}  [params]
+   * @param {?string} [params.opId]   One entry, or every failed entry when null.
+   * @param {?string} [params.userId]
+   * @returns {Promise<object[]>} The entries actually returned to the queue.
+   */
+  async retryFailed({ opId = null, userId = null } = {}) {
+    const db = await openDatabase(userId)
+    const transaction = db.transaction(STORE.SYNC_QUEUE, 'readwrite')
+
+    const candidates = opId
+      ? [await transaction.store.get(opId)].filter(Boolean)
+      : await transaction.store.index('status').getAll(QUEUE_STATUS.FAILED)
+
+    // Re-checked even for a named entry: the caller passes an id read moments
+    // earlier, and a drain may have moved it since.
+    const failed = candidates.filter((entry) => entry.status === QUEUE_STATUS.FAILED)
+
+    const revived = failed.map((entry) => ({
+      ...entry,
+      status: QUEUE_STATUS.PENDING,
+      /*
+       * A fresh budget, not an increment. The previous five attempts are
+       * spent history; what matters is that a person has judged the cause
+       * resolved — most often a server that was unreachable and now is not.
+       */
+      retryCount: 0,
+      lastError: null,
+      httpStatus: null,
+    }))
+
+    await Promise.all(revived.map((entry) => transaction.store.put(entry)))
+    await transaction.done
+
+    return revived
+  },
+
+  /**
    * Removes one entry.
    *
    * For an operation the server has confirmed, or one the reader has explicitly

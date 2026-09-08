@@ -24,7 +24,8 @@
     "verify:sync-coordinator": "node scripts/verify-sync-coordinator.mjs",
     "verify:panel-access": "node scripts/verify-panel-access.mjs",
     "verify:offline-ux": "node scripts/verify-offline-ux.mjs",
-    "verify:app-shell": "node scripts/verify-app-shell.mjs"
+    "verify:app-shell": "node scripts/verify-app-shell.mjs",
+    "verify:retry-failed": "node scripts/verify-retry-failed.mjs"
   },
   "dependencies": {
     "axios": "^1.19.0",

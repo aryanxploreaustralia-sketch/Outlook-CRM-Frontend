@@ -28,6 +28,9 @@ import { CloudOff, RefreshCw, TriangleAlert } from 'lucide-react'
  * @param {number}   [props.conflict] Mutations held back by a conflict.
  * @param {boolean}  [props.isSyncing]
  * @param {?Function} [props.onRetry] Omit to render no control.
+ * @param {?Function} [props.onRetryFailed]
+ *   Returns permanently-failed entries to the queue and syncs. Omit to render
+ *   no control — which is what happens anywhere the coordinator is not mounted.
  * @param {string}   [props.className]
  */
 export function PendingSyncNotice({
@@ -36,6 +39,7 @@ export function PendingSyncNotice({
   conflict = 0,
   isSyncing = false,
   onRetry = null,
+  onRetryFailed = null,
   className = '',
 }) {
   const held = failed + conflict
@@ -45,6 +49,16 @@ export function PendingSyncNotice({
   if (pending === 0 && held === 0) return null
 
   const needsAttention = held > 0
+
+  /*
+   * A failure can be tried again; a conflict cannot.
+   *
+   * `held` counts both, and the control below is offered only when something
+   * is genuinely retryable — a conflict needs a person to choose between two
+   * versions, and a "Try again" beside it would promise a resolution this
+   * cannot perform.
+   */
+  const canRetry = failed > 0 && typeof onRetryFailed === 'function'
 
   const label = needsAttention
     ? `${held} change${held === 1 ? '' : 's'} could not be saved to the CRM and ${held === 1 ? 'needs' : 'need'} attention.`
@@ -67,6 +81,27 @@ export function PendingSyncNotice({
     >
       <Icon className={`size-4 shrink-0 ${isSyncing ? 'animate-pulse' : ''}`} aria-hidden="true" />
       <span className="min-w-0 flex-1">{label}</span>
+
+      {/*
+        The action the attention state never had.
+        
+        This was the defect: the retry control hid itself precisely when
+        something had failed, so the notice asked for attention and offered
+        nothing that could give it. An ordinary sync cannot help — `drain()`
+        selects `pending`, and these entries are `failed` — so this is a
+        distinct action, deliberately labelled as one.
+      */}
+      {canRetry && (
+        <button
+          type="button"
+          onClick={onRetryFailed}
+          disabled={isSyncing}
+          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-amber-900 ring-1 ring-amber-300 hover:bg-white disabled:opacity-50"
+        >
+          <RefreshCw className={`size-3 ${isSyncing ? 'animate-spin' : ''}`} aria-hidden="true" />
+          {isSyncing ? 'Trying…' : 'Try again'}
+        </button>
+      )}
 
       {onRetry && !needsAttention && (
         <button
