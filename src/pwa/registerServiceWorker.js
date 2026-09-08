@@ -16,6 +16,8 @@
  * for it not to start. Nothing on this path is awaited by the bootstrap.
  */
 
+import { prefetchOfflineRoutes } from '@/pwa/prefetchOfflineRoutes'
+
 /** Where the worker lives, and the scope it must control. */
 const SCRIPT = '/sw.js'
 const SCOPE = '/'
@@ -128,6 +130,20 @@ export function registerServiceWorker() {
         // failed to install would be a far worse bug than the one being reported.
         console.warn('[pwa] Service worker registration failed.', error)
       })
+
+    /*
+     * Warm the offline-critical route chunks — but only once the worker is
+     * controlling this page.
+     *
+     * `ready` resolves on the active registration. Fetching before that would
+     * bypass the worker completely and cache nothing, which is precisely the
+     * gap that left a cold start with no Lead Create chunk. Chained off `ready`
+     * rather than the registration promise for that reason.
+     *
+     * Fire and forget, and failure-tolerant: an unwarmed chunk is fetched on
+     * demand, which is today's behaviour.
+     */
+    navigator.serviceWorker.ready.then(prefetchOfflineRoutes).catch(() => {})
   })
 }
 

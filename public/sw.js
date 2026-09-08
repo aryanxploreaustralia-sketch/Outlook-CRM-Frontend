@@ -71,20 +71,50 @@ const isStaticAsset = (url) =>
   url.pathname.startsWith('/pwa-icon-') ||
   url.pathname.startsWith('/xplore-logo-mark')
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
   /*
-   * Nothing is precached.
+   * The shell, and only the shell.
    *
-   * A precache list would have to name hashed files this worker cannot know,
-   * and precaching the shell here would mean the very first visit pays for a
-   * second download of what the page just loaded. The caches fill from real
-   * traffic instead.
+   * ## Why this had to change
+   *
+   * Registration happens on `window.load`, so the navigation that loaded the
+   * very first page completed *before* any worker existed and never passed
+   * through the handler below. `SHELL_CACHE` therefore stayed empty until the
+   * reader navigated a second time — and somebody who opened the CRM once and
+   * then lost their connection had no shell to fall back to. The app was
+   * offline-capable everywhere except at the front door.
+   *
+   * Fetching `/index.html` here closes that: one online visit is now enough.
+   *
+   * ## Still no precache manifest
+   *
+   * The 124 fingerprinted chunks are deliberately NOT listed. This worker
+   * cannot know their hashed names, and downloading 1.4 MB of routes most
+   * readers never open would make installation slower to fix a problem they do
+   * not have. Assets continue to fill `ASSET_CACHE` from real traffic; the one
+   * route that must survive a cold start is warmed by the client instead.
+   *
+   * A failure here is not fatal. Installing with no network simply leaves the
+   * cache empty, exactly as before, and the next successful navigation fills
+   * it — so this can only ever improve on the previous behaviour.
    *
    * `skipWaiting()` is deliberately NOT called. An updated worker taking over
    * a running tab can swap the caching strategy underneath a session that is
    * mid-edit; waiting for the tab to close costs nothing, because navigations
    * are network-first and the reader is already being served current HTML.
    */
+  event.waitUntil(
+    (async () => {
+      try {
+        // `reload` bypasses the HTTP cache so the stored shell is the current
+        // build's, never a stale copy a proxy happened to be holding.
+        const response = await fetch(SHELL_KEY, { cache: 'reload' })
+        await put(SHELL_CACHE, SHELL_KEY, response)
+      } catch {
+        /* No network at install time. The next navigation fills the cache. */
+      }
+    })(),
+  )
 })
 
 self.addEventListener('activate', (event) => {
@@ -159,9 +189,34 @@ self.addEventListener('fetch', (event) => {
         const cached = await caches.match(request)
         if (cached) return cached
 
-        const response = await fetch(request)
-        await put(ASSET_CACHE, request, response)
-        return response
+        /*
+         * The network call is guarded, and it was not before.
+         *
+         * A miss offline — a lazily-loaded route chunk the reader has never
+         * opened — made this `fetch` reject with nothing to catch it. The
+         * rejection propagated out of `respondWith`, which the browser reports
+         * as a failed subresource load, and the dynamic `import()` waiting on
+         * it failed with no way to tell why. A handler that can throw is worse
+         * than no handler at all, because it fails *differently* from the
+         * browser's own behaviour.
+         *
+         * The reply is a plain 503 carrying no body. The importing code
+         * already handles a failed chunk; what it needed was a definite answer
+         * rather than an unhandled rejection.
+         */
+        try {
+          const response = await fetch(request)
+          await put(ASSET_CACHE, request, response)
+          return response
+        } catch {
+          return new Response('', {
+            status: 503,
+            statusText: 'Offline',
+            // Never stored: a 503 cached against an asset URL would outlive the
+            // outage and keep failing after the connection returned.
+            headers: { 'Cache-Control': 'no-store' },
+          })
+        }
       })(),
     )
   }
