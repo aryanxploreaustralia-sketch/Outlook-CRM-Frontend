@@ -22,8 +22,12 @@ import {
   Upload,
 } from 'lucide-react'
 
-import { deleteAllLeads, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
+import { deleteAllLeads, deleteLead, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
+import { DeleteLeadDialog } from '@/components/leads/DeleteLeadDialog'
+import { useAuth } from '@/hooks/useAuth'
+import { isTransportFailure } from '@/offline/read'
+import { deleteLocal } from '@/offline/write'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
 import { describeParty } from '@/utils/party'
@@ -86,6 +90,19 @@ export function LeadsPage() {
    * `unknown` leaves the wording below exactly as it was.
    */
   const { neverDownloaded } = useHydrationState('leads')
+
+  /*
+   * Single-enquiry deletion.
+   *
+   * Held apart from the Delete All state above it on purpose: two dialogs whose
+   * open flags could both be true, or whose `isDeleting` was shared, would let a
+   * purge and a row delete interfere. Separate state means neither can arm or
+   * disable the other.
+   */
+  const userId = useAuth().user?.id ?? null
+  const [leadToDelete, setLeadToDelete] = useState(null)
+  const [isDeletingLead, setIsDeletingLead] = useState(false)
+  const [deleteLeadError, setDeleteLeadError] = useState(null)
 
   const [page, setPage] = useState(1)
   /* Rows per page is the reader's choice, not a constant. Changing it returns
@@ -218,6 +235,76 @@ export function LeadsPage() {
       )
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  /**
+   * Deletes the one enquiry the reader confirmed.
+   *
+   * ## It reuses everything
+   *
+   * `DELETE /leads/:id` already existed — `controller.remove` soft-deletes,
+   * recounts the company and writes the audit entry — and `deleteLead` already
+   * wrapped it. The offline fallback is the same shape `ContactDetailPage` and
+   * `CompanyDetailPage` already use, and `deleteLocal('leads', …)` was already
+   * wired into the write layer and the queue processor. Nothing new was added
+   * on either side; this is the UI that was missing.
+   *
+   * ## Only a dropped connection queues
+   *
+   * A 403 or a 404 is the server refusing, and writing a local tombstone for a
+   * record the server will not delete would hide the enquiry from this device
+   * while it stayed live for everybody else. Those surface as an error in the
+   * dialog instead, exactly as the delete paths elsewhere handle them.
+   */
+  const confirmDeleteLead = async () => {
+    // The dialog's button is disabled while this runs; this is the guard that
+    // actually holds, because a keyboard repeat can outrun a re-render.
+    if (!leadToDelete || isDeletingLead) return
+
+    const target = leadToDelete
+    let queuedLocally = false
+
+    setIsDeletingLead(true)
+    setDeleteLeadError(null)
+
+    try {
+      try {
+        await deleteLead(target.id)
+      } catch (thrown) {
+        if (!isTransportFailure(thrown) || !userId) throw thrown
+        await deleteLocal('leads', target.id, { userId })
+        queuedLocally = true
+      }
+
+      setLeadToDelete(null)
+
+      /*
+       * Said differently depending on where it landed.
+       *
+       * A local tombstone hides the enquiry from this device immediately, so
+       * without the distinction the two outcomes are indistinguishable and the
+       * reader has no way to know colleagues can still see the record.
+       */
+      setDeleteNotice(
+        queuedLocally
+          ? `Enquiry ${target.reference ?? ''} deleted on this device — waiting to sync.`.replace('  ', ' ')
+          : `Enquiry ${target.reference ?? ''} deleted.`.replace('  ', ' '),
+      )
+
+      // The row is gone and the facet dropdowns are built from the rows, so a
+      // stale facet would go on offering a city nothing matches.
+      await Promise.all([refresh(), refreshFacets()])
+
+      setTimeout(() => setDeleteNotice(null), 6000)
+    } catch (error) {
+      setDeleteLeadError(
+        error?.response?.data?.message ??
+          error?.message ??
+          'That lead could not be deleted.',
+      )
+    } finally {
+      setIsDeletingLead(false)
     }
   }
 
@@ -882,6 +969,16 @@ export function LeadsPage() {
                         {column.header}
                       </th>
                     ))}
+                    {/*
+                      Actions are pinned to the trailing edge and sit outside
+                      `columnOrder.columns`, so they are not draggable. An
+                      actions column is a control, not a field: letting it be
+                      reordered into the middle of the register would be
+                      reordering the furniture.
+                    */}
+                    <th scope="col" className="w-12 px-3 py-2 text-right font-medium">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -910,12 +1007,48 @@ export function LeadsPage() {
                           {column.render(lead)}
                         </td>
                       ))}
+
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            /*
+                             * The row carries a `<Link>` to the detail page in
+                             * one of its cells. This button is not inside it,
+                             * but stopping propagation costs nothing and makes
+                             * the guarantee explicit rather than incidental —
+                             * a later wrapper cannot turn a delete click into
+                             * a navigation.
+                             */
+                            event.stopPropagation()
+                            setDeleteLeadError(null)
+                            setLeadToDelete(lead)
+                          }}
+                          // Named per row, so a screen reader announces which
+                          // enquiry the control belongs to rather than reading
+                          // "Delete" once per line.
+                          aria-label={`Delete lead ${lead.reference ?? ''}`.trim()}
+                          title="Delete this lead"
+                          className="rounded p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
+
+          <DeleteLeadDialog
+            isOpen={Boolean(leadToDelete)}
+            lead={leadToDelete}
+            isDeleting={isDeletingLead}
+            error={deleteLeadError}
+            onCancel={() => setLeadToDelete(null)}
+            onConfirm={confirmDeleteLead}
+          />
 
           <DeleteAllLeadsDialog
             isOpen={isDeleteOpen}
