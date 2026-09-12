@@ -176,6 +176,24 @@ export async function bulkShareLeads(userIds, { signal, headers } = {}) {
 }
 
 /**
+ * Removes `userIds` from every enquiry this manager owns.
+ *
+ * The mirror of `bulkShareLeads`: it only ever narrows access, leaves
+ * colleagues who were not named exactly where they were, and is a no-op on a
+ * repeat run. Returns `{ updatedCount, modifiedCount, userIds }`, where
+ * `modifiedCount` is the number of enquiries that actually held one of these
+ * people — the honest figure to report back.
+ */
+export async function bulkRevokeLeadSharing(userIds, { signal, headers } = {}) {
+  const response = await httpClient.put(
+    ENDPOINTS.leads.sharingBulkRevoke,
+    { userIds },
+    { signal, headers },
+  )
+  return response.data?.data ?? null
+}
+
+/**
  * Updates the enquiry, its contact and its company in one request.
  *
  * `payload` is `{ lead?, contact?, company? }`; omit a section and it is not

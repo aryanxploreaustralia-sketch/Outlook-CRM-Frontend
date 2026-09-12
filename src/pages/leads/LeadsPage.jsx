@@ -20,6 +20,7 @@ import {
   Search,
   Share2,
   Trash2,
+  UserMinus,
   Upload,
 } from 'lucide-react'
 
@@ -31,6 +32,7 @@ import {
   fetchPurgePreview,
 } from '@/api/services/lead.service'
 import { BulkShareLeadsDialog } from '@/components/leads/BulkShareLeadsDialog'
+import { ManageLeadSharingDialog } from '@/components/leads/ManageLeadSharingDialog'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
 import { DeleteLeadDialog } from '@/components/leads/DeleteLeadDialog'
 import { useAuth } from '@/hooks/useAuth'
@@ -181,8 +183,9 @@ export function LeadsPage() {
    * enquiries shared *with* this reader, and bulk sharing touches only what
    * they own.
    */
-  const [bulkShare, setBulkShare] = useState({ canBulkShare: false, leadCount: 0 })
+  const [bulkShare, setBulkShare] = useState({ canBulkShare: false, leadCount: 0, sharedUserIds: [] })
   const [isBulkShareOpen, setIsBulkShareOpen] = useState(false)
+  const [isManageSharingOpen, setIsManageSharingOpen] = useState(false)
   const [shareNotice, setShareNotice] = useState(null)
 
   const loadBulkSharePreview = useCallback(async (signal) => {
@@ -860,6 +863,21 @@ export function LeadsPage() {
           </Button>
         )}
 
+        {/*
+          Its own button beside the grant, not a mode hidden inside it.
+
+          Giving access and taking it back are opposite intentions, and a
+          reader looking for the second should not have to open the first to
+          discover it. Shown on the same condition — whoever may share may
+          un-share — so the pair appears and disappears together.
+        */}
+        {bulkShare.canBulkShare && (
+          <Button variant="secondary" onClick={() => setIsManageSharingOpen(true)}>
+            <UserMinus className="size-4" aria-hidden="true" />
+            Manage Sharing
+          </Button>
+        )}
+
         {/* The primary action: most enquiries now arrive one at a time. */}
         <Button as={Link} to={ROUTE_PATHS.LEAD_NEW}>
           <Plus className="size-4" aria-hidden="true" />
@@ -1150,6 +1168,32 @@ export function LeadsPage() {
                 setShareNotice(
                   `${updatedCount.toLocaleString()} Lead${updatedCount === 1 ? '' : 's'} shared with ` +
                     `${userIds.length} user${userIds.length === 1 ? '' : 's'}.`,
+                )
+                setTimeout(() => setShareNotice(null), 8000)
+                loadBulkSharePreview()
+              }}
+            />
+          )}
+
+          {/*
+            The revoke counterpart. `modifiedCount` rather than the total
+            considered: reporting that 3,000 enquiries changed when twenty
+            actually held those people would be a lie in the direction that
+            worries people.
+          */}
+          {isManageSharingOpen && (
+            <ManageLeadSharingDialog
+              isOpen={isManageSharingOpen}
+              onClose={() => setIsManageSharingOpen(false)}
+              leadCount={bulkShare.leadCount}
+              sharedUserIds={bulkShare.sharedUserIds}
+              isOffline={isOffline}
+              onRevoked={({ modifiedCount, userIds }) => {
+                setShareNotice(
+                  modifiedCount === 0
+                    ? 'None of your Leads were shared with those users — nothing changed.'
+                    : `Access removed for ${userIds.length} user${userIds.length === 1 ? '' : 's'} ` +
+                      `from ${modifiedCount.toLocaleString()} Lead${modifiedCount === 1 ? '' : 's'}.`,
                 )
                 setTimeout(() => setShareNotice(null), 8000)
                 loadBulkSharePreview()

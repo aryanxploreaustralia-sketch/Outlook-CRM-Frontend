@@ -30,7 +30,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CloudOff, Share2 } from 'lucide-react'
+import { CloudOff, Share2, UserMinus, Users } from 'lucide-react'
 
 import { AdminModal } from '@/admin/components/AdminModal'
 import { AssignPicker } from '@/admin/components/mailboxes/AssignPicker'
@@ -54,6 +54,15 @@ const messageOf = (error, fallback) =>
 export function ShareLeadDialog({ isOpen, onClose, lead, isOffline = false, onSaved }) {
   const [users, setUsers] = useState([])
   const [selected, setSelected] = useState([])
+  /*
+   * Who held access when the dialog opened.
+   *
+   * Kept apart from `selected`, which moves as the reader ticks and unticks.
+   * The difference between the two is what the footer reports, so somebody
+   * removing a colleague can see that is what they are about to do before they
+   * press Save.
+   */
+  const [initial, setInitial] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -79,7 +88,9 @@ export function ShareLeadDialog({ isOpen, onClose, lead, isOffline = false, onSa
     ])
       .then(([available, current]) => {
         setUsers(available?.items ?? [])
-        setSelected((current?.items ?? []).map((user) => String(user.id)))
+        const held = (current?.items ?? []).map((user) => String(user.id))
+        setSelected(held)
+        setInitial(held)
       })
       .catch((caught) => {
         if (isCancelledError(caught)) return
@@ -102,6 +113,28 @@ export function ShareLeadDialog({ isOpen, onClose, lead, isOffline = false, onSa
       })),
     [users],
   )
+
+  /*
+   * Who is about to lose access: held at open, not ticked now.
+   *
+   * Names are resolved from the list already loaded, so this costs no request.
+   * Capped in the sentence at three so a bulk un-tick does not produce a
+   * paragraph where a count was wanted.
+   */
+  const removing = useMemo(
+    () => initial.filter((id) => !selected.includes(id)),
+    [initial, selected],
+  )
+
+  const removingNames = useMemo(() => {
+    const names = removing
+      .map((id) => options.find((option) => option.id === id)?.primary)
+      .filter(Boolean)
+
+    if (names.length === 0) return ''
+    if (names.length <= 3) return names.join(', ')
+    return `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`
+  }, [removing, options])
 
   const save = useCallback(async () => {
     if (!leadId) return
@@ -174,13 +207,47 @@ export function ShareLeadDialog({ isOpen, onClose, lead, isOffline = false, onSa
               ))}
             </div>
           ) : (
-            <AssignPicker
-              options={options}
-              value={selected}
-              onChange={setSelected}
-              searchPlaceholder="Search people…"
-              emptyMessage="There is nobody else to share this enquiry with."
-            />
+            <>
+              {/*
+                Who has access right now, stated before the list.
+
+                The ticks already encode it, but a reader scanning a long list
+                cannot count them, and this is the number they came to check.
+              */}
+              <p className="mb-2 flex items-center gap-2 text-xs text-slate-600">
+                <Users className="size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                {initial.length === 0
+                  ? 'Nobody else has access to this enquiry yet.'
+                  : `${initial.length} user${initial.length === 1 ? '' : 's'} currently ${
+                      initial.length === 1 ? 'has' : 'have'
+                    } access.`}
+              </p>
+
+              <AssignPicker
+                options={options}
+                value={selected}
+                onChange={setSelected}
+                searchPlaceholder="Search people…"
+                emptyMessage="There is nobody else to share this enquiry with."
+              />
+
+              {/*
+                Un-ticking is how access is taken back, so the consequence is
+                spelled out before Save rather than discovered afterwards.
+              */}
+              {removing.length > 0 && (
+                <p className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-inset ring-amber-200">
+                  <UserMinus className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+                  <span>
+                    Saving will remove access for{' '}
+                    <span className="font-semibold">
+                      {removing.length} user{removing.length === 1 ? '' : 's'}
+                    </span>
+                    {removingNames ? `: ${removingNames}` : ''}.
+                  </span>
+                </p>
+              )}
+            </>
           )}
 
           {/*
