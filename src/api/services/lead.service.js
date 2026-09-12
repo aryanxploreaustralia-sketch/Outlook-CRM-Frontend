@@ -122,6 +122,35 @@ export async function fetchLeadAssignees({ signal } = {}) {
 }
 
 /**
+ * Colleagues an enquiry may be shared with.
+ *
+ * Active CRM users other than the caller, decided entirely by the server.
+ * Returns `{ items: [{ id, name, email }] }`.
+ */
+export async function fetchShareableUsers({ signal } = {}) {
+  const response = await httpClient.get(ENDPOINTS.leads.shareableUsers, { signal })
+  return response.data?.data ?? response.data
+}
+
+/** Who this enquiry is currently shared with. `{ items: [{ id, name, email }] }`. */
+export async function fetchLeadSharing(id, { signal } = {}) {
+  const response = await httpClient.get(ENDPOINTS.leads.sharing(id), { signal })
+  return response.data?.data ?? response.data
+}
+
+/**
+ * Replaces the share list.
+ *
+ * `userIds` is the complete selection, not a set of changes — the server
+ * computes the additions and removals itself, so a client cannot submit an
+ * add-list and a remove-list that disagree.
+ */
+export async function updateLeadSharing(id, userIds, { signal, headers } = {}) {
+  const response = await httpClient.put(ENDPOINTS.leads.sharing(id), { userIds }, { signal, headers })
+  return response.data?.data ?? null
+}
+
+/**
  * Updates the enquiry, its contact and its company in one request.
  *
  * `payload` is `{ lead?, contact?, company? }`; omit a section and it is not

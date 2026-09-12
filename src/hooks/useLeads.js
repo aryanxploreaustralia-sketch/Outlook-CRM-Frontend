@@ -220,6 +220,15 @@ export function useLead(id, { enabled = true } = {}) {
      * the server will refuse.
      */
     canEdit: resource.data?.canEdit === true,
+    /*
+     * The server's answer to "may I change who this is shared with?".
+     *
+     * Defaults to false like `canEdit` above, and for the same reason: a
+     * payload from an older API, or the offline cache — which holds the summary
+     * shape and carries no such flag — must hide the control rather than offer
+     * one the server would refuse.
+     */
+    canShare: resource.data?.canShare === true,
     /** Who holds the enquiry, named by the server. `{ id, name }` or null. */
     holder: resource.data?.owner ?? null,
     isInitialLoading: resource.isInitialLoading,

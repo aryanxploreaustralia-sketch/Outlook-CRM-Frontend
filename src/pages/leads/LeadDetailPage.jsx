@@ -7,11 +7,12 @@
 
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, Building2, Mail, Pencil, Phone, User } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Building2, Mail, Pencil, Phone, Share2, User } from 'lucide-react'
 
 import { fetchLeadConversation } from '@/api/services/conversation.service'
 import { LeadConversation } from '@/components/leads/LeadConversation'
 import { LeadEditDialog } from '@/components/leads/LeadEditDialog'
+import { ShareLeadDialog } from '@/components/leads/ShareLeadDialog'
 import { LeadStageBadge } from '@/components/leads/LeadStageBadge'
 import { ErrorScreen } from '@/components/common/ErrorScreen'
 import { Button } from '@/components/ui/Button'
@@ -19,6 +20,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { LEAD_STAGES } from '@/constants/lead.constants'
 import { useApiResource } from '@/hooks/useApiResource'
 import { useLead } from '@/hooks/useLeads'
+import { useReadSource } from '@/offline/read'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
 import { describeParty } from '@/utils/party'
@@ -28,7 +30,7 @@ import { formatDate, formatDateTime } from '@/utils/datetime'
 export function LeadDetailPage() {
   const { id } = useParams()
   const {
-    lead, company, contact, canEdit, holder,
+    lead, company, contact, canEdit, canShare, holder,
     isInitialLoading, isError, error, refresh, action, isBusy, actionError, save, saveFull,
   } = useLead(id)
 
@@ -36,6 +38,18 @@ export function LeadDetailPage() {
 
   /** Whether the edit dialog is open. The dialog owns the draft itself. */
   const [isEditOpen, setIsEditOpen] = useState(false)
+
+  /** Whether the share dialog is open. It loads its own lists when it opens. */
+  const [isShareOpen, setIsShareOpen] = useState(false)
+
+  /*
+   * Sharing is online-only, so the dialog needs to know.
+   *
+   * Read through the existing connectivity hook rather than a new listener —
+   * it is the same subscription the rest of the app already uses, and it adds
+   * no request and no timer.
+   */
+  const { isOffline } = useReadSource()
 
   /**
    * The correspondence, fetched separately from the enquiry itself.
@@ -136,6 +150,23 @@ export function LeadDetailPage() {
         without the key, React would keep the previous record's values in the
         dialog's own state after a background refresh.
       */}
+      {/*
+        Mounted only while open, like the edit dialog above, so it fetches the
+        people list on open rather than on every enquiry anybody views.
+
+        `refresh` afterwards so the count on the button and the `sharedWith`
+        array behind it reflect what was just saved without a page reload.
+      */}
+      {isShareOpen && (
+        <ShareLeadDialog
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+          lead={lead}
+          isOffline={isOffline}
+          onSaved={() => refresh({ isBackground: true })}
+        />
+      )}
+
       {isEditOpen && (
         <LeadEditDialog
           key={lead.updatedAt ?? lead.id}
@@ -157,17 +188,44 @@ export function LeadDetailPage() {
             <h2 className="text-sm font-semibold text-slate-900">Enquiry</h2>
 
             {/*
-              Rendered from the server's `canEdit`, not from a client-side
-              comparison, so the control and the endpoint's guard cannot
-              disagree. An imported enquiry is an ordinary enquiry here: nothing
-              on this page reads `sourceSheet` to decide anything.
+              Both controls are rendered from the server's own flags —
+              `canEdit` and `canShare` — not from a client-side comparison, so
+              a control and the endpoint's guard cannot disagree. An imported
+              enquiry is an ordinary enquiry here: nothing on this page reads
+              `sourceSheet` to decide anything.
             */}
-            {canEdit && (
-              <Button variant="secondary" size="sm" onClick={() => setIsEditOpen(true)}>
-                <Pencil className="size-3.5" aria-hidden="true" />
-                Edit lead
-              </Button>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {/*
+                Beside Edit rather than up in the page header: sharing is an
+                action on the enquiry record, which is what this section is, and
+                the header already carries the stage control and the
+                do-not-contact toggle.
+
+                `canShare` is the server's answer and is narrower than
+                `canEdit` — somebody the enquiry was shared with may edit it but
+                may not pass that access on, so they see Edit here and no Share.
+              */}
+              {canShare && (
+                <Button variant="ghost" size="sm" onClick={() => setIsShareOpen(true)}>
+                  <Share2 className="size-3.5" aria-hidden="true" />
+                  Share
+                  {/* The count, only once there is one. A permanent "(0)" is
+                      noise on the overwhelming majority of enquiries. */}
+                  {(lead.sharedWith ?? []).length > 0 && (
+                    <span className="ml-0.5 rounded-full bg-brand-100 px-1.5 text-[11px] font-medium text-brand-700">
+                      {lead.sharedWith.length}
+                    </span>
+                  )}
+                </Button>
+              )}
+
+              {canEdit && (
+                <Button variant="secondary" size="sm" onClick={() => setIsEditOpen(true)}>
+                  <Pencil className="size-3.5" aria-hidden="true" />
+                  Edit lead
+                </Button>
+              )}
+            </div>
           </div>
 
           <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
