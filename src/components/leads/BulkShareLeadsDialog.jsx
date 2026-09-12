@@ -1,35 +1,38 @@
 /**
- * Share every enquiry this manager owns, in one operation.
+ * Who this manager's whole register is shared with.
  *
- * The register-wide counterpart to `ShareLeadDialog`, which shares one enquiry.
- * Both are kept: sharing a single quotation with a colleague and handing a whole
- * desk to a team are different acts, and collapsing them into one screen would
- * make the smaller one feel as consequential as the larger.
+ * One dialog, one question: tick the colleagues who should have access. A tick
+ * grants it, an un-tick takes it back, and Save applies both — so there is no
+ * separate "remove access" screen to find, and no way to be looking at the
+ * wrong one.
+ *
+ * ## The checkboxes are the state, not a queue of actions
+ *
+ * It opens showing what is true right now: everybody who currently holds access
+ * arrives ticked. Whatever the boxes say when Save is pressed is what the
+ * register will be shared with.
+ *
+ * ## Only what actually changed is sent as a change
+ *
+ * The server computes the difference against what is genuinely shared, which
+ * matters more than it looks. A colleague may hold access to three enquiries
+ * out of a thousand; they still show as one ticked box, and re-saving without
+ * touching them must not quietly promote them to the whole register. Leaving a
+ * tick alone therefore changes nothing at all.
  *
  * ## Two steps, because the blast radius is large
  *
- * Picking people is reversible; applying the grant to several thousand
- * enquiries is the part worth pausing on. So the dialog selects first and
- * confirms second, and the confirmation states both numbers — how many people
- * and how many enquiries — before the button that does it.
+ * Ticking is reversible; applying it across a few thousand enquiries is the
+ * part worth pausing on. The confirmation names both halves separately — who is
+ * gaining access and who is losing it — because those are different things to
+ * agree to.
  *
- * ## Additive, and the wording says so
- *
- * The endpoint adds the selected people and removes nobody, so this screen
- * cannot un-share anything. That is stated in the confirmation rather than left
- * for the reader to infer from an absence, because "share with these three"
- * reasonably reads as "and only these three". Removing access stays on the
- * single-enquiry dialog, where the reader can see whom they are removing.
- *
- * ## Online only
- *
- * Like single-enquiry sharing: this is an access-control change against the
- * server's own register, and the offline cache holds one user's owned rows from
- * an owner-scoped feed. Nothing here touches the sync queue.
+ * Online only, like every other sharing action. Nothing here touches the sync
+ * queue.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, CloudOff, Share2, Users } from 'lucide-react'
+import { AlertTriangle, CloudOff, UserMinus, UserPlus, Users } from 'lucide-react'
 
 import { AdminModal } from '@/admin/components/AdminModal'
 import { AssignPicker } from '@/admin/components/mailboxes/AssignPicker'
@@ -42,8 +45,8 @@ import { isCancelledError } from '@/utils/apiError'
  * Turns a failure into something the operator can act on.
  *
  * Each branch is a different situation and a different next step, so they are
- * worded separately rather than collapsed into the server's message — which for
- * a 401 or a dropped connection is not something a person can act on.
+ * worded separately rather than passed through from the server — which for a
+ * 401 or a dropped connection says nothing a person can act on.
  */
 function describeFailure(error) {
   if (error?.isNetwork) {
@@ -53,12 +56,12 @@ function describeFailure(error) {
   const status = error?.status
 
   if (status === 401) return 'Your session has expired. Sign in again and retry — nothing was changed.'
-  if (status === 403) return 'Only a manager can share their whole register at once.'
+  if (status === 403) return 'Only a manager can manage sharing across their whole register.'
 
   return (
     error?.response?.data?.message ??
     error?.message ??
-    'The enquiries could not be shared. Nothing was changed.'
+    'The sharing could not be saved. Nothing was changed.'
   )
 }
 
@@ -67,24 +70,36 @@ function describeFailure(error) {
  *   isOpen: boolean,
  *   onClose: () => void,
  *   leadCount: number,
+ *   sharedUserIds?: string[],
  *   isOffline?: boolean,
- *   onShared?: (summary: { updatedCount: number, userIds: string[] }) => void,
+ *   onSaved?: (summary: {
+ *     modifiedCount: number, added: string[], removed: string[], userIds: string[],
+ *   }) => void,
  * }} props
  */
 export function BulkShareLeadsDialog({
   isOpen,
   onClose,
   leadCount = 0,
+  sharedUserIds = [],
   isOffline = false,
-  onShared,
+  onSaved,
 }) {
   const [users, setUsers] = useState([])
   const [selected, setSelected] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState(null)
-  /** `false` while choosing people, `true` on the confirmation step. */
+  /** `false` while choosing, `true` on the confirmation step. */
   const [isConfirming, setIsConfirming] = useState(false)
+
+  /**
+   * Who held access when the dialog opened.
+   *
+   * Frozen at open rather than read live from the prop, so the diff shown in
+   * the footer is measured against the state the reader actually saw.
+   */
+  const [initial, setInitial] = useState([])
 
   // Loaded when the dialog opens rather than with the register, so a reader who
   // never shares anything never fetches the people list.
@@ -94,8 +109,11 @@ export function BulkShareLeadsDialog({
     const controller = new AbortController()
     setIsLoading(true)
     setError(null)
-    setSelected([])
     setIsConfirming(false)
+
+    const held = (sharedUserIds ?? []).map(String)
+    setSelected(held)
+    setInitial(held)
 
     fetchShareableUsers({ signal: controller.signal })
       .then((data) => setUsers(data?.items ?? []))
@@ -108,44 +126,62 @@ export function BulkShareLeadsDialog({
       })
 
     return () => controller.abort()
+    // `sharedUserIds` is intentionally not a dependency: the snapshot is taken
+    // once per opening, and a background refresh must not move it underneath
+    // somebody who is mid-selection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isOffline])
 
-  const options = useMemo(
-    () =>
-      users.map((user) => ({
-        id: String(user.id),
-        primary: user.name,
-        secondary: user.email ?? undefined,
-        leading: <UserAvatar name={user.name} email={user.email} size="sm" />,
-      })),
-    [users],
-  )
+  const holders = useMemo(() => new Set(initial), [initial])
+
+  /** Colleagues who already hold access first, then everybody else. */
+  const options = useMemo(() => {
+    const mapped = users.map((user) => ({
+      id: String(user.id),
+      primary: user.name,
+      secondary: user.email ?? undefined,
+      leading: <UserAvatar name={user.name} email={user.email} size="sm" />,
+      _holds: holders.has(String(user.id)),
+    }))
+
+    return [...mapped].sort((a, b) => Number(b._holds) - Number(a._holds))
+  }, [users, holders])
 
   const allIds = useMemo(() => options.map((option) => option.id), [options])
-  const allSelected = allIds.length > 0 && selected.length === allIds.length
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.includes(id))
 
-  const share = useCallback(async () => {
+  const added = useMemo(() => selected.filter((id) => !initial.includes(id)), [selected, initial])
+  const removed = useMemo(() => initial.filter((id) => !selected.includes(id)), [selected, initial])
+  const hasChanges = added.length > 0 || removed.length > 0
+
+  const nameOf = useCallback(
+    (id) => options.find((option) => option.id === id)?.primary ?? 'Unknown user',
+    [options],
+  )
+
+  const save = useCallback(async () => {
     setIsSaving(true)
     setError(null)
 
     try {
       const result = await bulkShareLeads(selected)
-      onShared?.({
-        updatedCount: result?.updatedCount ?? 0,
+      onSaved?.({
+        modifiedCount: result?.modifiedCount ?? 0,
+        added: result?.added ?? added,
+        removed: result?.removed ?? removed,
         userIds: result?.userIds ?? selected,
       })
       onClose()
     } catch (caught) {
       setError(describeFailure(caught))
-      // Back to the picker: the confirmation panel has no controls to correct
-      // whatever went wrong, and leaving the reader on it is a dead end.
+      // Back to the picker: the confirmation panel has no control that could
+      // correct whatever went wrong.
       setIsConfirming(false)
     } finally {
       setIsSaving(false)
     }
-  }, [selected, onShared, onClose])
+  }, [selected, added, removed, onSaved, onClose])
 
-  /** The register is empty, so there is nothing a grant could cover. */
   const hasNoLeads = leadCount === 0
 
   return (
@@ -154,7 +190,7 @@ export function BulkShareLeadsDialog({
       onClose={onClose}
       busy={isSaving}
       title="Share My Leads"
-      description="Give selected users access to all Leads owned by you."
+      description="Choose who has access to all Leads owned by you. Ticking grants access; un-ticking removes it."
       footer={
         <>
           <Button
@@ -167,18 +203,16 @@ export function BulkShareLeadsDialog({
           </Button>
 
           {isConfirming ? (
-            <Button size="sm" onClick={share} isLoading={isSaving} disabled={isSaving}>
-              <Share2 className="size-3.5" aria-hidden="true" />
-              Share All My Leads
+            <Button size="sm" onClick={save} isLoading={isSaving} disabled={isSaving}>
+              Save Changes
             </Button>
           ) : (
             <Button
               size="sm"
               onClick={() => setIsConfirming(true)}
-              disabled={isLoading || isOffline || hasNoLeads || selected.length === 0}
+              disabled={isLoading || isOffline || hasNoLeads || !hasChanges}
             >
-              <Share2 className="size-3.5" aria-hidden="true" />
-              Share All My Leads
+              Save Changes
             </Button>
           )}
         </>
@@ -208,50 +242,62 @@ export function BulkShareLeadsDialog({
               You don’t own any enquiries yet, so there is nothing to share.
             </p>
           ) : isConfirming ? (
-            /* --- Step 2: what is about to happen --------------------------- */
+            /* --- Step 2: the two halves, stated separately ------------------ */
             <div className="space-y-3">
               <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-200">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <span>
-                  You are about to share all of your Leads with{' '}
-                  <span className="font-semibold">
-                    {selected.length} user{selected.length === 1 ? '' : 's'}
-                  </span>
-                  . This will affect{' '}
+                  This will change access across{' '}
                   <span className="font-semibold">
                     {leadCount.toLocaleString()} Lead{leadCount === 1 ? '' : 's'}
-                  </span>
-                  .
+                  </span>{' '}
+                  owned by you.
                 </span>
               </p>
 
-              <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
-                {options
-                  .filter((option) => selected.includes(option.id))
-                  .map((option) => (
-                    <li key={option.id} className="flex items-center gap-2.5 px-1.5 py-1 text-sm">
-                      {option.leading}
-                      <span className="min-w-0 flex-1 truncate text-slate-800">{option.primary}</span>
-                      {option.secondary && (
-                        <span className="truncate text-xs text-slate-400">{option.secondary}</span>
-                      )}
-                    </li>
-                  ))}
-              </ul>
+              {added.length > 0 && (
+                <div>
+                  <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                    <UserPlus className="size-3.5" aria-hidden="true" />
+                    Gaining access ({added.length})
+                  </p>
+                  <ul className="max-h-32 space-y-0.5 overflow-y-auto rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 text-sm text-slate-800">
+                    {added.map((id) => (
+                      <li key={id} className="truncate px-1">{nameOf(id)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              {/* Said explicitly: this screen only ever adds. */}
+              {removed.length > 0 && (
+                <div>
+                  <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-rose-700">
+                    <UserMinus className="size-3.5" aria-hidden="true" />
+                    Losing access ({removed.length})
+                  </p>
+                  <ul className="max-h-32 space-y-0.5 overflow-y-auto rounded-lg border border-rose-200 bg-rose-50/40 p-2 text-sm text-slate-800">
+                    {removed.map((id) => (
+                      <li key={id} className="truncate px-1">{nameOf(id)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <p className="text-xs text-slate-500">
-                You stay the owner of every enquiry. Anyone already shared on a Lead keeps their
-                access — this only adds people.
+                Nothing is deleted and you stay the owner of every enquiry. Colleagues you left
+                ticked keep exactly the access they already had.
               </p>
             </div>
           ) : (
-            /* --- Step 1: choose the people --------------------------------- */
+            /* --- Step 1: the permission selector ---------------------------- */
             <>
-              <p className="mb-3 flex items-center gap-2 text-xs text-slate-500">
-                <Users className="size-3.5 shrink-0" aria-hidden="true" />
-                {leadCount.toLocaleString()} Lead{leadCount === 1 ? '' : 's'} owned by you will be
-                shared.
+              <p className="mb-3 flex items-center gap-2 text-xs text-slate-600">
+                <Users className="size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                {initial.length === 0
+                  ? `None of your ${leadCount.toLocaleString()} Leads are shared with anyone yet.`
+                  : `${initial.length} user${initial.length === 1 ? '' : 's'} currently ${
+                      initial.length === 1 ? 'has' : 'have'
+                    } access to your ${leadCount.toLocaleString()} Leads.`}
               </p>
 
               {isLoading ? (
@@ -262,18 +308,15 @@ export function BulkShareLeadsDialog({
                 </div>
               ) : options.length === 0 ? (
                 <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600 ring-1 ring-inset ring-slate-200">
-                  There is nobody to share your enquiries with yet. Colleagues appear here once they
-                  have an active account with CRM access.
+                  There is nobody else in the CRM to share your enquiries with yet.
                 </p>
               ) : (
                 <>
                   {/*
                     Select all / Clear live here rather than inside
                     `AssignPicker`, which is the mailbox screen's component and
-                    is shared with the admin console. Adding controls to it for
-                    one caller would change a screen this work is not allowed to
-                    touch; they operate on the same value, so the behaviour is
-                    identical either way.
+                    is shared with the admin console. They operate on the same
+                    value, so the behaviour is identical either way.
                   */}
                   <div className="mb-2 flex items-center gap-2">
                     <Button
@@ -300,6 +343,26 @@ export function BulkShareLeadsDialog({
                     searchPlaceholder="Search people…"
                     emptyMessage="There is nobody to share with."
                   />
+
+                  {/*
+                    The pending change, before the confirmation step — so a
+                    reader who un-ticked somebody by accident sees it here
+                    rather than discovering it two clicks later.
+                  */}
+                  {hasChanges && (
+                    <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                      {added.length > 0 && (
+                        <span className="font-medium text-emerald-700">
+                          +{added.length} gaining access
+                        </span>
+                      )}
+                      {removed.length > 0 && (
+                        <span className="font-medium text-rose-700">
+                          −{removed.length} losing access
+                        </span>
+                      )}
+                    </p>
+                  )}
                 </>
               )}
             </>

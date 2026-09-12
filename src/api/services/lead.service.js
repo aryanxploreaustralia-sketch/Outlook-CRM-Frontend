@@ -164,34 +164,21 @@ export async function fetchBulkSharingPreview({ signal } = {}) {
 }
 
 /**
- * Gives `userIds` access to every enquiry this manager owns.
+ * Sets who every enquiry this manager owns is shared with.
  *
- * Additive: people already shared on an enquiry stay, and running it twice
- * changes nothing the second time. Returns
- * `{ updatedCount, modifiedCount, userIds }`.
+ * `userIds` is the desired **final** set, exactly as the single-enquiry save
+ * takes one: somebody ticked who did not have access is granted it, somebody
+ * un-ticked loses it, and a colleague left ticked is not touched at all. The
+ * server computes that difference against what is actually shared, so a client
+ * cannot submit an add-list and a remove-list that disagree.
+ *
+ * Returns `{ updatedCount, modifiedCount, userIds, added, removed }`.
  */
 export async function bulkShareLeads(userIds, { signal, headers } = {}) {
   const response = await httpClient.put(ENDPOINTS.leads.sharingBulk, { userIds }, { signal, headers })
   return response.data?.data ?? null
 }
 
-/**
- * Removes `userIds` from every enquiry this manager owns.
- *
- * The mirror of `bulkShareLeads`: it only ever narrows access, leaves
- * colleagues who were not named exactly where they were, and is a no-op on a
- * repeat run. Returns `{ updatedCount, modifiedCount, userIds }`, where
- * `modifiedCount` is the number of enquiries that actually held one of these
- * people — the honest figure to report back.
- */
-export async function bulkRevokeLeadSharing(userIds, { signal, headers } = {}) {
-  const response = await httpClient.put(
-    ENDPOINTS.leads.sharingBulkRevoke,
-    { userIds },
-    { signal, headers },
-  )
-  return response.data?.data ?? null
-}
 
 /**
  * Updates the enquiry, its contact and its company in one request.

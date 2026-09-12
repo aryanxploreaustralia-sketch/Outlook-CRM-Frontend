@@ -360,8 +360,6 @@ export const ENDPOINTS = Object.freeze({
      * on a record.
      */
     sharingBulk: '/v1/leads/sharing/bulk',
-    /** Taking that access back, across every enquiry the caller owns. */
-    sharingBulkRevoke: '/v1/leads/sharing/bulk/revoke',
     /** The enquiry, its contact and its company in one save. */
     detailFull: (id) => `/v1/leads/${id}/full`,
     /** Enquiries introduced but never answered, and the send that chases them. */
