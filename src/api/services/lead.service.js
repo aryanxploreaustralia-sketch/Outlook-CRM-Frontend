@@ -151,6 +151,31 @@ export async function updateLeadSharing(id, userIds, { signal, headers } = {}) {
 }
 
 /**
+ * Whether this account may share its whole register, and how many enquiries
+ * that would cover.
+ *
+ * Returns `{ canBulkShare, leadCount }`. The count is the caller's *own*
+ * enquiries — not the total on the Leads page, which also includes enquiries
+ * shared with them.
+ */
+export async function fetchBulkSharingPreview({ signal } = {}) {
+  const response = await httpClient.get(ENDPOINTS.leads.sharingBulk, { signal })
+  return response.data?.data ?? null
+}
+
+/**
+ * Gives `userIds` access to every enquiry this manager owns.
+ *
+ * Additive: people already shared on an enquiry stay, and running it twice
+ * changes nothing the second time. Returns
+ * `{ updatedCount, modifiedCount, userIds }`.
+ */
+export async function bulkShareLeads(userIds, { signal, headers } = {}) {
+  const response = await httpClient.put(ENDPOINTS.leads.sharingBulk, { userIds }, { signal, headers })
+  return response.data?.data ?? null
+}
+
+/**
  * Updates the enquiry, its contact and its company in one request.
  *
  * `payload` is `{ lead?, contact?, company? }`; omit a section and it is not

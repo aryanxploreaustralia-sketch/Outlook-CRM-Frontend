@@ -6,7 +6,7 @@
  * here, and that is correct.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ClipboardList,
@@ -18,15 +18,23 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
+  Share2,
   Trash2,
   Upload,
 } from 'lucide-react'
 
-import { deleteAllLeads, deleteLead, exportLeads, fetchPurgePreview } from '@/api/services/lead.service'
+import {
+  deleteAllLeads,
+  deleteLead,
+  exportLeads,
+  fetchBulkSharingPreview,
+  fetchPurgePreview,
+} from '@/api/services/lead.service'
+import { BulkShareLeadsDialog } from '@/components/leads/BulkShareLeadsDialog'
 import { DeleteAllLeadsDialog } from '@/components/leads/DeleteAllLeadsDialog'
 import { DeleteLeadDialog } from '@/components/leads/DeleteLeadDialog'
 import { useAuth } from '@/hooks/useAuth'
-import { isTransportFailure } from '@/offline/read'
+import { isTransportFailure, useReadSource } from '@/offline/read'
 import { deleteLocal } from '@/offline/write'
 import { DateRangeFilter } from '@/components/filters/DateRangeFilter'
 import { DEFAULT_PAGE_SIZE, Pagination } from '@/components/ui/Pagination'
@@ -155,6 +163,46 @@ export function LeadsPage() {
   const [selected, setSelected] = useState(() => new Set())
 
   const { facets, refresh: refreshFacets } = useLeadFacets()
+
+  /* Bulk sharing is online-only, so the dialog needs to know. Same hook the
+     enquiry page uses — one existing subscription, no new listener. */
+  const { isOffline } = useReadSource()
+
+  /*
+   * --- Bulk sharing ------------------------------------------------------
+   *
+   * Whether this account may share its whole register, and how many enquiries
+   * that covers. One cheap owner-scoped call, made once on mount.
+   *
+   * The capability comes from the server rather than from a role read in the
+   * browser — the same rule the Share control on the enquiry page follows, and
+   * the reason the CRM session carries no role to check against. `leadCount`
+   * is deliberately *not* `pagination.total`: that figure now includes
+   * enquiries shared *with* this reader, and bulk sharing touches only what
+   * they own.
+   */
+  const [bulkShare, setBulkShare] = useState({ canBulkShare: false, leadCount: 0 })
+  const [isBulkShareOpen, setIsBulkShareOpen] = useState(false)
+  const [shareNotice, setShareNotice] = useState(null)
+
+  const loadBulkSharePreview = useCallback(async (signal) => {
+    try {
+      const preview = await fetchBulkSharingPreview({ signal })
+      if (preview) setBulkShare(preview)
+    } catch {
+      /*
+       * Swallowed on purpose. This decides whether one optional button is
+       * offered; a register that loaded fine must not show an error because a
+       * capability probe did not. The button simply stays hidden.
+       */
+    }
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    loadBulkSharePreview(controller.signal)
+    return () => controller.abort()
+  }, [loadBulkSharePreview])
 
   const { items, pagination, isInitialLoading, isLoading, isError, error, refresh, isBusy, actionError, moveStage } =
     useLeadList({
@@ -799,6 +847,19 @@ export function LeadsPage() {
           Import workbook
         </Button>
 
+        {/*
+          Offered only where the server says it applies — a manager with a
+          register of their own. It sits with the other register-wide actions
+          rather than on a row, because it acts on every enquiry at once and a
+          per-row control would suggest otherwise.
+        */}
+        {bulkShare.canBulkShare && (
+          <Button variant="secondary" onClick={() => setIsBulkShareOpen(true)}>
+            <Share2 className="size-4" aria-hidden="true" />
+            Share My Leads
+          </Button>
+        )}
+
         {/* The primary action: most enquiries now arrive one at a time. */}
         <Button as={Link} to={ROUTE_PATHS.LEAD_NEW}>
           <Plus className="size-4" aria-hidden="true" />
@@ -832,6 +893,17 @@ export function LeadsPage() {
           className="rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-200"
         >
           {deleteNotice} Dashboard counters refresh when you next open it.
+        </p>
+      )}
+
+      {/* The outcome of a bulk share, in the same place every other register
+          result is reported. */}
+      {shareNotice && (
+        <p
+          role="status"
+          className="rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 ring-1 ring-inset ring-emerald-200"
+        >
+          {shareNotice}
         </p>
       )}
 
@@ -1058,6 +1130,32 @@ export function LeadsPage() {
             onCancel={() => setIsDeleteOpen(false)}
             onConfirm={confirmDelete}
           />
+
+          {/*
+            Mounted only while open, so the people list is fetched on demand
+            rather than with every visit to the register.
+
+            The register itself is not refetched afterwards: sharing adds
+            nobody's enquiries to this reader's own list and changes no row they
+            can see. The preview is refreshed so the count behind the button
+            stays true.
+          */}
+          {isBulkShareOpen && (
+            <BulkShareLeadsDialog
+              isOpen={isBulkShareOpen}
+              onClose={() => setIsBulkShareOpen(false)}
+              leadCount={bulkShare.leadCount}
+              isOffline={isOffline}
+              onShared={({ updatedCount, userIds }) => {
+                setShareNotice(
+                  `${updatedCount.toLocaleString()} Lead${updatedCount === 1 ? '' : 's'} shared with ` +
+                    `${userIds.length} user${userIds.length === 1 ? '' : 's'}.`,
+                )
+                setTimeout(() => setShareNotice(null), 8000)
+                loadBulkSharePreview()
+              }}
+            />
+          )}
 
           {/* --- Pagination ---------------------------------------------------- */}
           <Pagination

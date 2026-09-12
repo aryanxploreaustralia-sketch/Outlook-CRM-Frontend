@@ -352,6 +352,14 @@ export const ENDPOINTS = Object.freeze({
     /** Colleagues an enquiry may be shared with, and the grant itself. */
     shareableUsers: '/v1/leads/shareable-users',
     sharing: (id) => `/v1/leads/${id}/sharing`,
+    /**
+     * Sharing every enquiry this manager owns, in one operation.
+     *
+     * One path, two methods: GET previews what a share would touch, PUT
+     * performs it. Deliberately not under `/:id` — it acts on a register, not
+     * on a record.
+     */
+    sharingBulk: '/v1/leads/sharing/bulk',
     /** The enquiry, its contact and its company in one save. */
     detailFull: (id) => `/v1/leads/${id}/full`,
     /** Enquiries introduced but never answered, and the send that chases them. */
