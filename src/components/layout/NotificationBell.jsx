@@ -33,6 +33,8 @@ import {
   markNotificationRead,
 } from '@/api/services/notification.service'
 import { useApiResource } from '@/hooks/useApiResource'
+import { useAuth } from '@/hooks/useAuth'
+import { setAppBadgeCount } from '@/pwa/appBadge'
 import { ROUTE_PATHS } from '@/routes/paths'
 
 /**
@@ -91,6 +93,10 @@ export function NotificationBell() {
   /** Which category the dropdown is filtered to. `all` sends no filter. */
   const [category, setCategory] = useState('all')
 
+  /** Who the count belongs to — the app icon badge is tagged with it. */
+  const auth = useAuth()
+  const ownerId = auth?.user?.id ?? auth?.user?._id ?? null
+
   const fetcher = useCallback(
     ({ signal }) =>
       fetchNotifications({
@@ -99,8 +105,8 @@ export function NotificationBell() {
         // only the fifteen rows it happens to hold, not the whole set.
         ...(category === 'all' ? {} : { category }),
         signal,
-      }),
-    [category],
+      }).then((result) => ({ ...result, ownerId })),
+    [category, ownerId],
   )
 
   /**
@@ -123,6 +129,19 @@ export function NotificationBell() {
    */
   const unreadCount = data?.unreadCount ?? 0
   const categories = data?.categories ?? []
+
+  /**
+   * The installed app's taskbar/dock badge mirrors the same unread count.
+   *
+   * No request of its own: it rides the poll above, which keeps running while
+   * the app is minimised. Applied only to a response fetched for the user who
+   * is signed in now, so one person's count can never be shown for the next.
+   */
+  const hasCountForOwner = Boolean(data && ownerId && data.ownerId === ownerId)
+
+  useEffect(() => {
+    if (hasCountForOwner) setAppBadgeCount(unreadCount, ownerId)
+  }, [hasCountForOwner, unreadCount, ownerId])
 
   // Click-outside and Escape both dismiss. A panel that can only be closed by
   // the button that opened it is a panel people leave open by accident.
@@ -157,7 +176,11 @@ export function NotificationBell() {
 
     if (!notification.isRead) {
       markNotificationRead(notification.id)
-        .then(() => refresh({ isBackground: true }))
+        .then((result) => {
+          // The server returns the new count; the icon need not wait for the refetch.
+          if (ownerId) setAppBadgeCount(result.unreadCount, ownerId)
+          return refresh({ isBackground: true })
+        })
         .catch(() => {})
     }
 
@@ -192,6 +215,7 @@ export function NotificationBell() {
   const handleMarkAll = async () => {
     try {
       await markAllNotificationsRead()
+      if (ownerId) setAppBadgeCount(0, ownerId)
       await refresh({ isBackground: true })
     } catch {
       // The badge simply stays as it was until the next poll.

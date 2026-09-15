@@ -26,7 +26,8 @@
     "verify:offline-ux": "node scripts/verify-offline-ux.mjs",
     "verify:app-shell": "node scripts/verify-app-shell.mjs",
     "verify:retry-failed": "node scripts/verify-retry-failed.mjs",
-    "verify:lead-delete": "node scripts/verify-lead-delete.mjs"
+    "verify:lead-delete": "node scripts/verify-lead-delete.mjs",
+    "verify:app-badge": "node scripts/verify-app-badge.mjs"
   },
   "dependencies": {
     "axios": "^1.19.0",

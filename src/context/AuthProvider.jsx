@@ -25,6 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchAuthStatus, signOut as signOutRequest } from '@/api/services/auth.service'
 import { REQUEST_STATUS } from '@/constants/app.constants'
 import { AuthContext } from '@/context/authContext'
+import { clearAppBadge } from '@/pwa/appBadge'
 import { logger } from '@/utils/logger'
 
 /**
@@ -107,6 +108,28 @@ export function AuthProvider({ children }) {
       await refresh()
     }
   }, [refresh])
+
+  /**
+   * The installed app's icon badge belongs to one user.
+   *
+   * Cleared on sign-out (or an expired session), and when a different account
+   * replaces the current one, so a count is never left on the icon for somebody
+   * it does not belong to. Setting it is the notification bell's job; the first
+   * sign-in is deliberately not a clear, or it would wipe the count the bell has
+   * just applied in the same commit.
+   */
+  const badgeOwnerRef = useRef(null)
+  const currentUserId = status.authenticated ? (status.user?.id ?? status.user?._id ?? null) : null
+
+  useEffect(() => {
+    const previous = badgeOwnerRef.current
+    badgeOwnerRef.current = currentUserId
+
+    const signedOut = requestStatus === REQUEST_STATUS.SUCCESS && !currentUserId
+    const switchedUser = Boolean(previous && currentUserId && previous !== currentUserId)
+
+    if (signedOut || switchedUser) clearAppBadge()
+  }, [currentUserId, requestStatus])
 
   useEffect(() => {
     isMountedRef.current = true
