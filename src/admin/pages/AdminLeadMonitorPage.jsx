@@ -374,6 +374,19 @@ export function AdminLeadMonitorPage() {
         key: 'reference',
         header: 'Reference',
         /*
+         * --- Why every column below carries a percentage --------------------
+         *
+         * This table is laid out `table-fixed` (see the `className` on
+         * `<AdminTable>`), so the browser sizes columns from these headers and
+         * never from the content. That is what makes a 200-character remark or
+         * an unbroken email address impossible to widen the table with: the
+         * column keeps its share and the cell truncates inside it.
+         *
+         * The seven add up to 100, so the table is exactly its container —
+         * no overflow, and therefore no horizontal scrollbar.
+         */
+        width: 'w-[13%]',
+        /*
          * The reference opens the enquiry, addressed by id rather than by the
          * text in the cell. Two enquiries can carry the same reference — the
          * workbook is typed by hand — and `_id` is what the detail endpoint
@@ -390,17 +403,11 @@ export function AdminLeadMonitorPage() {
       {
         key: 'customer',
         header: 'Customer',
-        /*
-         * Capped, because `table-auto` sizes a column to its longest cell and
-         * the longest cell here is an email address. Unbounded, one long
-         * address widened the column for every row and pushed Owner across the
-         * table — the gap this closes. A cap rather than a fixed width: the
-         * column still shrinks on a narrow viewport, and the name and email
-         * already truncate, which is what makes the cap safe.
-         */
-        width: 'max-w-64',
+        /* The widest share: it carries two lines, a name and an email, and
+           both truncate rather than widening the column. */
+        width: 'w-[22%]',
         render: (lead) => (
-          <div className="min-w-0 max-w-64">
+          <div className="min-w-0">
             <p className="truncate text-slate-700">{lead.customer}</p>
             {lead.email && <p className="truncate text-xs text-slate-500">{lead.email}</p>}
           </div>
@@ -410,12 +417,12 @@ export function AdminLeadMonitorPage() {
         key: 'assignedTo',
         header: 'Owner',
         /* Enough for a full name on one line — "Mrunmayi Mane", "Hemant
-           Panchal" — without reserving a track wide enough to reopen a gap. */
-        width: 'w-36',
-        cellClassName: 'whitespace-nowrap',
+           Panchal". A longer one truncates instead of widening the table. */
+        width: 'w-[14%]',
+        cellClassName: 'truncate',
         render: (lead) => lead.assignedTo ?? <AdminBadge tone="warning">Unassigned</AdminBadge>,
       },
-      { key: 'market', header: 'Market', cellClassName: 'text-slate-600' },
+      { key: 'market', header: 'Market', width: 'w-[10%]', cellClassName: 'truncate text-slate-600' },
       {
         /*
          * The enquiry's own date, from `Lead.quoteDate` — the workbook's
@@ -425,18 +432,21 @@ export function AdminLeadMonitorPage() {
          */
         key: 'quoteDate',
         header: 'Query date',
+        width: 'w-[11%]',
+        cellClassName: 'truncate',
         render: (lead) => <span className="text-slate-600">{formatDate(lead.quoteDate)}</span>,
       },
       {
         key: 'remarks',
         header: 'Remarks',
         // Truncated to one line; clicking opens the whole remark.
-        width: 'max-w-64',
+        width: 'w-[19%]',
+        cellClassName: 'truncate',
         render: (lead) => (
           <RemarkCell
             remarks={lead.remarks}
             reference={lead.reference}
-            className="max-w-64 text-slate-600"
+            className="text-slate-600"
             emptyFallback={<span className="text-slate-400">{EMPTY}</span>}
           />
         ),
@@ -444,6 +454,10 @@ export function AdminLeadMonitorPage() {
       {
         key: 'travelDate',
         header: 'Travel date',
+        /* Prose travel dates ("mid-December, flexible") are the long ones here,
+           so this truncates as well. */
+        width: 'w-[11%]',
+        cellClassName: 'truncate',
         // Prose travel dates are shown as written. Created is still a filter
         // option above, and still shown on the lead's detail page.
         render: (lead) => (
@@ -776,6 +790,20 @@ export function AdminLeadMonitorPage() {
 
       <AdminCard padded={false}>
         <AdminTable
+          /*
+           * This table fits its container instead of scrolling sideways.
+           *
+           * `AdminTable` ships `table-auto min-w-[46rem]`, which is right for
+           * the console's other tables: they would rather scroll than crush a
+           * column. This register would rather fit, because one long remark or
+           * email should not push Owner and the dates off-screen. Both classes
+           * are overridden from here, through the `className` the component
+           * already puts on its scroll container, so no shared component
+           * changes and no other admin table is affected. The container keeps
+           * `overflow-x-auto`, but with nothing wider than itself inside it
+           * there is nothing to scroll.
+           */
+          className="[&>table]:min-w-0 [&>table]:table-fixed"
           columns={columnOrder.columns}
           reorder={columnOrder}
           rows={items}
