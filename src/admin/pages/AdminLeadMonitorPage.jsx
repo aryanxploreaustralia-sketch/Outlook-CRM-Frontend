@@ -822,12 +822,28 @@ export function AdminLeadMonitorPage() {
            *
            * `top-(--spacing-topbar)` is the offset: the admin topbar is
            * `sticky top-0` and `h-(--spacing-topbar)`, so the header comes to
-           * rest directly beneath it instead of sliding under it. The `<th>`
-           * keeps its own `bg-slate-50/95` and `backdrop-blur`, which is what
-           * stops rows showing through, plus the header row's existing bottom
-           * border.
+           * rest directly beneath it instead of sliding under it.
+           *
+           * ## Why the header needs an opaque background and its own rule
+           *
+           * `AdminTable` styles its headers `bg-slate-50/95` with
+           * `backdrop-blur`. On a table that never actually scrolled under its
+           * own header that was only a tint; here it meant five percent of
+           * every passing row was visible *through* the header, blurred — a row
+           * legibly sitting behind "REFERENCE". Hence the fully opaque
+           * `bg-slate-50` (the same colour, without the alpha) and no blur:
+           * there is now nothing behind it to blur, and the effect costs a
+           * repaint per scrolled frame.
+           *
+           * The separating line is a `box-shadow`, not a border, because the
+           * header row's own `border-b` sits on the `<tr>` and the table is
+           * `border-collapse: collapse` — a collapsed border belongs to the
+           * table grid and stays where the row is, so it does not travel with
+           * the sticky cells. A shadow is painted by the `<th>` itself, so the
+           * rule stays welded to the underside of the header wherever it comes
+           * to rest. One pixel, `--color-slate-200`: the same line as before.
            */
-          className="overflow-x-clip! [&>table]:min-w-0 [&>table]:table-fixed [&_th]:top-(--spacing-topbar)"
+          className="overflow-x-clip! [&>table]:min-w-0 [&>table]:table-fixed [&_thead_th]:top-(--spacing-topbar) [&_thead_th]:bg-slate-50 [&_thead_th]:backdrop-blur-none [&_thead_th]:shadow-[0_1px_0_0_var(--color-slate-200)]"
           columns={columnOrder.columns}
           reorder={columnOrder}
           rows={items}
