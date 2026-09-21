@@ -390,8 +390,17 @@ export function AdminLeadMonitorPage() {
       {
         key: 'customer',
         header: 'Customer',
+        /*
+         * Capped, because `table-auto` sizes a column to its longest cell and
+         * the longest cell here is an email address. Unbounded, one long
+         * address widened the column for every row and pushed Owner across the
+         * table — the gap this closes. A cap rather than a fixed width: the
+         * column still shrinks on a narrow viewport, and the name and email
+         * already truncate, which is what makes the cap safe.
+         */
+        width: 'max-w-64',
         render: (lead) => (
-          <div className="min-w-0">
+          <div className="min-w-0 max-w-64">
             <p className="truncate text-slate-700">{lead.customer}</p>
             {lead.email && <p className="truncate text-xs text-slate-500">{lead.email}</p>}
           </div>
@@ -400,6 +409,10 @@ export function AdminLeadMonitorPage() {
       {
         key: 'assignedTo',
         header: 'Owner',
+        /* Enough for a full name on one line — "Mrunmayi Mane", "Hemant
+           Panchal" — without reserving a track wide enough to reopen a gap. */
+        width: 'w-36',
+        cellClassName: 'whitespace-nowrap',
         render: (lead) => lead.assignedTo ?? <AdminBadge tone="warning">Unassigned</AdminBadge>,
       },
       { key: 'market', header: 'Market', cellClassName: 'text-slate-600' },
