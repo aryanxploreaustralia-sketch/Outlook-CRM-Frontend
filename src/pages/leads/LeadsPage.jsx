@@ -98,10 +98,19 @@ const NO_RANGE = { preset: '', from: '', to: '' }
  * collapsed border stays with the row rather than travelling with the cells.
  */
 const HEADER_CELL =
-  'sticky top-(--spacing-topbar) z-10 bg-slate-50 px-5 py-2.5 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[0_1px_0_0_var(--color-slate-200)]'
+  'sticky top-(--spacing-topbar) z-10 bg-slate-50 px-3 py-2.5 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[0_1px_0_0_var(--color-slate-200)] xl:px-5'
 
-/** One body cell. Matching padding, alignment and colour. */
-const BODY_CELL = 'px-5 py-2.5 align-middle text-slate-700'
+/**
+ * One body cell. Matching alignment and colour, and the same padding.
+ *
+ * `px-3` until `xl`, then the Lead monitor's `px-5`. Padding is the most
+ * expensive thing in a nine-column table — 40px a column is 360px of the row
+ * spent on whitespace — and a laptop does not have that to spare: at 1366px it
+ * was the difference between "Rajesh Singh" reading in full and reading as
+ * "Rajesh Si…". Above `xl` there is room for the console's own spacing, so the
+ * two panels look identical exactly where they can afford to.
+ */
+const BODY_CELL = 'px-3 py-2.5 align-middle text-slate-700 xl:px-5'
 import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -461,7 +470,7 @@ export function LeadsPage() {
         /* The seven field widths below, plus the selection column's 4% and the
            actions column's 5%, come to 100% — the table is exactly its
            container, so there is nothing to scroll sideways to. */
-        width: 'w-[12%]',
+        width: 'w-[10%]',
         cellClassName: `${BODY_CELL} truncate`,
         render: (lead) => (
           <Link
@@ -476,7 +485,7 @@ export function LeadsPage() {
         key: 'contact',
         header: 'Contact',
         /* Two lines, a name over an email; each truncates on its own. */
-        width: 'w-[19%]',
+        width: 'w-[21%]',
         cellClassName: `${BODY_CELL} min-w-0`,
         render: (lead) => (
           <>
@@ -488,7 +497,7 @@ export function LeadsPage() {
       {
         key: 'company',
         header: 'Company',
-        width: 'w-[14%]',
+        width: 'w-[17%]',
         cellClassName: `${BODY_CELL} truncate text-slate-600`,
         render: (lead) => lead.companyName ?? '—',
       },
@@ -505,7 +514,7 @@ export function LeadsPage() {
       {
         key: 'pax',
         header: 'Pax',
-        width: 'w-[8%]',
+        width: 'w-[9%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         // The headline only — the full breakdown belongs on the detail
         // page, not in a narrow column. Same helper, so the two agree.
@@ -516,7 +525,7 @@ export function LeadsPage() {
         header: 'Remarks',
         // One truncated line keeps the row height fixed; clicking it opens the
         // whole remark. Column width is unchanged.
-        width: 'w-[19%]',
+        width: 'w-[18%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         render: (lead) => <RemarkCell remarks={lead.internalNotes} reference={lead.reference} />,
       },
@@ -779,7 +788,7 @@ export function LeadsPage() {
         column from `lg` up, the identical panel as a drawer below it. Nothing
         about that behaviour is written twice.
       */}
-      <div className="flex items-start gap-5">
+      <div className="flex items-start gap-4">
         <FilterPanel
           isOpen={isFilterDrawerOpen}
           onClose={() => setIsFilterDrawerOpen(false)}
@@ -787,6 +796,17 @@ export function LeadsPage() {
           chips={filterChips}
           activeCount={activeFilters}
           onClearAll={activeFilters > 0 ? clearFilters : undefined}
+          /*
+           * 14rem rather than the component's 16rem, and only here.
+           *
+           * Every control in the rail is full-width and label-above-input, so
+           * 32px off the rail costs it nothing and hands those pixels to the
+           * register beside it — where they become readable customer names
+           * rather than empty rail. `!` because the component's own `w-64` is a
+           * class of equal specificity; the drawer it renders below `lg` is a
+           * separate element and keeps its own width.
+           */
+          className="lg:w-56!"
         />
 
         <div className="min-w-0 flex-1 space-y-4">
@@ -1071,7 +1091,7 @@ export function LeadsPage() {
                     {/* Selection is pinned to the leading edge. It is a control, not
                         a field, and a checkbox adrift in the middle of the register
                         would read as data. */}
-                    <th scope="col" className={`${HEADER_CELL} w-[4%] px-3`}>
+                    <th scope="col" className={`${HEADER_CELL} w-[3%] px-3`}>
                       <input
                         type="checkbox"
                         aria-label="Select all on this page"
@@ -1100,7 +1120,7 @@ export function LeadsPage() {
                       reordered into the middle of the register would be
                       reordering the furniture.
                     */}
-                    <th scope="col" className={`${HEADER_CELL} w-[5%] px-3 text-right`}>
+                    <th scope="col" className={`${HEADER_CELL} w-[3%] px-3 text-right`}>
                       <span className="sr-only">Actions</span>
                     </th>
                   </tr>

@@ -196,7 +196,19 @@ export function DashboardLayout() {
               on any short page. The footer's own `mt-auto` handles that, and
               handles it once.
             */}
-            <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+            {/*
+              `max-w-[100rem]`, the width the admin console already uses.
+
+              This was `max-w-6xl` — 72rem, about 1150px. On anything wider
+              than a small laptop the CRM stopped at that line and left the rest
+              of the monitor empty, which is what squeezed the Leads register:
+              the table could only ever have 72rem minus the filter rail,
+              however large the screen. Raising the ceiling is what gives the
+              register the room, and it matches `AdminLayout` so the two panels
+              now use a monitor the same way. Narrower screens are unaffected —
+              `w-full` still governs below the ceiling.
+            */}
+            <div className="mx-auto w-full max-w-[100rem] px-4 py-6 sm:px-6 sm:py-8">
               {/*
                 Phase 8 — the status strip.
 
