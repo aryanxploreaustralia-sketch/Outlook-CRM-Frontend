@@ -98,19 +98,21 @@ const NO_RANGE = { preset: '', from: '', to: '' }
  * collapsed border stays with the row rather than travelling with the cells.
  */
 const HEADER_CELL =
-  'sticky top-(--spacing-topbar) z-10 bg-slate-50 px-3 py-2.5 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[0_1px_0_0_var(--color-slate-200)] xl:px-5'
+  'sticky top-(--spacing-topbar) z-10 bg-slate-50 px-3 py-2.5 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[0_1px_0_0_var(--color-slate-200)]'
 
 /**
- * One body cell. Matching alignment and colour, and the same padding.
+ * One body cell. Matching alignment, colour and padding.
  *
- * `px-3` until `xl`, then the Lead monitor's `px-5`. Padding is the most
- * expensive thing in a nine-column table — 40px a column is 360px of the row
- * spent on whitespace — and a laptop does not have that to spare: at 1366px it
- * was the difference between "Rajesh Singh" reading in full and reading as
- * "Rajesh Si…". Above `xl` there is room for the console's own spacing, so the
- * two panels look identical exactly where they can afford to.
+ * `px-3` at every width, where this once grew to `px-5` above `xl`.
+ *
+ * Padding is the most expensive thing in a nine-column table: 40px a column is
+ * 360px of the row spent on whitespace, and that is 360px not spent on a
+ * customer's name. 24px is enough to keep the columns legibly apart, so the
+ * rest goes to the content — which is also what keeps the column widths below
+ * honest, since each was derived from what its values actually measure plus
+ * exactly this padding.
  */
-const BODY_CELL = 'px-3 py-2.5 align-middle text-slate-700 xl:px-5'
+const BODY_CELL = 'px-3 py-2.5 align-middle text-slate-700'
 import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -470,7 +472,7 @@ export function LeadsPage() {
         /* The seven field widths below, plus the selection column's 4% and the
            actions column's 5%, come to 100% — the table is exactly its
            container, so there is nothing to scroll sideways to. */
-        width: 'w-[10%]',
+        width: 'w-[9%]',
         cellClassName: `${BODY_CELL} truncate`,
         render: (lead) => (
           <Link
@@ -485,7 +487,7 @@ export function LeadsPage() {
         key: 'contact',
         header: 'Contact',
         /* Two lines, a name over an email; each truncates on its own. */
-        width: 'w-[22%]',
+        width: 'w-[19%]',
         cellClassName: `${BODY_CELL} min-w-0`,
         render: (lead) => (
           <>
@@ -497,7 +499,7 @@ export function LeadsPage() {
       {
         key: 'company',
         header: 'Company',
-        width: 'w-[15%]',
+        width: 'w-[13%]',
         cellClassName: `${BODY_CELL} truncate text-slate-600`,
         render: (lead) => lead.companyName ?? '—',
       },
@@ -514,7 +516,7 @@ export function LeadsPage() {
       {
         key: 'pax',
         header: 'Pax',
-        width: 'w-[8%]',
+        width: 'w-[7%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         // The headline only — the full breakdown belongs on the detail
         // page, not in a narrow column. Same helper, so the two agree.
@@ -525,14 +527,14 @@ export function LeadsPage() {
         header: 'Remarks',
         // One truncated line keeps the row height fixed; clicking it opens the
         // whole remark. Column width is unchanged.
-        width: 'w-[17%]',
+        width: 'w-[22%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         render: (lead) => <RemarkCell remarks={lead.internalNotes} reference={lead.reference} />,
       },
       {
         key: 'stage',
         header: 'Stage',
-        width: 'w-[8%]',
+        width: 'w-[10%]',
         cellClassName: `${BODY_CELL} truncate`,
         render: (lead) => (
           <LeadStageBadge stage={lead.stage} showEligibility eligible={lead.campaignEligible} />
