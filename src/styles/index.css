@@ -13,19 +13,29 @@
 
 @theme {
   /* --- Brand ------------------------------------------------------------
-   * Microsoft/Outlook-adjacent blues. 600 is the primary action colour;
-   * 700 is its hover state.
+   * The Xplore Australia accent, taken from the logo mark (#d23926 / #d13320).
+   * 600 is the primary action colour; 700 is its hover state.
+   *
+   * One scale, used by both panels: every accent in the CRM resolves through
+   * `brand-*`, so the active sidebar row, primary buttons, links, selected
+   * states and focus outlines all follow this and nothing else was recoloured.
+   *
+   * `600` is the logo red-orange and carries white text at 4.9:1, so the
+   * primary button and the active nav row stay legible; `700` (6.6:1) is the
+   * hover and the accent text weight. The rest is the same scale shape the
+   * blue had, so every existing `brand-50` tint and `brand-500` ring keeps its
+   * relative weight.
    */
-  --color-brand-50: #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-200: #bfdbfe;
-  --color-brand-300: #93c5fd;
-  --color-brand-400: #60a5fa;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-brand-800: #1e40af;
-  --color-brand-900: #1e3a8a;
+  --color-brand-50: #fef4f2;
+  --color-brand-100: #fde6e1;
+  --color-brand-200: #fbcabf;
+  --color-brand-300: #f7a693;
+  --color-brand-400: #f07a5e;
+  --color-brand-500: #e2543a;
+  --color-brand-600: #d23926;
+  --color-brand-700: #b02a1b;
+  --color-brand-800: #8e231a;
+  --color-brand-900: #74211b;
 
   /* --- Sidebar ---------------------------------------------------------
    * The dark navigation surface. Kept as its own scale rather than reusing
