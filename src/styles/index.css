@@ -38,16 +38,32 @@
   --color-brand-900: #74211b;
 
   /* --- Sidebar ---------------------------------------------------------
-   * The dark navigation surface. Kept as its own scale rather than reusing
-   * `slate`, so the chrome can be re-themed without touching page content.
+   * The Xplore Australia orange navigation surface, shared by both panels.
+   * Kept as its own scale rather than reusing `slate` or `brand`, so the
+   * chrome can be re-themed without touching page content — which is why this
+   * change reaches every sidebar element without editing the layout.
+   *
+   * ## Every value here is chosen against the surface it sits on
+   *
+   * The requested #e64a2e carries white text at only 3.9:1, below the 4.5:1
+   * a navigation label needs. `bg` is that hue held one step deeper, which
+   * reads as the same orange and gives white 5.1:1. The rest follows from it:
+   *
+   *   bg          #c73c20   white text 5.1:1
+   *   bg-elevated #bd3a20   the profile card, recessed — white 5.6:1
+   *   hover       #b0331b   one step down, clearly darker than the surface
+   *   active      #8f2613   darker still, so selected ≠ hover ≠ surface
+   *   text        #fff1ed   warm near-white, 4.6:1 on the surface
+   *   text-strong #ffffff   labels and headings
+   *   border      #d95936   a lighter orange rule, visible but not a stripe
    */
-  --color-sidebar-bg: #0f172a;
-  --color-sidebar-bg-elevated: #16213c;
-  --color-sidebar-border: #1e2b47;
-  --color-sidebar-text: #94a3b8;
-  --color-sidebar-text-strong: #f1f5f9;
-  --color-sidebar-hover: #1c2b48;
-  --color-sidebar-active: #1e3a8a;
+  --color-sidebar-bg: #c73c20;
+  --color-sidebar-bg-elevated: #bd3a20;
+  --color-sidebar-border: #d95936;
+  --color-sidebar-text: #fff1ed;
+  --color-sidebar-text-strong: #ffffff;
+  --color-sidebar-hover: #b0331b;
+  --color-sidebar-active: #8f2613;
 
   /* --- Semantic status -------------------------------------------------- */
   --color-success: #16a34a;
@@ -200,7 +216,9 @@
 
   /* Focus rings on the dark sidebar need a light colour to be visible at all. */
   .sidebar-surface :focus-visible {
-    @apply outline-brand-300;
+    /* White, not `brand-300`: the accent is now the surface itself, and an
+       orange ring on orange is not a focus indicator. */
+    @apply outline-white;
   }
 }
 

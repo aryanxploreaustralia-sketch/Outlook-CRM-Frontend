@@ -33,7 +33,7 @@ export function SidebarNavItem({ item, isCollapsed, onNavigate }) {
         <span
           aria-disabled="true"
           title={description ?? `${label} — coming soon`}
-          className={`${base} cursor-not-allowed text-sidebar-text/45`}
+          className={`${base} cursor-not-allowed text-sidebar-text/75`}
         >
           <Icon className="size-5 shrink-0" aria-hidden="true" />
 
@@ -41,7 +41,7 @@ export function SidebarNavItem({ item, isCollapsed, onNavigate }) {
             <>
               <span className="flex-1 truncate">{label}</span>
               {badge && (
-                <span className="shrink-0 rounded-md bg-sidebar-bg-elevated px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sidebar-text/70">
+                <span className="shrink-0 rounded-md bg-sidebar-bg-elevated px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sidebar-text/80">
                   {badge}
                 </span>
               )}
@@ -67,7 +67,7 @@ export function SidebarNavItem({ item, isCollapsed, onNavigate }) {
           [
             base,
             isActive
-              ? 'bg-brand-600/90 text-white shadow-card'
+              ? 'bg-sidebar-active text-white shadow-card'
               : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text-strong',
           ].join(' ')
         }

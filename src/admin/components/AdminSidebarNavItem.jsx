@@ -61,7 +61,7 @@ export function AdminSidebarNavItem({ item, isCollapsed, onNavigate }) {
              * both use, and the reason their sidebars stay quiet.
              */
             isActive
-              ? 'bg-sidebar-hover text-sidebar-text-strong'
+              ? 'bg-sidebar-active text-sidebar-text-strong'
               : 'text-sidebar-text hover:bg-sidebar-hover/60 hover:text-sidebar-text-strong',
           ].join(' ')
         }
@@ -75,7 +75,7 @@ export function AdminSidebarNavItem({ item, isCollapsed, onNavigate }) {
               indicator *moving* between items as you navigate.
             */}
             <span
-              className={`absolute left-0 top-1/2 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-500 transition-all duration-(--duration-base) ${
+              className={`absolute left-0 top-1/2 w-[3px] -translate-y-1/2 rounded-r-full bg-white transition-all duration-(--duration-base) ${
                 isActive ? 'h-5 opacity-100' : 'h-0 opacity-0'
               }`}
               aria-hidden="true"
@@ -86,7 +86,7 @@ export function AdminSidebarNavItem({ item, isCollapsed, onNavigate }) {
             */}
             <Icon
               className={`size-5 shrink-0 transition-[color,transform] duration-(--duration-fast) group-hover:translate-x-0.5 ${
-                isActive ? 'text-brand-400' : ''
+                isActive ? 'text-white' : ''
               }`}
               aria-hidden="true"
             />

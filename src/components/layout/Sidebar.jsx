@@ -145,7 +145,7 @@ export function Sidebar({
           {NAV_SECTIONS.map((section, sectionIndex) => (
             <div key={section.id} className={sectionIndex > 0 ? 'mt-6' : ''}>
               {section.label && !isCollapsed && (
-                <h2 className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-text/50">
+                <h2 className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-text/80">
                   {section.label}
                 </h2>
               )}
@@ -223,7 +223,7 @@ export function Sidebar({
             onClick={onSignOut}
             disabled={isSigningOut}
             title={isCollapsed ? 'Sign out' : undefined}
-            className={`flex w-full items-center rounded-lg text-sm font-medium text-sidebar-text transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`flex w-full items-center rounded-lg text-sm font-medium text-sidebar-text transition-colors hover:bg-sidebar-active hover:text-white disabled:cursor-not-allowed disabled:opacity-60 ${
               isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'
             }`}
           >
@@ -240,7 +240,7 @@ export function Sidebar({
               onClick={onToggleCollapse}
               aria-expanded={!isCollapsed}
               aria-controls="app-sidebar"
-              className={`mt-1 flex w-full items-center rounded-lg py-2 text-xs font-medium text-sidebar-text/70 transition-colors hover:bg-sidebar-hover hover:text-sidebar-text-strong ${
+              className={`mt-1 flex w-full items-center rounded-lg py-2 text-xs font-medium text-sidebar-text/80 transition-colors hover:bg-sidebar-hover hover:text-sidebar-text-strong ${
                 isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
               }`}
             >

@@ -149,7 +149,7 @@ export function AdminSidebar({
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5">
                   <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-                  <span className="truncate text-[11px] font-medium uppercase tracking-[0.06em] text-sidebar-text/70">
+                  <span className="truncate text-[11px] font-medium uppercase tracking-[0.06em] text-sidebar-text/85">
                     Admin
                   </span>
                 </span>
@@ -182,7 +182,7 @@ export function AdminSidebar({
           {sections.map((section, sectionIndex) => (
             <div key={section.id} className={sectionIndex > 0 ? 'mt-5' : ''}>
               {section.label && !isCollapsed && (
-                <h2 className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.09em] text-sidebar-text/45">
+                <h2 className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.09em] text-sidebar-text/80">
                   {section.label}
                 </h2>
               )}
@@ -268,7 +268,7 @@ export function AdminSidebar({
               onClick={onToggleCollapse}
               aria-expanded={!isCollapsed}
               aria-controls="admin-sidebar"
-              className={`mt-1 flex w-full items-center rounded-lg py-2 text-xs font-medium text-sidebar-text/70 transition-colors hover:bg-sidebar-hover hover:text-sidebar-text-strong ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
+              className={`mt-1 flex w-full items-center rounded-lg py-2 text-xs font-medium text-sidebar-text/80 transition-colors hover:bg-sidebar-hover hover:text-sidebar-text-strong ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'
                 }`}
             >
               {isCollapsed ? (
