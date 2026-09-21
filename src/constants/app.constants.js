@@ -21,6 +21,15 @@ export const STORAGE_KEYS = Object.freeze({
    * the console's layout never follows somebody into the CRM.
    */
   LEAD_COLUMNS_CRM: 'oac:lead-columns:user',
+
+  /**
+   * Column *widths* for the CRM register, kept apart from the order above.
+   *
+   * The page appends the signed-in user's id, because a width is a personal
+   * preference and a shared machine must not hand one person's layout to the
+   * next. Nothing here reaches the server.
+   */
+  LEAD_COLUMN_WIDTHS_CRM: 'oac:lead-column-widths:user',
   LEAD_COLUMNS_ADMIN_MONITOR: 'oac:lead-columns:admin-monitor',
   LEAD_COLUMNS_ADMIN_USER_LEADS: 'oac:lead-columns:admin-user-leads',
 })

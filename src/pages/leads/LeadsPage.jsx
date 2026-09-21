@@ -113,7 +113,34 @@ const HEADER_CELL =
  * exactly this padding.
  */
 const BODY_CELL = 'px-3 py-2.5 align-middle text-slate-700'
+
+/**
+ * The register's column sizing: where each column starts, and how far it may
+ * be dragged in.
+ *
+ * `defaultPercent` is the balanced layout the table opens with — derived from
+ * what each column's values actually measure — and the seven add up to 100% of
+ * the space the two fixed pixel columns (selection and delete) leave.
+ *
+ * `minPixels` is the point past which a column stops being useful rather than
+ * merely tight: a reference that cannot show a reference, a stage narrower
+ * than its badge. Stated in pixels because that is what content is measured
+ * in; `useColumnWidths` converts them against the table's live width.
+ */
+const COLUMN_SIZING = [
+  { key: 'reference', defaultPercent: 10, minPixels: 84 },
+  { key: 'contact', defaultPercent: 21, minPixels: 140 },
+  { key: 'company', defaultPercent: 14, minPixels: 110 },
+  { key: 'travel', defaultPercent: 12, minPixels: 96 },
+  { key: 'pax', defaultPercent: 8, minPixels: 64 },
+  { key: 'remarks', defaultPercent: 24, minPixels: 120 },
+  { key: 'stage', defaultPercent: 11, minPixels: 92 },
+]
+
+/** The column that gives and takes width when another is dragged. */
+const FLEXIBLE_COLUMN = 'remarks'
 import { useColumnOrder } from '@/hooks/useColumnOrder'
+import { useColumnWidths } from '@/hooks/useColumnWidths'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
 import { resolveErrorVariant } from '@/utils/apiError'
@@ -469,10 +496,6 @@ export function LeadsPage() {
       {
         key: 'reference',
         header: 'Reference',
-        /* The seven field widths below, plus the selection column's 4% and the
-           actions column's 5%, come to 100% — the table is exactly its
-           container, so there is nothing to scroll sideways to. */
-        width: 'w-[9%]',
         cellClassName: `${BODY_CELL} truncate`,
         render: (lead) => (
           <Link
@@ -487,7 +510,6 @@ export function LeadsPage() {
         key: 'contact',
         header: 'Contact',
         /* Two lines, a name over an email; each truncates on its own. */
-        width: 'w-[19%]',
         cellClassName: `${BODY_CELL} min-w-0`,
         render: (lead) => (
           <>
@@ -499,14 +521,12 @@ export function LeadsPage() {
       {
         key: 'company',
         header: 'Company',
-        width: 'w-[13%]',
         cellClassName: `${BODY_CELL} truncate text-slate-600`,
         render: (lead) => lead.companyName ?? '—',
       },
       {
         key: 'travel',
         header: 'Travel',
-        width: 'w-[11%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         // Prose travel dates like "August" are shown as written — the sheet's
         // only timing signal for those enquiries.
@@ -516,7 +536,6 @@ export function LeadsPage() {
       {
         key: 'pax',
         header: 'Pax',
-        width: 'w-[7%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         // The headline only — the full breakdown belongs on the detail
         // page, not in a narrow column. Same helper, so the two agree.
@@ -527,14 +546,12 @@ export function LeadsPage() {
         header: 'Remarks',
         // One truncated line keeps the row height fixed; clicking it opens the
         // whole remark. Column width is unchanged.
-        width: 'w-[22%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         render: (lead) => <RemarkCell remarks={lead.internalNotes} reference={lead.reference} />,
       },
       {
         key: 'stage',
         header: 'Stage',
-        width: 'w-[10%]',
         cellClassName: `${BODY_CELL} truncate`,
         render: (lead) => (
           <LeadStageBadge stage={lead.stage} showEligibility eligible={lead.campaignEligible} />
@@ -545,6 +562,24 @@ export function LeadsPage() {
   )
 
   const columnOrder = useColumnOrder(STORAGE_KEYS.LEAD_COLUMNS_CRM, columnDefs)
+
+  /*
+   * Column widths, dragged by the reader and kept for them alone.
+   *
+   * Scoped by user id, because a width is a personal preference and a shared
+   * machine must not hand one person's layout to the next. Signed out, the key
+   * falls back to a shared bucket rather than writing under someone else's id.
+   */
+  const columnWidths = useColumnWidths({
+    storageKey: `${STORAGE_KEYS.LEAD_COLUMN_WIDTHS_CRM}:${userId ?? 'anonymous'}`,
+    columns: COLUMN_SIZING,
+    orderedKeys: columnOrder.columns.map((column) => column.key),
+    flexibleKey: FLEXIBLE_COLUMN,
+    // `w-10` selection + `w-12` actions. Declared so the percentages divide
+    // what is left rather than the whole table — see the hook for why that is
+    // what makes a drag follow the pointer exactly.
+    reservedPixels: 88,
+  })
 
   /*
    * The rail's control class. One height, one radius, one focus ring for every
@@ -859,10 +894,17 @@ export function LeadsPage() {
           Refresh
         </Button>
 
-        {/* Only once the order has been changed. A permanent reset button on a
-            default table is clutter that explains nothing. */}
-        {columnOrder.isCustomised && (
-          <Button variant="secondary" onClick={columnOrder.reset}>
+        {/* Only once the order or a width has been changed. A permanent reset
+            button on a default table is clutter that explains nothing. The one
+            control restores both, which is what "Reset columns" reads as. */}
+        {(columnOrder.isCustomised || columnWidths.isCustomised) && (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              columnOrder.reset()
+              columnWidths.reset()
+            }}
+          >
             <RotateCcw className="size-4" aria-hidden="true" />
             Reset columns
           </Button>
@@ -1087,7 +1129,7 @@ export function LeadsPage() {
                   collapsed border behind when the cells move.
             */
             <div className="scroll-x overflow-clip rounded-xl border border-slate-200 bg-white">
-              <table className="w-full table-fixed border-collapse text-sm">
+              <table ref={columnWidths.tableRef} className="w-full table-fixed border-collapse text-sm">
                 <thead className="text-left">
                   <tr>
                     {/* Selection is pinned to the leading edge. It is a control, not
@@ -1109,10 +1151,34 @@ export function LeadsPage() {
                         key={column.key}
                         scope="col"
                         {...columnOrder.headerProps(column.key)}
-                        title="Drag to reorder · Ctrl+← / Ctrl+→"
-                        className={`${HEADER_CELL} ${column.width ?? ''} cursor-grab select-none whitespace-nowrap outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40`}
+                        /*
+                         * The reorder drag is suspended while a width drag is
+                         * in progress. Both start from the same header, and a
+                         * `draggable` element that begins a native drag mid
+                         * resize would leave the pointer owning two gestures.
+                         */
+                        draggable={!columnWidths.isResizing}
+                        style={{ width: columnWidths.widthOf(column.key) }}
+                        title="Drag to reorder · Ctrl+← / Ctrl+→ · drag the edge to resize"
+                        className={`${HEADER_CELL} relative cursor-grab select-none whitespace-nowrap outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40`}
                       >
                         {column.header}
+
+                        {/*
+                          The resize handle: the last few pixels of the header,
+                          as in a spreadsheet. Nothing is drawn until the pointer
+                          is on it, so the row keeps one clean rule rather than a
+                          divider between every column.
+
+                          `aria-hidden` and no tab stop: this is a pointer
+                          affordance, and the keyboard already has Ctrl+←/→ for
+                          the ordering this header carries.
+                        */}
+                        <span
+                          {...columnWidths.handleProps(column.key)}
+                          aria-hidden="true"
+                          className="absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize after:absolute after:inset-y-1 after:left-1/2 after:w-px after:-translate-x-1/2 after:bg-transparent after:transition-colors hover:after:bg-brand-400"
+                        />
                       </th>
                     ))}
                     {/*
