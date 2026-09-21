@@ -319,123 +319,122 @@
   }
 }
 
+
 /*
- * Hidden scrollbars (Phase 16.2).
+ * The scrollbar, everywhere (replaces the hidden scrollbars of Phase 16.2).
  *
- * Scrolling is completely untouched — wheel, trackpad, touch, keyboard and
- * programmatic scrolling all behave exactly as before. Only the *painting* of
- * the scrollbar is suppressed, which is what Notion, Linear, Slack, Discord and
- * Teams all do so a grey gutter does not cut into every panel.
+ * Slim, a dark track, a small rounded grey thumb. One declaration set governs
+ * every scrollable element in both panels — the document, the sidebars, table
+ * containers, dropdowns, modals, the filter rails — so a panel added next month
+ * is covered without anybody remembering to opt in.
  *
- * ## Why this sits outside `@layer`
+ * ## What this replaces, and what that means
  *
- * Unlayered CSS outranks every layered rule, including all of Tailwind's. Put
- * inside `@layer utilities` — where Phase 16.1C had it — these declarations sit
- * at the bottom of the cascade and any unlayered rule, now or later, silently
- * beats them. For a rule whose whole job is "always win", a layer is the wrong
- * place.
+ * Until now the CRM hid its scrollbars entirely and gave them back on one
+ * opt-in class for horizontal containers. That removed a scrollbar's two jobs —
+ * the *hint* that content continues, and the *control* you can drag — in
+ * exchange for a quieter surface. Showing them returns both, which is the point
+ * of the change: on a long register or a tall dialog there is now something to
+ * see and something to grab.
  *
- * ## Why it is global rather than scoped to the admin shell
+ * Nothing about scrolling itself is touched. Wheel, trackpad, touch, keyboard
+ * and programmatic scrolling behave exactly as before, and no element is given
+ * an `overflow` it did not already have — this governs only what a bar looks
+ * like once the browser has decided to paint one.
  *
- * 16.1C scoped it to `.admin-shell`. That was the bug: `html` and `body` are
- * **ancestors** of that element, not descendants, so the document's own
- * scrollbar was never matched. Every inner panel was hidden and the outermost
- * bar — the most visible one — stayed. Hence "multiple visible scrollbars".
+ * ## Why it sits outside `@layer`
  *
- * `*` covers every element that exists or will exist, so a panel added next
- * month is covered without anybody remembering to opt in.
+ * Unlayered CSS outranks every layered rule, including all of Tailwind's. These
+ * declarations have to win against utilities applied to the same elements, so
+ * they stay unlayered — the same reasoning the hidden-scrollbar block used.
  *
- * ## Three declarations, because no single one covers every engine
+ * ## Three engines, three declarations
  *
- *   `scrollbar-width`       standard. Firefox 64+, Chrome 121+, Safari 18.2+
- *   `-ms-overflow-style`    legacy Edge and IE11
- *   `::-webkit-scrollbar`   Chrome, Safari, Edge before 121
+ *   `scrollbar-width` / `scrollbar-color`   standard: Firefox, Chrome 121+,
+ *                                           Safari 18.2+
+ *   `::-webkit-scrollbar`                   Chrome, Safari, Edge before 121
+ *   `-ms-overflow-style`                    legacy Edge and IE11
  *
- * `width`/`height: 0` alongside `display: none` on the WebKit pseudo-element:
- * `display: none` is what actually removes it, and the zero sizes are the
- * belt-and-braces form for older WebKit builds that ignored `display` on this
- * pseudo-element.
+ * The standard properties cannot express a radius, so Firefox renders its own
+ * rounded thin bar from `scrollbar-color`; WebKit gets the exact geometry
+ * below. Both end up slim, dark-tracked and grey-thumbed.
  *
- * ## What this costs
+ * ## No layout shift
  *
- * A scrollbar is both a hint that content continues and a control you can drag.
- * Hiding it removes both, which matters most to pointer users who find dragging
- * easier than wheeling. Every container keeps `overflow: auto`, so wheel,
- * trackpad, touch and keyboard are unaffected. The keyboard case used to need
- * help — the admin shell scrolled an inner element, which the arrows only reach
- * when it holds focus — but the document scrolls again, so Page Up/Down, Home,
- * End and the arrows work from `body` with nothing arranged for them. A user
- * who enables "always show scrollbars" at the OS level still gets overlay bars,
- * because that setting overrides page CSS.
+ * `overflow: auto` reserves gutter space the moment a bar is painted, exactly
+ * as it did before this change, and the widths here are smaller than a default
+ * bar rather than larger. Nothing is switched to `overflow: scroll`, so a
+ * container that does not scroll still shows no track and takes no gutter.
  */
+:root {
+  /* Named once, so the two engines below cannot drift apart. */
+  --scrollbar-size: 0.5rem;
+  --scrollbar-track: #0b1120;
+  --scrollbar-thumb: var(--color-slate-500);
+  --scrollbar-thumb-hover: var(--color-slate-400);
+}
+
 *,
 html,
 body {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  -ms-overflow-style: auto;
 }
 
 *::-webkit-scrollbar,
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
+  display: block;
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
 }
 
-/**
- * Horizontal scroll containers get their scrollbar back.
+*::-webkit-scrollbar-track,
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb,
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: var(--scrollbar-thumb);
+
+  /*
+   * A hair of the track showing either side of the thumb is what makes a slim
+   * bar read as rounded rather than as a filled channel. `background-clip:
+   * content-box` keeps the border transparent instead of painting the thumb
+   * under it.
+   */
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover,
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: content-box;
+}
+
+/* The junction where a vertical and horizontal bar meet, so it matches the
+   track rather than falling back to the browser's own grey. */
+*::-webkit-scrollbar-corner,
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+/*
+ * `.scroll-x` is kept, and now adds nothing to the appearance.
  *
- * ## Why this is the one exception
- *
- * The rule above weighs a scrollbar's two jobs — *hint* and *control* — against
- * the visual noise, and hiding wins because every other input path survives:
- * wheel, trackpad, touch, keyboard.
- *
- * That reasoning does not hold on the horizontal axis. A plain mouse has no
- * horizontal wheel. Shift+wheel exists but is undiscoverable, and touch and
- * arrow keys are not what a desktop user reaches for. So on a wide table the
- * hidden bar removes the hint *and* the only practical control, which is how a
- * table that scrolls perfectly well reads as a table with columns cut off.
- *
- * ## Why a class rather than an axis selector
- *
- * `::-webkit-scrollbar:horizontal` could re-enable one axis in Chrome and
- * Safari, but Firefox's `scrollbar-width` is per-element with no axis form, so
- * that route silently leaves Firefox broken. Opting containers in by class is
- * uniform across engines and — more importantly — deliberate: it appears where
- * someone judged the content genuinely wide, not everywhere a div scrolls.
- *
- * `overflow-x: auto` still decides *whether* a bar shows, so a table narrower
- * than its container has none. This only governs what it looks like when the
- * browser has already decided to paint one.
- *
- * ## Why it sits outside `@layer`
- *
- * Same reason as the block above: unlayered declarations beat layered ones
- * whatever the specificity, so inside `@layer utilities` this would lose to the
- * `*` selector it is meant to override.
+ * It exists on a dozen horizontal containers and used to be the one place a
+ * scrollbar was allowed to show. The rules above cover those containers like
+ * everything else, so the class is left in place — removing it would mean
+ * editing a dozen components for no visual change — and simply inherits.
  */
 .scroll-x {
   scrollbar-width: thin;
-  -ms-overflow-style: auto;
-  scrollbar-color: var(--color-slate-300) transparent;
-}
-
-.scroll-x::-webkit-scrollbar {
-  display: block;
-  height: 0.5rem;
-}
-
-.scroll-x::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scroll-x::-webkit-scrollbar-thumb {
-  border-radius: 9999px;
-  background: var(--color-slate-300);
-}
-
-.scroll-x::-webkit-scrollbar-thumb:hover {
-  background: var(--color-slate-400);
 }

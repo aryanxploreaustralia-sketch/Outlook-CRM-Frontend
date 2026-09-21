@@ -61,8 +61,8 @@ export function toEndpointPath(path) {
     reportedDuplicates.add(path)
     console.warn(
       `[api] The endpoint "${path}" begins with the API prefix "${prefix}", which ` +
-        `the base URL already supplies. Requesting "${remainder}" instead. Remove ` +
-        'the prefix from src/api/endpoints.js — endpoint paths start at the version.',
+      `the base URL already supplies. Requesting "${remainder}" instead. Remove ` +
+      'the prefix from src/api/endpoints.js — endpoint paths start at the version.',
     )
   }
 
