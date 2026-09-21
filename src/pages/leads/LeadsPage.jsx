@@ -83,6 +83,25 @@ const QUOTE_PRESETS = [
 
 /** The empty window, so "cleared" means one thing in every place it is used. */
 const NO_RANGE = { preset: '', from: '', to: '' }
+
+/**
+ * One header cell, styled exactly as the Lead monitor's.
+ *
+ * Declared once so the three header cells this table renders — selection,
+ * the reorderable fields, actions — cannot drift apart, and so the sticky
+ * recipe is stated in a single place.
+ *
+ * `top-(--spacing-topbar)` is the CRM topbar's own height token, so the header
+ * comes to rest directly beneath it. The background is fully opaque: rows pass
+ * behind it and must not show through. The separating line is a `box-shadow`
+ * rather than a border, because the table collapses its borders and a
+ * collapsed border stays with the row rather than travelling with the cells.
+ */
+const HEADER_CELL =
+  'sticky top-(--spacing-topbar) z-10 bg-slate-50 px-5 py-2.5 align-middle text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[0_1px_0_0_var(--color-slate-200)]'
+
+/** One body cell. Matching padding, alignment and colour. */
+const BODY_CELL = 'px-5 py-2.5 align-middle text-slate-700'
 import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
 import { ROUTE_PATHS } from '@/routes/paths'
@@ -439,7 +458,11 @@ export function LeadsPage() {
       {
         key: 'reference',
         header: 'Reference',
-        cellClassName: 'whitespace-nowrap px-3 py-2',
+        /* The seven field widths below, plus the selection column's 4% and the
+           actions column's 5%, come to 100% — the table is exactly its
+           container, so there is nothing to scroll sideways to. */
+        width: 'w-[12%]',
+        cellClassName: `${BODY_CELL} truncate`,
         render: (lead) => (
           <Link
             to={ROUTE_PATHS.LEAD_DETAIL.replace(':id', lead.id)}
@@ -452,7 +475,9 @@ export function LeadsPage() {
       {
         key: 'contact',
         header: 'Contact',
-        cellClassName: 'max-w-48 px-3 py-2',
+        /* Two lines, a name over an email; each truncates on its own. */
+        width: 'w-[19%]',
+        cellClassName: `${BODY_CELL} min-w-0`,
         render: (lead) => (
           <>
             <span className="block truncate text-slate-900">{lead.contactPerson}</span>
@@ -463,13 +488,15 @@ export function LeadsPage() {
       {
         key: 'company',
         header: 'Company',
-        cellClassName: 'max-w-48 truncate px-3 py-2 text-slate-600',
+        width: 'w-[14%]',
+        cellClassName: `${BODY_CELL} truncate text-slate-600`,
         render: (lead) => lead.companyName ?? '—',
       },
       {
         key: 'travel',
         header: 'Travel',
-        cellClassName: 'whitespace-nowrap px-3 py-2 text-slate-500',
+        width: 'w-[11%]',
+        cellClassName: `${BODY_CELL} truncate text-slate-500`,
         // Prose travel dates like "August" are shown as written — the sheet's
         // only timing signal for those enquiries.
         render: (lead) =>
@@ -478,7 +505,8 @@ export function LeadsPage() {
       {
         key: 'pax',
         header: 'Pax',
-        cellClassName: 'whitespace-nowrap px-3 py-2 text-slate-500',
+        width: 'w-[8%]',
+        cellClassName: `${BODY_CELL} truncate text-slate-500`,
         // The headline only — the full breakdown belongs on the detail
         // page, not in a narrow column. Same helper, so the two agree.
         render: (lead) => describeParty(lead).summary ?? '—',
@@ -488,13 +516,15 @@ export function LeadsPage() {
         header: 'Remarks',
         // One truncated line keeps the row height fixed; clicking it opens the
         // whole remark. Column width is unchanged.
-        cellClassName: 'max-w-56 px-3 py-2 text-slate-500',
+        width: 'w-[19%]',
+        cellClassName: `${BODY_CELL} truncate text-slate-500`,
         render: (lead) => <RemarkCell remarks={lead.internalNotes} reference={lead.reference} />,
       },
       {
         key: 'stage',
         header: 'Stage',
-        cellClassName: 'whitespace-nowrap px-3 py-2',
+        width: 'w-[8%]',
+        cellClassName: `${BODY_CELL} truncate`,
         render: (lead) => (
           <LeadStageBadge stage={lead.stage} showEligibility eligible={lead.campaignEligible} />
         ),
@@ -1013,14 +1043,35 @@ export function LeadsPage() {
               )}
             </div>
           ) : (
-            <div className="scroll-x overflow-x-auto rounded-xl border border-slate-200 bg-white">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            /*
+              The register, carrying the Lead monitor's table behaviour.
+
+              Same three mechanisms, for the same reasons, and nothing else
+              about this page changed:
+
+               1. **`overflow-clip`, not `overflow-x-auto`.** `auto` on one axis
+                  computes the other from `visible` to `auto`, so this box was a
+                  scroll container — which both produced the horizontal
+                  scrollbar and anchored the sticky header to a box that never
+                  scrolls. `clip` clips identically, keeps the rounded corners,
+                  and creates no scrollport, so the header sticks against the
+                  document and nothing scrolls sideways.
+               2. **`table-fixed` with a percentage on every column**, summing
+                  to 100. The browser then sizes columns from the headers rather
+                  than from the longest cell, so no email, remark or customer
+                  name can widen the table.
+               3. **Sticky headers offset by the topbar**, opaque, with the
+                  separating rule as a shadow — `border-collapse` leaves a
+                  collapsed border behind when the cells move.
+            */
+            <div className="scroll-x overflow-clip rounded-xl border border-slate-200 bg-white">
+              <table className="w-full table-fixed border-collapse text-sm">
+                <thead className="text-left">
                   <tr>
                     {/* Selection is pinned to the leading edge. It is a control, not
                         a field, and a checkbox adrift in the middle of the register
                         would read as data. */}
-                    <th scope="col" className="w-10 px-3 py-2">
+                    <th scope="col" className={`${HEADER_CELL} w-[4%] px-3`}>
                       <input
                         type="checkbox"
                         aria-label="Select all on this page"
@@ -1037,7 +1088,7 @@ export function LeadsPage() {
                         scope="col"
                         {...columnOrder.headerProps(column.key)}
                         title="Drag to reorder · Ctrl+← / Ctrl+→"
-                        className="cursor-grab select-none px-3 py-2 font-medium outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
+                        className={`${HEADER_CELL} ${column.width ?? ''} cursor-grab select-none whitespace-nowrap outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40`}
                       >
                         {column.header}
                       </th>
@@ -1049,15 +1100,18 @@ export function LeadsPage() {
                       reordered into the middle of the register would be
                       reordering the furniture.
                     */}
-                    <th scope="col" className="w-12 px-3 py-2 text-right font-medium">
+                    <th scope="col" className={`${HEADER_CELL} w-[5%] px-3 text-right`}>
                       <span className="sr-only">Actions</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {items.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-slate-50">
-                      <td className="px-3 py-2">
+                    <tr
+                      key={lead.id}
+                      className="transition-colors duration-(--duration-fast) hover:bg-slate-50/70"
+                    >
+                      <td className={`${BODY_CELL} px-3`}>
                         <input
                           type="checkbox"
                           aria-label={`Select ${lead.reference}`}
@@ -1081,7 +1135,7 @@ export function LeadsPage() {
                         </td>
                       ))}
 
-                      <td className="px-3 py-2 text-right">
+                      <td className={`${BODY_CELL} px-3 text-right`}>
                         <button
                           type="button"
                           onClick={(event) => {
