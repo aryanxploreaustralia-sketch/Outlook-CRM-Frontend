@@ -485,7 +485,7 @@ export function LeadsPage() {
         key: 'contact',
         header: 'Contact',
         /* Two lines, a name over an email; each truncates on its own. */
-        width: 'w-[21%]',
+        width: 'w-[22%]',
         cellClassName: `${BODY_CELL} min-w-0`,
         render: (lead) => (
           <>
@@ -497,7 +497,7 @@ export function LeadsPage() {
       {
         key: 'company',
         header: 'Company',
-        width: 'w-[17%]',
+        width: 'w-[15%]',
         cellClassName: `${BODY_CELL} truncate text-slate-600`,
         render: (lead) => lead.companyName ?? '—',
       },
@@ -514,7 +514,7 @@ export function LeadsPage() {
       {
         key: 'pax',
         header: 'Pax',
-        width: 'w-[9%]',
+        width: 'w-[8%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         // The headline only — the full breakdown belongs on the detail
         // page, not in a narrow column. Same helper, so the two agree.
@@ -525,7 +525,7 @@ export function LeadsPage() {
         header: 'Remarks',
         // One truncated line keeps the row height fixed; clicking it opens the
         // whole remark. Column width is unchanged.
-        width: 'w-[18%]',
+        width: 'w-[17%]',
         cellClassName: `${BODY_CELL} truncate text-slate-500`,
         render: (lead) => <RemarkCell remarks={lead.internalNotes} reference={lead.reference} />,
       },
@@ -1091,7 +1091,7 @@ export function LeadsPage() {
                     {/* Selection is pinned to the leading edge. It is a control, not
                         a field, and a checkbox adrift in the middle of the register
                         would read as data. */}
-                    <th scope="col" className={`${HEADER_CELL} w-[3%] px-3`}>
+                    <th scope="col" className={`${HEADER_CELL} w-10 px-2`}>
                       <input
                         type="checkbox"
                         aria-label="Select all on this page"
@@ -1120,7 +1120,7 @@ export function LeadsPage() {
                       reordered into the middle of the register would be
                       reordering the furniture.
                     */}
-                    <th scope="col" className={`${HEADER_CELL} w-[3%] px-3 text-right`}>
+                    <th scope="col" className={`${HEADER_CELL} w-12 px-2 text-right`}>
                       <span className="sr-only">Actions</span>
                     </th>
                   </tr>
@@ -1131,7 +1131,7 @@ export function LeadsPage() {
                       key={lead.id}
                       className="transition-colors duration-(--duration-fast) hover:bg-slate-50/70"
                     >
-                      <td className={`${BODY_CELL} px-3`}>
+                      <td className={`${BODY_CELL} px-2`}>
                         <input
                           type="checkbox"
                           aria-label={`Select ${lead.reference}`}
@@ -1155,7 +1155,7 @@ export function LeadsPage() {
                         </td>
                       ))}
 
-                      <td className={`${BODY_CELL} px-3 text-right`}>
+                      <td className={`${BODY_CELL} px-2 text-right`}>
                         <button
                           type="button"
                           onClick={(event) => {
