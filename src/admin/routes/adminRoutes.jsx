@@ -158,6 +158,17 @@ export const adminRoute = {
       lazy: gated(PERMISSIONS.LEADS_VIEW, async () => (await import('@/admin/pages/AdminLeadMonitorPage')).AdminLeadMonitorPage),
     },
     {
+      path: 'companies',
+      handle: {
+        title: 'Companies',
+        subtitle: 'Which companies send enquiries, and how many',
+        breadcrumb: 'Companies',
+      },
+      // The same gate as the monitor above: one page, two views of the same
+      // cross-user register.
+      lazy: gated(PERMISSIONS.LEADS_VIEW, async () => (await import('@/admin/pages/AdminCompaniesPage')).AdminCompaniesPage),
+    },
+    {
       path: 'audit',
       handle: {
         title: 'Audit logs',

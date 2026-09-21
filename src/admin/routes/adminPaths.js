@@ -32,6 +32,8 @@ export const ADMIN_PATHS = Object.freeze({
   TEAM: `${ADMIN_ROOT}/team`,
   CAMPAIGN_MONITOR: `${ADMIN_ROOT}/campaigns`,
   LEAD_MONITOR: `${ADMIN_ROOT}/leads`,
+  /** The same enquiries, grouped by the company that sent them. */
+  COMPANIES: `${ADMIN_ROOT}/companies`,
   AUDIT: `${ADMIN_ROOT}/audit`,
   HEALTH: `${ADMIN_ROOT}/health`,
   ORGANIZATION: `${ADMIN_ROOT}/organization`,

@@ -176,6 +176,9 @@ export const ADMIN_ENDPOINTS = Object.freeze({
   /** Cross-user enquiry monitoring. Accepts search, stage, attention. */
   leads: '/v1/admin/leads',
 
+  /** The same enquiries, grouped by company. Same guard as the list above. */
+  companies: '/v1/admin/companies',
+
   /** One enquiry, whoever owns it. Same guard as the list above. */
   leadDetail: (id) => `/v1/admin/leads/${id}`,
 

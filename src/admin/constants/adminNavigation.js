@@ -136,6 +136,17 @@ export const ADMIN_NAV_MONITORING = Object.freeze([
     // Same reasoning as the campaign monitor above.
     permission: 'analytics.view',
   },
+  {
+    id: 'admin-companies',
+    label: 'Companies',
+    path: ADMIN_PATHS.COMPANIES,
+    icon: Building2,
+    end: false,
+    description: 'Which companies send enquiries, and how many',
+    // The same capability as the monitor it sits under: this reads across
+    // every user's register, which is what `analytics.view` governs.
+    permission: 'analytics.view',
+  },
 ])
 
 /** Governance and platform. */

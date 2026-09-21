@@ -528,6 +528,16 @@ export function fetchAdminLeads({ signal, ...params } = {}) {
 }
 
 /**
+ * The company-wise enquiry overview.
+ *
+ * Same transport as the monitor above; the grouping is the server's, so the
+ * page holds no second copy of the register.
+ */
+export function fetchAdminCompanies({ signal, ...params } = {}) {
+  return get(ADMIN_ENDPOINTS.companies, { params: clean(params), signal })
+}
+
+/**
  * Per-day counts for the calendar grid.
  *
  * `tz` is the reader's own IANA zone. The server groups task due-times in it,
@@ -663,6 +673,7 @@ export default {
   fetchAdminLead,
   fetchAdminCalendar,
   fetchAdminCalendarDay,
+  fetchAdminCompanies,
   fetchAdminLeads,
   fetchAdminMailboxes,
   fetchAdminOrganization,

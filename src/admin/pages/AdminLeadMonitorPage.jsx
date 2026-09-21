@@ -145,6 +145,7 @@ const FILTER_KEYS = [
   'market',
   'introduction',
   'owner',
+  'company',
   'attention',
   'activity',
   'preset',
@@ -187,6 +188,9 @@ export function AdminLeadMonitorPage() {
   const market = read('market')
   const introduction = read('introduction')
   const owner = read('owner')
+  /* One company's enquiries. Written by "View queries" on the companies page;
+     the monitor itself only ever reads and clears it. */
+  const company = read('company')
   const attention = read('attention')
   const activity = read('activity')
   const dateField = read('dateField') || 'travelDate'
@@ -244,6 +248,7 @@ export function AdminLeadMonitorPage() {
       market,
       introduction,
       owner,
+      company,
       attention,
       activity,
       // Only sent alongside a range — on its own it selects nothing and would
@@ -255,7 +260,7 @@ export function AdminLeadMonitorPage() {
       page,
       limit,
     }),
-    [urlSearch, stage, market, introduction, owner, attention, activity, dateField, preset, from, to, page, limit],
+    [urlSearch, stage, market, introduction, owner, company, attention, activity, dateField, preset, from, to, page, limit],
   )
 
   const loader = useCallback((options) => fetchAdminLeads({ ...query, ...options }), [query])
@@ -275,6 +280,7 @@ export function AdminLeadMonitorPage() {
       stage: query.stage,
       market: query.market,
       introduction: query.introduction,
+      company: query.company,
       attention: query.attention,
       activity: query.activity,
       dateField: query.dateField,
@@ -336,6 +342,7 @@ export function AdminLeadMonitorPage() {
   if (stage) chips.push({ key: 'stage', label: labelOf(STAGE_OPTIONS, stage), clear: { stage: '' } })
   if (market) chips.push({ key: 'market', label: labelOf(MARKET_OPTIONS, market), clear: { market: '' } })
   if (owner) chips.push({ key: 'owner', label: labelOf(ownerOptions, owner), clear: { owner: '' } })
+  if (company) chips.push({ key: 'company', label: `Company: ${company}`, clear: { company: '' } })
   if (introduction) {
     chips.push({
       key: 'introduction',
