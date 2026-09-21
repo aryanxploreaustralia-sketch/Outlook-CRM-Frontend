@@ -383,7 +383,6 @@ export function AdminLeadMonitorPage() {
         render: (lead) => (
           <AdminTableIdentity
             primary={lead.reference}
-            secondary={lead.company ?? 'No company'}
             to={ADMIN_PATHS.LEAD_DETAIL.replace(':id', lead.id)}
           />
         ),
