@@ -799,11 +799,35 @@ export function AdminLeadMonitorPage() {
            * email should not push Owner and the dates off-screen. Both classes
            * are overridden from here, through the `className` the component
            * already puts on its scroll container, so no shared component
-           * changes and no other admin table is affected. The container keeps
-           * `overflow-x-auto`, but with nothing wider than itself inside it
-           * there is nothing to scroll.
+           * changes and no other admin table is affected.
+           *
+           * ## And the header stays put while the register scrolls
+           *
+           * `AdminTable` already marks its `<th>`s `sticky top-0`; on this page
+           * that was inert, for the reason its own comment gives. The wrapper
+           * carries `overflow-x-auto`, and an `overflow` of `auto` on one axis
+           * computes the other from `visible` to `auto` — so the wrapper was a
+           * scroll container in *both* directions, and a sticky header inside
+           * it anchors to that box rather than to the document. The box is as
+           * tall as its content and never scrolls, so the header never stuck.
+           *
+           * `overflow-x-clip` is the one form that clips without creating a
+           * scroll container (`clip` beside `visible` is the single mixed pair
+           * CSS leaves alone), so the nearest scrollport becomes the document —
+           * which is what `AdminLayout` deliberately gave back to the page —
+           * and the header sticks against it. Nothing is lost by clipping: the
+           * table is `table-fixed` at exactly 100%, so there was never anything
+           * wider than the wrapper to scroll to. `!` because the component's
+           * own `overflow-x-auto` is a class of equal specificity.
+           *
+           * `top-(--spacing-topbar)` is the offset: the admin topbar is
+           * `sticky top-0` and `h-(--spacing-topbar)`, so the header comes to
+           * rest directly beneath it instead of sliding under it. The `<th>`
+           * keeps its own `bg-slate-50/95` and `backdrop-blur`, which is what
+           * stops rows showing through, plus the header row's existing bottom
+           * border.
            */
-          className="[&>table]:min-w-0 [&>table]:table-fixed"
+          className="overflow-x-clip! [&>table]:min-w-0 [&>table]:table-fixed [&_th]:top-(--spacing-topbar)"
           columns={columnOrder.columns}
           reorder={columnOrder}
           rows={items}

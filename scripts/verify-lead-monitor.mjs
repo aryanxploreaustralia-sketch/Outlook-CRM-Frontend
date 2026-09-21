@@ -83,6 +83,18 @@ check(page.includes('<AdminTable'), 'the table is unchanged')
 check(page.includes('columnOrder'), 'column ordering is unchanged')
 
 // ---------------------------------------------------------------------------
+section('The header stays put, and nothing scrolls sideways')
+const table = strip(read('src/admin/components/AdminTable.jsx'))
+check(table.includes('sticky top-0'), 'the shared table still marks its headers sticky')
+check(page.includes('[&>table]:table-fixed'), 'this table is laid out fixed, so no cell can widen it')
+check(page.includes('overflow-x-clip!'), 'its wrapper clips instead of scrolling — clip creates no scroll container, so the header anchors to the document')
+check(page.includes('[&_th]:top-(--spacing-topbar)'), 'and rests below the sticky admin topbar, not under it')
+check(read('src/admin/components/AdminTopbar.jsx').includes('h-(--spacing-topbar)'), 'the offset is the topbar\'s own height token, so the two cannot drift')
+check(/z-20/.test(read('src/admin/components/AdminTopbar.jsx')) && table.includes('z-10'), 'the topbar outranks the table header, so rows pass beneath both')
+check(table.includes('bg-slate-50/95') && table.includes('backdrop-blur'), 'the header keeps a solid background — rows do not show through')
+check(!page.includes('overflow-x-auto'), 'no horizontal scroll is reintroduced on this page')
+
+// ---------------------------------------------------------------------------
 section('Brand and responsiveness')
 check(/border-brand-500|bg-brand-600|text-brand-700/.test(cards), 'selected state uses the Xplore orange brand tokens')
 check(!/blue-[0-9]/.test(cards), 'no blue accents were introduced')
