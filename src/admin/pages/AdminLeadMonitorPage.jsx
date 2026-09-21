@@ -52,6 +52,9 @@ import {
   AdminTable,
   AdminTableIdentity,
 } from '@/admin/components'
+// Imported by path rather than through the barrel: it belongs to this page and
+// nothing else, so it does not need to become part of the shared surface.
+import { AdminOwnerCards } from '@/admin/components/AdminOwnerCards'
 import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
@@ -256,6 +259,31 @@ export function AdminLeadMonitorPage() {
   )
 
   const loader = useCallback((options) => fetchAdminLeads({ ...query, ...options }), [query])
+
+  /**
+   * The same filters the table is showing, minus the owner — what each owner
+   * card counts under.
+   *
+   * Owner is excluded because each card supplies its own; page, limit and sort
+   * are excluded because none of them can change a total. Anything else the
+   * reader has filtered by stays, so a card reads "how many would I see if I
+   * clicked this" rather than a number the table would then contradict.
+   */
+  const ownerCountParams = useMemo(
+    () => ({
+      search: query.search,
+      stage: query.stage,
+      market: query.market,
+      introduction: query.introduction,
+      attention: query.attention,
+      activity: query.activity,
+      dateField: query.dateField,
+      preset: query.preset,
+      from: query.from,
+      to: query.to,
+    }),
+    [query],
+  )
 
   // `useAdminResource` aborts the superseded request and guards the response by
   // id, so changing three filters quickly cannot land an older answer last.
@@ -487,7 +515,6 @@ export function AdminLeadMonitorPage() {
       title="Lead monitor"
       subtitle="Pipeline health across every consultant — what is unowned and what has gone quiet"
       breadcrumb={breadcrumb}
-      notice="Last activity is the record&rsquo;s last modification, not a conversation timestamp."
       isRefreshing={isRefreshing}
       actions={actions}
     >
@@ -496,6 +523,13 @@ export function AdminLeadMonitorPage() {
         daily, then the register — which is what the page is for and so gets
         the room. Everything secondary is one click away rather than on screen.
       */}
+
+      {/*
+        One wrapper, so this page can sit tighter than the `space-y-6` every
+        admin page inherits — without changing that shared rhythm for the
+        others. Nothing inside moved; only the gaps between the sections did.
+      */}
+      <div className="space-y-3">
 
       {/* --- Counts, as a strip rather than four cards ---------------------- */}
       <dl className="grid grid-cols-2 divide-slate-200 overflow-hidden rounded-(--radius-card) border border-slate-200 bg-white sm:grid-cols-4 sm:divide-x">
@@ -515,7 +549,7 @@ export function AdminLeadMonitorPage() {
           },
           { label: 'Booked or completed', value: summary?.won, tone: 'text-emerald-700' },
         ].map((stat) => (
-          <div key={stat.label} className="px-4 py-3">
+          <div key={stat.label} className="px-3.5 py-2.5">
             <dt className="truncate text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">
               {stat.label}
             </dt>
@@ -526,6 +560,21 @@ export function AdminLeadMonitorPage() {
           </div>
         ))}
       </dl>
+
+      {/*
+        --- Owners, as cards ------------------------------------------------
+
+        A control for the existing `owner` filter, nothing more: selecting one
+        writes the same URL parameter the dropdown used to, so the table, the
+        counts, the chips and the pagination all react exactly as before.
+      */}
+      <AdminOwnerCards
+        owners={ownerOptions}
+        value={owner}
+        onSelect={(next) => setFilters({ owner: next })}
+        countParams={ownerCountParams}
+        isLoading={isLoading}
+      />
 
       {/* --- The controls used daily ---------------------------------------- */}
       <div className="rounded-(--radius-card) border border-slate-200 bg-white">
@@ -539,14 +588,9 @@ export function AdminLeadMonitorPage() {
             />
           </div>
 
-          <AdminFilterSelect
-            label="Owner"
-            value={owner}
-            onChange={(next) => setFilters({ owner: next })}
-            options={ownerOptions}
-            allLabel="All owners"
-            className="w-40"
-          />
+          {/* The owner dropdown that stood here is now the card row above. The
+              filter itself is unchanged — same parameter, same writer, and its
+              chip below still clears it. */}
 
           <AdminFilterSelect
             label="Destination"
@@ -746,7 +790,7 @@ export function AdminLeadMonitorPage() {
 
         {/* Every page is reachable; totals come from the API, never the row count. */}
         {!isLoading && pagination?.total > 0 && (
-          <div className="border-t border-slate-100 px-5 py-3">
+          <div className="border-t border-slate-100 px-4 py-2.5">
             <AdminPagination
               page={pagination.page}
               pageSize={pagination.limit}
@@ -763,6 +807,7 @@ export function AdminLeadMonitorPage() {
           </div>
         )}
       </AdminCard>
+      </div>
     </AdminPageContainer>
   )
 }
