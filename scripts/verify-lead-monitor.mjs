@@ -97,6 +97,15 @@ check(read('src/admin/components/AdminTopbar.jsx').includes('h-(--spacing-topbar
 check(/z-20/.test(read('src/admin/components/AdminTopbar.jsx')) && table.includes('z-10'), 'the topbar outranks the table header, so rows pass beneath both')
 check(table.includes('bg-slate-50/95') && table.includes('backdrop-blur'), 'the header keeps a solid background — rows do not show through')
 check(!page.includes('overflow-x-auto'), 'no horizontal scroll is reintroduced on this page')
+/*
+ * The one that actually made the header stick. `AdminCard` ships
+ * `overflow-hidden`, which is a scroll container, so a sticky `<th>` inside it
+ * anchored to the card instead of the document and rode the page out of view.
+ * Measured in headless Chrome: with `hidden` the header reached -1428px on a
+ * 1600px scroll; with `clip` it holds at 64px, the topbar's height.
+ */
+check(page.includes('<AdminCard padded={false} className="overflow-clip!">'), 'the card clips without becoming a scroll container, so sticky anchors to the document')
+check(read('src/admin/components/AdminCard.jsx').includes('overflow-hidden'), 'the shared card still clips for every other admin screen')
 
 // ---------------------------------------------------------------------------
 section('Brand and responsiveness')

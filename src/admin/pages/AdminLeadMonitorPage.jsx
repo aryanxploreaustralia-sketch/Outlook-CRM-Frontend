@@ -788,7 +788,26 @@ export function AdminLeadMonitorPage() {
         ]}
       />
 
-      <AdminCard padded={false}>
+      {/*
+        `overflow-clip`, not the card's own `overflow-hidden`.
+
+        This is what actually stopped the sticky header working. `AdminCard`
+        clips its body so the table's corners cannot escape its radius, and
+        `overflow: hidden` creates a *scroll container* — so the sticky `<th>`
+        inside it anchored to the card's own scrollport instead of to the
+        document. That box is exactly as tall as the table and never scrolls,
+        so the header sat at the top of the card and rode the page down out of
+        view, which is precisely the reported symptom.
+
+        `overflow: clip` clips identically — the rounded corners still hold —
+        but is defined as *not* scrollable, so it creates no scrollport. The
+        nearest one is then the document, which `AdminLayout` deliberately gave
+        back to the page, and the header sticks against the actual page scroll.
+
+        `!` because the component's own `overflow-hidden` is a class of equal
+        specificity; scoped here, so every other admin card is untouched.
+      */}
+      <AdminCard padded={false} className="overflow-clip!">
         <AdminTable
           /*
            * This table fits its container instead of scrolling sideways.
