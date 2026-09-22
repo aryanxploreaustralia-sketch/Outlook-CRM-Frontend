@@ -188,6 +188,23 @@ export async function bulkShareLeads(userIds, { signal, headers } = {}) {
  * off the enquiry, which is what stops this endpoint being a lever on records
  * the caller has no claim to.
  */
+/**
+ * Adds one internal note to an enquiry.
+ *
+ * The text is all that travels. The note's date and author are stamped by the
+ * server, which is what removes the need for anybody to type a date — and what
+ * makes the date trustworthy, since a browser's clock is not.
+ *
+ * Deliberately not routed through the offline queue: that queue carries
+ * create/update/delete for whole records, and adding a note is neither. See
+ * the Lead detail page, which disables the control while offline rather than
+ * accepting a note it cannot deliver.
+ */
+export async function addLeadNote(id, body, { signal } = {}) {
+  const response = await httpClient.post(ENDPOINTS.leads.notes(id), { body }, { signal })
+  return response.data?.data?.note ?? null
+}
+
 export async function updateLeadFull(id, payload, { signal } = {}) {
   const response = await httpClient.put(ENDPOINTS.leads.detailFull(id), payload, { signal })
   return response.data?.data ?? response.data

@@ -349,6 +349,8 @@ export const ENDPOINTS = Object.freeze({
     bulkStage: '/v1/leads/bulk-stage',
     /** The managers an enquiry may be assigned to. */
     assignees: '/v1/leads/assignees',
+    /** One timestamped internal note. The server stamps the time. */
+    notes: (id) => `/v1/leads/${id}/notes`,
     /** Colleagues an enquiry may be shared with, and the grant itself. */
     shareableUsers: '/v1/leads/shareable-users',
     sharing: (id) => `/v1/leads/${id}/sharing`,

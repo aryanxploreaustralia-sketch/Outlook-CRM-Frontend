@@ -9,6 +9,7 @@ import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, Building2, Mail, Pencil, Phone, Share2, User } from 'lucide-react'
 
+import { addLeadNote } from '@/api/services/lead.service'
 import { fetchLeadConversation } from '@/api/services/conversation.service'
 import { LeadConversation } from '@/components/leads/LeadConversation'
 import { LeadEditDialog } from '@/components/leads/LeadEditDialog'
@@ -35,6 +36,16 @@ export function LeadDetailPage() {
   } = useLead(id)
 
   const [notes, setNotes] = useState(null)
+
+  /*
+   * The new-note box, and nothing else: no date field, because the date is not
+   * the writer's to supply. `isAddingNote` is held apart from the page's own
+   * `isBusy` so saving the earlier-notes field and adding a note cannot disable
+   * one another.
+   */
+  const [newNote, setNewNote] = useState('')
+  const [isAddingNote, setIsAddingNote] = useState(false)
+  const [noteError, setNoteError] = useState(null)
 
   /** Whether the edit dialog is open. The dialog owns the draft itself. */
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -267,9 +278,101 @@ export function LeadDetailPage() {
             ))}
           </dl>
 
+          {/*
+            --- Internal notes -------------------------------------------
+
+            One box, one note. The date and the author are the server's, which
+            is why neither is asked for: a note's timestamp is stamped when it
+            reaches the API, not typed by whoever is writing it and not taken
+            from the browser's clock.
+
+            The free-text field below this is the enquiry's earlier notes —
+            what the workbook imported and what people typed by hand, dates
+            included. It is untouched and still editable; nothing is migrated,
+            and no date is invented for it.
+          */}
           <div className="mt-5">
-            <label htmlFor="lead-notes" className="block text-xs font-medium uppercase tracking-wide text-slate-500">
-              Internal notes
+            <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Internal notes</h3>
+
+            <div className="mt-2">
+              <label htmlFor="lead-new-note" className="sr-only">
+                Write a note
+              </label>
+              <textarea
+                id="lead-new-note"
+                rows={2}
+                value={newNote}
+                onChange={(event) => setNewNote(event.target.value)}
+                placeholder="Write a note — the date and time are added automatically"
+                disabled={!canEdit || isOffline}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50"
+              />
+
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  disabled={isBusy || !canEdit || isOffline || newNote.trim().length === 0}
+                  isLoading={isAddingNote}
+                  onClick={async () => {
+                    const text = newNote.trim()
+                    if (!text) return
+
+                    setIsAddingNote(true)
+                    setNoteError(null)
+                    try {
+                      await addLeadNote(id, text)
+                      setNewNote('')
+                      // The note lives on the lead, so the page's own loader is
+                      // what brings it back — no second copy is kept here.
+                      await refresh()
+                    } catch (caught) {
+                      setNoteError(caught)
+                    } finally {
+                      setIsAddingNote(false)
+                    }
+                  }}
+                >
+                  Add note
+                </Button>
+
+                {isOffline ? (
+                  <span className="text-xs text-amber-700">
+                    Notes need a connection — the time is recorded by the server.
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400">Never sent to the customer.</span>
+                )}
+              </div>
+
+              {noteError && (
+                <p className="mt-2 text-xs text-rose-600">
+                  {noteError?.message ?? 'That note could not be saved. Please try again.'}
+                </p>
+              )}
+            </div>
+
+            {/* Newest first, as the server returns them. */}
+            {(lead.notes ?? []).length > 0 && (
+              <ul className="mt-3 space-y-2.5">
+                {(lead.notes ?? []).map((note) => (
+                  <li key={note.id} className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2">
+                    <p className="whitespace-pre-wrap text-sm text-slate-800">{note.body}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {/* No date is ever invented: a note stored without one
+                          says so rather than borrowing today's. */}
+                      {note.createdAt ? formatDateTime(note.createdAt) : 'Date unavailable'}
+                      {note.createdByName ? ` · ${note.createdByName}` : ''}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <label
+              htmlFor="lead-notes"
+              className="mt-5 block text-xs font-medium uppercase tracking-wide text-slate-500"
+            >
+              Earlier notes
             </label>
             <textarea
               id="lead-notes"
