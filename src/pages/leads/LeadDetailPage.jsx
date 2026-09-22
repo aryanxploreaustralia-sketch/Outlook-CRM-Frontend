@@ -35,8 +35,6 @@ export function LeadDetailPage() {
     isInitialLoading, isError, error, refresh, action, isBusy, actionError, save, saveFull,
   } = useLead(id)
 
-  const [notes, setNotes] = useState(null)
-
   /*
    * The new-note box, and nothing else: no date field, because the date is not
    * the writer's to supply. `isAddingNote` is held apart from the page's own
@@ -88,8 +86,6 @@ export function LeadDetailPage() {
   if (isError || !lead) {
     return <ErrorScreen variant={resolveErrorVariant(error)} error={error} onRetry={() => refresh()} />
   }
-
-  const noteValue = notes ?? lead.internalNotes ?? ''
 
   return (
     <div className="space-y-5">
@@ -351,50 +347,56 @@ export function LeadDetailPage() {
               )}
             </div>
 
-            {/* Newest first, as the server returns them. */}
-            {(lead.notes ?? []).length > 0 && (
-              <ul className="mt-3 space-y-2.5">
-                {(lead.notes ?? []).map((note) => (
-                  <li key={note.id} className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2">
-                    <p className="whitespace-pre-wrap text-sm text-slate-800">{note.body}</p>
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      {/* No date is ever invented: a note stored without one
-                          says so rather than borrowing today's. */}
-                      {note.createdAt ? formatDateTime(note.createdAt) : 'Date unavailable'}
-                      {note.createdByName ? ` · ${note.createdByName}` : ''}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/*
+              --- Earlier notes ---------------------------------------------
 
-            <label
-              htmlFor="lead-notes"
-              className="mt-5 block text-xs font-medium uppercase tracking-wide text-slate-500"
-            >
-              Earlier notes
-            </label>
-            <textarea
-              id="lead-notes"
-              rows={4}
-              value={noteValue}
-              onChange={(event) => setNotes(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-            <div className="mt-2 flex items-center gap-2">
-              <Button
-                size="sm"
-                disabled={isBusy || !canEdit || noteValue === (lead.internalNotes ?? '')}
-                isLoading={action === 'save'}
-                onClick={async () => {
-                  await save({ internalNotes: noteValue })
-                  setNotes(null)
-                }}
-              >
-                Save notes
-              </Button>
-              <span className="text-xs text-slate-400">Never sent to the customer.</span>
-            </div>
+              Read-only, newest first. There is one place to write a note — the
+              box above — and this is the record of what has been written.
+
+              The second textarea that used to sit here was the *old* way of
+              keeping notes: one free-text field where the date had to be typed
+              by hand. Two boxes meant two note systems on one page, which is
+              what this removes. Nothing is lost: the field itself is untouched
+              on the record, still shown below, and still editable through Edit
+              enquiry, where it belongs with the enquiry's other fields.
+            */}
+            {((lead.notes ?? []).length > 0 || (lead.internalNotes ?? '').trim()) && (
+              <>
+                <h4 className="mt-5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Earlier notes
+                </h4>
+
+                <ul className="mt-2 space-y-2.5">
+                  {(lead.notes ?? []).map((note) => (
+                    <li key={note.id} className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2">
+                      <p className="text-[11px] text-slate-500">
+                        {/* No date is ever invented: a note stored without one
+                            says so rather than borrowing today's. */}
+                        {note.createdAt ? formatDateTime(note.createdAt) : 'Date unavailable'}
+                      </p>
+                      {note.createdByName && (
+                        <p className="text-[11px] font-medium text-slate-600">{note.createdByName}</p>
+                      )}
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{note.body}</p>
+                    </li>
+                  ))}
+
+                  {/*
+                    The enquiry's original free-text remark, if it has one.
+                    Shown last because it predates every timestamped note, and
+                    dateless because nobody knows when it was written — the
+                    workbook did not record it, and inventing a date would be
+                    worse than saying so.
+                  */}
+                  {(lead.internalNotes ?? '').trim() && (
+                    <li className="rounded-lg border border-dashed border-slate-200 px-3 py-2">
+                      <p className="text-[11px] text-slate-500">Date unavailable · from the workbook</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{lead.internalNotes}</p>
+                    </li>
+                  )}
+                </ul>
+              </>
+            )}
           </div>
         </section>
 

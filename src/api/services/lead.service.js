@@ -200,8 +200,8 @@ export async function bulkShareLeads(userIds, { signal, headers } = {}) {
  * the Lead detail page, which disables the control while offline rather than
  * accepting a note it cannot deliver.
  */
-export async function addLeadNote(id, body, { signal } = {}) {
-  const response = await httpClient.post(ENDPOINTS.leads.notes(id), { body }, { signal })
+export async function addLeadNote(id, text, { signal } = {}) {
+  const response = await httpClient.post(ENDPOINTS.leads.notes(id), { text }, { signal })
   return response.data?.data?.note ?? null
 }
 
