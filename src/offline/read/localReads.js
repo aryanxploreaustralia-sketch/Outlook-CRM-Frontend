@@ -34,6 +34,7 @@
 import { companiesRepository } from '@/offline/repositories/companiesRepository.js'
 import { contactsRepository } from '@/offline/repositories/contactsRepository.js'
 import { leadsRepository } from '@/offline/repositories/leadsRepository.js'
+import { LEAD_STAGES } from '@/constants/lead.constants'
 import {
   isVisible,
   matchesCompany,
@@ -178,6 +179,16 @@ export async function readLocalLeadFacets({ userId } = {}) {
     companies: [...companies.values()]
       .sort((a, b) => b.leadCount - a.leadCount)
       .slice(0, 200),
+
+    /*
+     * The stages the downloaded enquiries are actually in, in the register's
+     * own order — the same rule the server applies, so the Stage filter offers
+     * the same options offline as on.
+     */
+    stages: LEAD_STAGES.filter((option) => distinct('stage').includes(option.value)).map((option) => ({
+      value: option.value,
+      label: option.label,
+    })),
   }
 }
 

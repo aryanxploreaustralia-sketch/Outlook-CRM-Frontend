@@ -221,6 +221,28 @@ export function LeadsPage() {
 
   const { facets, refresh: refreshFacets } = useLeadFacets()
 
+  /*
+   * Stage and destination options come from the register, not from the
+   * vocabulary.
+   *
+   * `facets` is computed over the enquiries this person can actually open —
+   * their own and the ones shared with them — so the options can neither miss
+   * a value that is on screen nor offer one that would return nothing.
+   *
+   * The constants remain as the fallback for the first paint, before the facets
+   * have arrived: an empty Stage select would read as "this register has no
+   * stages" when it only means "not loaded yet". Once they land, the register
+   * decides. They are also what the chips below read labels from, which is a
+   * different job — naming a value the reader already chose.
+   */
+  const stageOptions = facets.stages?.length ? facets.stages : LEAD_STAGES
+
+  const marketOptions = facets.markets?.length
+    ? facets.markets
+        .map((value) => MARKET_OPTIONS.find((option) => option.value === value) ?? { value, label: value })
+        .sort((a, b) => a.label.localeCompare(b.label))
+    : MARKET_OPTIONS
+
   /* Bulk sharing is online-only, so the dialog needs to know. Same hook the
      enquiry page uses — one existing subscription, no new listener. */
   const { isOffline } = useReadSource()
@@ -754,7 +776,7 @@ export function LeadsPage() {
             className={FIELD}
           >
             <option value="">All stages</option>
-            {LEAD_STAGES.map((option) => (
+            {stageOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
@@ -773,7 +795,7 @@ export function LeadsPage() {
             className={FIELD}
           >
             <option value="">All destinations</option>
-            {MARKET_OPTIONS.map((option) => (
+            {marketOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
