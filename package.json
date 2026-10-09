@@ -28,7 +28,8 @@
     "verify:retry-failed": "node scripts/verify-retry-failed.mjs",
     "verify:lead-delete": "node scripts/verify-lead-delete.mjs",
     "verify:app-badge": "node scripts/verify-app-badge.mjs",
-    "verify:lead-monitor": "node scripts/verify-lead-monitor.mjs"
+    "verify:lead-monitor": "node scripts/verify-lead-monitor.mjs",
+    "verify:lead-reference-sort": "node scripts/verify-lead-reference-sort.mjs"
   },
   "dependencies": {
     "axios": "^1.19.0",

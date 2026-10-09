@@ -286,6 +286,51 @@ export function matchesCompany(record, criteria = {}) {
 // Sorting
 // ---------------------------------------------------------------------------
 
+/** The two lead sorts that read the reference's number rather than its text. */
+const REFERENCE_SORTS = new Set(['reference', '-reference'])
+
+/** A reference is letters then digits — `XANB079`. The prefix is not fixed-width. */
+const REFERENCE_PATTERN = /^([A-Z]*)(\d+)$/
+
+/**
+ * Splits a reference into the parts the sort needs.
+ *
+ * A value that is not letters-then-digits — blank, letters only, an imported
+ * row with a stray character — yields `number: null`, which the comparator
+ * sends to the end rather than treating as zero.
+ */
+function referenceParts(value) {
+  const match = REFERENCE_PATTERN.exec(String(value ?? '').trim().toUpperCase())
+  if (!match) return { prefix: String(value ?? '').trim().toUpperCase(), number: null }
+
+  return { prefix: match[1], number: Number(match[2]) }
+}
+
+/**
+ * The register by reference number: number first, then prefix, then id.
+ *
+ * `direction` applies to the number alone. The prefix stays ascending in both
+ * directions, so the references sharing a number keep one stable order instead
+ * of flipping with the reader's choice — and `id` makes the order total, which
+ * is what keeps a page boundary from wobbling between reads.
+ */
+function sortByReference(records, direction) {
+  return [...records].sort((left, right) => {
+    const a = referenceParts(left.reference)
+    const b = referenceParts(right.reference)
+
+    // References with no number sit after every reference that has one.
+    if ((a.number === null) !== (b.number === null)) return a.number === null ? 1 : -1
+
+    if (a.number !== null && a.number !== b.number) return (a.number - b.number) * direction
+
+    const byPrefix = a.prefix.localeCompare(b.prefix)
+    if (byPrefix !== 0) return byPrefix
+
+    return String(left.id ?? '').localeCompare(String(right.id ?? ''))
+  })
+}
+
 /**
  * Sort specifications, mirroring the server's `SORT_OPTIONS` maps exactly.
  *
@@ -369,6 +414,16 @@ function compareField(left, right, field) {
 export function sortRecords(records, entity, sort) {
   const table = SORTS[entity] ?? {}
   const spec = table[sort] ?? table[DEFAULT_SORT[entity]] ?? []
+
+  /*
+   * Reference order is the number's, not the string's — the same rule the
+   * server applies, so a register sorted offline reads in the same order it
+   * does online. See `REFERENCE_SORT_STAGES` in the backend's lead service for
+   * why the prefix cannot be the primary key.
+   */
+  if (entity === 'leads' && REFERENCE_SORTS.has(sort)) {
+    return sortByReference(records, sort === '-reference' ? -1 : 1)
+  }
 
   return [...records].sort((left, right) => {
     for (const [field, direction] of spec) {
