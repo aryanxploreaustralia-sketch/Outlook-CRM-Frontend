@@ -92,6 +92,32 @@ check(
   '   the order is stable across reads, so a page boundary cannot wobble',
 )
 
+section('The Reference header is the control')
+
+const { readFileSync } = await import('node:fs')
+const page = readFileSync(new URL('../src/pages/leads/LeadsPage.jsx', import.meta.url), 'utf8')
+const strip = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/\/\/.*$/gm, '')
+const code = strip(page)
+
+check(code.includes("const [sort, setSort] = useState(null)"), '7. the register opens with no sort of its own')
+check(code.includes('sort: sort ?? DEFAULT_SORT'), "   so the API still receives the page's existing default")
+check(code.includes("const DEFAULT_SORT = '-quote'"), '   which is unchanged', 'quote date, newest first')
+check(
+  /setSort\(\(current\) =>\s*current === SORT_ASCENDING \? SORT_DESCENDING : SORT_ASCENDING,?\s*\)/.test(code),
+  '1. clicking the header toggles the direction',
+)
+check(/onClick=\{\(\) => \{[\s\S]{0,400}setPage\(1\)/.test(code), '8. and returns to page one')
+check(code.includes('column.key === SORTABLE_COLUMN ?'), '   only the Reference column carries the control')
+check(code.includes('aria-sort='), '2. the header reports its direction to assistive tech')
+check(/ArrowUp className|ArrowDown className|ArrowUpDown className/.test(code), '   with a visible indicator for each state')
+check(code.includes('<ArrowUpDown'), '   dimmed while the register is in its default order')
+
+check(code.includes('draggable={!columnWidths.isResizing}'), '3. the header is still the drag source for reordering')
+check(code.includes('draggable={false}'), '   the button is not, so a drag belongs to the header')
+check(code.includes('{...columnOrder.headerProps(column.key)}'), '   and the reorder handlers are untouched')
+check(code.includes('{...columnWidths.handleProps(column.key)}'), '4. the resize handle is untouched')
+check(!code.includes('<select') || !/sort/i.test(code.split('<select')[1]?.slice(0, 200) ?? ''), '6. no sort dropdown was added')
+
 section('Every other sort is untouched')
 const byQuote = sortRecords(
   [

@@ -9,6 +9,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   ClipboardList,
   CloudOff,
   Download,
@@ -139,6 +142,20 @@ const COLUMN_SIZING = [
 
 /** The column that gives and takes width when another is dragged. */
 const FLEXIBLE_COLUMN = 'remarks'
+
+/**
+ * The register's default order, and the one column that can change it.
+ *
+ * `-quote` is what the API defaults to and what this page has always sent; it
+ * stays in force until somebody clicks the Reference header. The two reference
+ * keys are the server's own — the aggregation behind them sorts on the
+ * number in the reference rather than the text, so XANB079 and XARS079 sit
+ * together rather than apart by prefix.
+ */
+const DEFAULT_SORT = '-quote'
+const SORTABLE_COLUMN = 'reference'
+const SORT_ASCENDING = 'reference'
+const SORT_DESCENDING = '-reference'
 import { useColumnOrder } from '@/hooks/useColumnOrder'
 import { useColumnWidths } from '@/hooks/useColumnWidths'
 import { useLeadFacets, useLeadList } from '@/hooks/useLeads'
@@ -175,6 +192,11 @@ export function LeadsPage() {
        landing on an empty page reads as lost data. */
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [stage, setStage] = useState('')
+  /*
+   * Null until the reader asks for a different order, so the register opens in
+   * the order it always did rather than in one this control chose for them.
+   */
+  const [sort, setSort] = useState(null)
   const [city, setCity] = useState('')
   const [market, setMarket] = useState('')
   const [handledBy, setHandledBy] = useState('')
@@ -287,6 +309,7 @@ export function LeadsPage() {
     useLeadList({
       page,
       limit: pageSize,
+      sort: sort ?? DEFAULT_SORT,
       stage,
       city,
       market,
@@ -1181,10 +1204,79 @@ export function LeadsPage() {
                          */
                         draggable={!columnWidths.isResizing}
                         style={{ width: columnWidths.widthOf(column.key) }}
-                        title="Drag to reorder · Ctrl+← / Ctrl+→ · drag the edge to resize"
+                        /*
+                         * Only the sortable column reports a direction, and it
+                         * reports `none` while the register is in its default
+                         * order — which is the honest answer, since that order
+                         * is by quote date and not by this column at all.
+                         */
+                        aria-sort={
+                          column.key !== SORTABLE_COLUMN || !sort
+                            ? undefined
+                            : sort === SORT_ASCENDING
+                              ? 'ascending'
+                              : 'descending'
+                        }
+                        title={
+                          column.key === SORTABLE_COLUMN
+                            ? 'Click to sort by reference number · drag to reorder · drag the edge to resize'
+                            : 'Drag to reorder · Ctrl+← / Ctrl+→ · drag the edge to resize'
+                        }
                         className={`${HEADER_CELL} relative cursor-grab select-none whitespace-nowrap outline-none data-dragging:opacity-40 data-drop-target:bg-brand-100 data-drop-target:text-brand-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40`}
                       >
-                        {column.header}
+                        {column.key === SORTABLE_COLUMN ? (
+                          /*
+                           * A button inside the draggable header, not instead of
+                           * it.
+                           *
+                           * A click with no movement is a click and sorts; a
+                           * press that moves becomes a drag, because `dragstart`
+                           * fires on the `<th>` whether the pointer went down on
+                           * the button or beside it. So both gestures keep
+                           * working from the same place and neither has to guess
+                           * what the other meant — which is why this is a button
+                           * rather than an `onClick` on the `<th>`, where a drop
+                           * at the end of a reorder would also read as a click.
+                           *
+                           * `draggable={false}` on the button only stops the
+                           * *button* being the drag source; the header still is.
+                           */
+                          <button
+                            type="button"
+                            draggable={false}
+                            onClick={() => {
+                              setSort((current) =>
+                                current === SORT_ASCENDING ? SORT_DESCENDING : SORT_ASCENDING,
+                              )
+                              /* A new order means page 1: page 7 of one ordering
+                                 is not page 7 of another, and an empty table
+                                 reads as "no enquiries" rather than "no page 7". */
+                              setPage(1)
+                            }}
+                            className="inline-flex items-center gap-1 rounded uppercase tracking-[0.05em] outline-none hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500/40"
+                          >
+                            {column.header}
+                            {sort === SORT_ASCENDING ? (
+                              <ArrowUp className="size-3 text-brand-600" aria-hidden="true" />
+                            ) : sort === SORT_DESCENDING ? (
+                              <ArrowDown className="size-3 text-brand-600" aria-hidden="true" />
+                            ) : (
+                              /* Dimmed until it is the active order, so the
+                                 column advertises that it sorts without
+                                 claiming it currently does. */
+                              <ArrowUpDown className="size-3 text-slate-300" aria-hidden="true" />
+                            )}
+                            <span className="sr-only">
+                              {sort === SORT_ASCENDING
+                                ? 'Sorted by reference number, lowest first. Activate to reverse.'
+                                : sort === SORT_DESCENDING
+                                  ? 'Sorted by reference number, highest first. Activate to reverse.'
+                                  : 'Activate to sort by reference number.'}
+                            </span>
+                          </button>
+                        ) : (
+                          column.header
+                        )}
 
                         {/*
                           The resize handle: the last few pixels of the header,
