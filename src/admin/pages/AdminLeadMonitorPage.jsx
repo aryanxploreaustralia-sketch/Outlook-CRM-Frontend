@@ -37,7 +37,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { RefreshCw, RotateCcw, SlidersHorizontal, UserCheck, X } from 'lucide-react'
+import { Download, RefreshCw, RotateCcw, SlidersHorizontal, UserCheck, X } from 'lucide-react'
 
 import {
   AdminBadge,
@@ -58,7 +58,7 @@ import { AdminOwnerCards } from '@/admin/components/AdminOwnerCards'
 import { ADMIN_TONE } from '@/admin/constants/admin.constants'
 import { ADMIN_PATHS } from '@/admin/routes/adminPaths'
 import { useAdminBreadcrumbs, useAdminResource, useDebouncedValue } from '@/admin/hooks'
-import { fetchAdminLeads } from '@/admin/services/admin.service'
+import { exportAdminLeads, fetchAdminLeads } from '@/admin/services/admin.service'
 import { EMPTY, formatCount, formatDate } from '@/admin/utils/format'
 import { FilterPanel } from '@/components/filters/FilterPanel'
 import { RemarkCell } from '@/components/leads/RemarkCell'
@@ -489,6 +489,16 @@ export function AdminLeadMonitorPage() {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
 
   /*
+   * The export, which is a request rather than a navigation.
+   *
+   * Its own busy flag so a download in progress cannot disable Refresh, and so
+   * the button can say what it is doing. `exportError` is surfaced inline: a
+   * download that silently fails looks like a button that does nothing.
+   */
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportError, setExportError] = useState(null)
+
+  /*
    * How many of the filters behind "More filters" are set.
    *
    * Counted separately from `activeFilterCount` so the button reports what is
@@ -519,6 +529,33 @@ export function AdminLeadMonitorPage() {
           Reset columns
         </Button>
       )}
+      {/*
+        The register as a workbook.
+
+        `query` is what the table is showing — every filter, the search, a
+        selected owner — so the file matches the screen. `page` and `limit` are
+        dropped by the service: an export is of the whole matching set.
+      */}
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={async () => {
+          setIsExporting(true)
+          setExportError(null)
+          try {
+            await exportAdminLeads(query)
+          } catch (caught) {
+            setExportError(caught)
+          } finally {
+            setIsExporting(false)
+          }
+        }}
+        isLoading={isExporting}
+      >
+        <Download className="size-3.5" aria-hidden="true" />
+        Export leads
+      </Button>
+
       <Button variant="secondary" size="sm" onClick={refresh} isLoading={isRefreshing}>
         <RefreshCw className="size-3.5" aria-hidden="true" />
         Refresh
@@ -563,6 +600,19 @@ export function AdminLeadMonitorPage() {
         others. Nothing inside moved; only the gaps between the sections did.
       */}
       <div className="space-y-3">
+        {/* A failed download, said out loud. The button finishing with nothing
+            downloaded is otherwise indistinguishable from a button that does
+            nothing. */}
+        {exportError && (
+          <p
+            role="alert"
+            className="rounded-(--radius-card) border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+          >
+            {exportError?.response?.data?.message ??
+              exportError?.message ??
+              'That export could not be prepared. Please try again.'}
+          </p>
+        )}
 
       {/* --- Counts, as a strip rather than four cards ---------------------- */}
       <dl className="grid grid-cols-2 divide-slate-200 overflow-hidden rounded-(--radius-card) border border-slate-200 bg-white sm:grid-cols-4 sm:divide-x">

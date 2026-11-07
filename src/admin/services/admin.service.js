@@ -36,6 +36,7 @@
 import { ADMIN_ENDPOINTS } from '@/admin/services/adminEndpoints'
 import { apiUrl } from '@/api/apiUrl'
 import { httpClient } from '@/api/httpClient'
+import { downloadWorkbook } from '@/admin/services/downloadWorkbook'
 
 /**
  * Issues a GET and unwraps the standard envelope.
@@ -533,6 +534,17 @@ export function fetchAdminLeads({ signal, ...params } = {}) {
  * Same transport as the monitor above; the grouping is the server's, so the
  * page holds no second copy of the register.
  */
+/**
+ * Downloads the monitor's current view as a workbook.
+ *
+ * Takes the same parameters the list does, so whatever is filtered on screen is
+ * what the file holds. `page` and `limit` are not sent: an export is of the
+ * whole matching set, and the server ignores them in any case.
+ */
+export function exportAdminLeads({ signal, page: _page, limit: _limit, ...params } = {}) {
+  return downloadWorkbook(ADMIN_ENDPOINTS.leadsExport, params, { signal })
+}
+
 export function fetchAdminCompanies({ signal, ...params } = {}) {
   return get(ADMIN_ENDPOINTS.companies, { params: clean(params), signal })
 }
@@ -673,6 +685,7 @@ export default {
   fetchAdminLead,
   fetchAdminCalendar,
   fetchAdminCalendarDay,
+  exportAdminLeads,
   fetchAdminCompanies,
   fetchAdminLeads,
   fetchAdminMailboxes,

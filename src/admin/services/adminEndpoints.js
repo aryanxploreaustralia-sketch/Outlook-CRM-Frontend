@@ -176,6 +176,9 @@ export const ADMIN_ENDPOINTS = Object.freeze({
   /** Cross-user enquiry monitoring. Accepts search, stage, attention. */
   leads: '/v1/admin/leads',
 
+  /** The register as a workbook, across every owner. Read-only. */
+  leadsExport: '/v1/admin/leads/export',
+
   /** The same enquiries, grouped by company. Same guard as the list above. */
   companies: '/v1/admin/companies',
 
